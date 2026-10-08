@@ -60,3 +60,13 @@ models:
         data_tests: [not_null, non_negative]
       - name: exits
         data_tests: [not_null, non_negative]
+
+  - name: fct_bike_trips_daily
+    description: Bay Wheels trips per day (member/casual, e-bike/classic/unknown, dockless, average duration).
+    columns:
+      - name: trip_date
+        data_tests: [not_null, unique]
+      - name: trips
+        data_tests: [not_null, non_negative]
+      - name: dockless_trips
+        data_tests: [not_null, non_negative]

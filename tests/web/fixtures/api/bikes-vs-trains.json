@@ -1,0 +1,245 @@
+{
+  "rows": [
+    {
+      "month_start": "2019-01-01",
+      "bart_entries": 9644792,
+      "bike_trips": 192082,
+      "bart_avg_daily_entries": 311122.32,
+      "bike_avg_daily_trips": 6196.19,
+      "bart_index_2019": 100.0,
+      "bike_index_2019": 100.0,
+      "bikes_per_1000_bart_entries": 19.92
+    },
+    {
+      "month_start": "2019-02-01",
+      "bart_entries": 9006216,
+      "bike_trips": 183412,
+      "bart_avg_daily_entries": 321650.57,
+      "bike_avg_daily_trips": 6550.43,
+      "bart_index_2019": 100.0,
+      "bike_index_2019": 100.0,
+      "bikes_per_1000_bart_entries": 20.37
+    },
+    {
+      "month_start": "2019-03-01",
+      "bart_entries": 9991747,
+      "bike_trips": 256299,
+      "bart_avg_daily_entries": 322314.42,
+      "bike_avg_daily_trips": 8267.71,
+      "bart_index_2019": 100.0,
+      "bike_index_2019": 100.0,
+      "bikes_per_1000_bart_entries": 25.65
+    },
+    {
+      "month_start": "2019-04-01",
+      "bart_entries": 10312623,
+      "bike_trips": 239092,
+      "bart_avg_daily_entries": 343754.1,
+      "bike_avg_daily_trips": 7969.73,
+      "bart_index_2019": 100.0,
+      "bike_index_2019": 100.0,
+      "bikes_per_1000_bart_entries": 23.18
+    },
+    {
+      "month_start": "2019-05-01",
+      "bart_entries": 10326834,
+      "bike_trips": 182163,
+      "bart_avg_daily_entries": 333123.68,
+      "bike_avg_daily_trips": 5876.23,
+      "bart_index_2019": 100.0,
+      "bike_index_2019": 100.0,
+      "bikes_per_1000_bart_entries": 17.64
+    },
+    {
+      "month_start": "2019-06-01",
+      "bart_entries": 9932642,
+      "bike_trips": 191771,
+      "bart_avg_daily_entries": 331088.07,
+      "bike_avg_daily_trips": 6392.37,
+      "bart_index_2019": 100.0,
+      "bike_index_2019": 100.0,
+      "bikes_per_1000_bart_entries": 19.31
+    },
+    {
+      "month_start": "2019-07-01",
+      "bart_entries": 10134097,
+      "bike_trips": 258101,
+      "bart_avg_daily_entries": 326906.35,
+      "bike_avg_daily_trips": 8325.84,
+      "bart_index_2019": 100.0,
+      "bike_index_2019": 100.0,
+      "bikes_per_1000_bart_entries": 25.47
+    },
+    {
+      "month_start": "2019-08-01",
+      "bart_entries": 10424866,
+      "bike_trips": 210560,
+      "bart_avg_daily_entries": 336286.0,
+      "bike_avg_daily_trips": 6792.26,
+      "bart_index_2019": 100.0,
+      "bike_index_2019": 100.0,
+      "bikes_per_1000_bart_entries": 20.2
+    },
+    {
+      "month_start": "2019-09-01",
+      "bart_entries": 10015058,
+      "bike_trips": 217986,
+      "bart_avg_daily_entries": 333835.27,
+      "bike_avg_daily_trips": 7266.2,
+      "bart_index_2019": 100.0,
+      "bike_index_2019": 100.0,
+      "bikes_per_1000_bart_entries": 21.77
+    },
+    {
+      "month_start": "2019-10-01",
+      "bart_entries": 10786560,
+      "bike_trips": 239884,
+      "bart_avg_daily_entries": 347953.55,
+      "bike_avg_daily_trips": 7738.19,
+      "bart_index_2019": 100.0,
+      "bike_index_2019": 100.0,
+      "bikes_per_1000_bart_entries": 22.24
+    },
+    {
+      "month_start": "2019-11-01",
+      "bart_entries": 9218525,
+      "bike_trips": 185438,
+      "bart_avg_daily_entries": 307284.17,
+      "bike_avg_daily_trips": 6181.27,
+      "bart_index_2019": 100.0,
+      "bike_index_2019": 100.0,
+      "bikes_per_1000_bart_entries": 20.12
+    },
+    {
+      "month_start": "2019-12-01",
+      "bart_entries": 8815645,
+      "bike_trips": 150079,
+      "bart_avg_daily_entries": 284375.65,
+      "bike_avg_daily_trips": 4841.26,
+      "bart_index_2019": 100.0,
+      "bike_index_2019": 100.0,
+      "bikes_per_1000_bart_entries": 17.02
+    },
+    {
+      "month_start": "2025-01-01",
+      "bart_entries": 4261168,
+      "bike_trips": 282783,
+      "bart_avg_daily_entries": 137457.03,
+      "bike_avg_daily_trips": 9122.03,
+      "bart_index_2019": 44.18,
+      "bike_index_2019": 147.22,
+      "bikes_per_1000_bart_entries": 66.36
+    },
+    {
+      "month_start": "2025-02-01",
+      "bart_entries": 4130031,
+      "bike_trips": 246691,
+      "bart_avg_daily_entries": 147501.11,
+      "bike_avg_daily_trips": 8810.39,
+      "bart_index_2019": 45.86,
+      "bike_index_2019": 134.5,
+      "bikes_per_1000_bart_entries": 59.73
+    },
+    {
+      "month_start": "2025-03-01",
+      "bart_entries": 4530847,
+      "bike_trips": 324890,
+      "bart_avg_daily_entries": 146156.35,
+      "bike_avg_daily_trips": 10480.32,
+      "bart_index_2019": 45.35,
+      "bike_index_2019": 126.76,
+      "bikes_per_1000_bart_entries": 71.71
+    },
+    {
+      "month_start": "2025-04-01",
+      "bart_entries": 4846643,
+      "bike_trips": 349004,
+      "bart_avg_daily_entries": 161554.77,
+      "bike_avg_daily_trips": 11633.47,
+      "bart_index_2019": 47.0,
+      "bike_index_2019": 145.97,
+      "bikes_per_1000_bart_entries": 72.01
+    },
+    {
+      "month_start": "2025-05-01",
+      "bart_entries": 4775431,
+      "bike_trips": 381567,
+      "bart_avg_daily_entries": 154046.16,
+      "bike_avg_daily_trips": 12308.61,
+      "bart_index_2019": 46.24,
+      "bike_index_2019": 209.46,
+      "bikes_per_1000_bart_entries": 79.9
+    },
+    {
+      "month_start": "2025-06-01",
+      "bart_entries": 4776461,
+      "bike_trips": 378536,
+      "bart_avg_daily_entries": 159215.37,
+      "bike_avg_daily_trips": 12617.87,
+      "bart_index_2019": 48.09,
+      "bike_index_2019": 197.39,
+      "bikes_per_1000_bart_entries": 79.25
+    },
+    {
+      "month_start": "2025-07-01",
+      "bart_entries": 4823002,
+      "bike_trips": 387978,
+      "bart_avg_daily_entries": 155580.71,
+      "bike_avg_daily_trips": 12515.42,
+      "bart_index_2019": 47.59,
+      "bike_index_2019": 150.32,
+      "bikes_per_1000_bart_entries": 80.44
+    },
+    {
+      "month_start": "2025-08-01",
+      "bart_entries": 4908797,
+      "bike_trips": 429690,
+      "bart_avg_daily_entries": 158348.29,
+      "bike_avg_daily_trips": 13860.97,
+      "bart_index_2019": 47.09,
+      "bike_index_2019": 204.07,
+      "bikes_per_1000_bart_entries": 87.53
+    },
+    {
+      "month_start": "2025-09-01",
+      "bart_entries": 4724313,
+      "bike_trips": 458042,
+      "bart_avg_daily_entries": 157477.1,
+      "bike_avg_daily_trips": 15268.07,
+      "bart_index_2019": 47.17,
+      "bike_index_2019": 210.12,
+      "bikes_per_1000_bart_entries": 96.95
+    },
+    {
+      "month_start": "2025-10-01",
+      "bart_entries": 4930734,
+      "bike_trips": 484910,
+      "bart_avg_daily_entries": 159055.94,
+      "bike_avg_daily_trips": 15642.26,
+      "bart_index_2019": 45.71,
+      "bike_index_2019": 202.14,
+      "bikes_per_1000_bart_entries": 98.34
+    },
+    {
+      "month_start": "2025-11-01",
+      "bart_entries": 4031002,
+      "bike_trips": 384504,
+      "bart_avg_daily_entries": 134366.73,
+      "bike_avg_daily_trips": 12816.8,
+      "bart_index_2019": 43.73,
+      "bike_index_2019": 207.35,
+      "bikes_per_1000_bart_entries": 95.39
+    },
+    {
+      "month_start": "2025-12-01",
+      "bart_entries": 3768928,
+      "bike_trips": 286521,
+      "bart_avg_daily_entries": 121578.32,
+      "bike_avg_daily_trips": 9242.61,
+      "bart_index_2019": 42.75,
+      "bike_index_2019": 190.91,
+      "bikes_per_1000_bart_entries": 76.02
+    }
+  ],
+  "source": "BART hourly origin-destination ridership reports. Lyft Bay Wheels trip data."
+}

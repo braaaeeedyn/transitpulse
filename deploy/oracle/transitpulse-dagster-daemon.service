@@ -1,0 +1,37 @@
+# Dagster daemon: runs the schedules (monthly ingest, models, weekly forecast) and the run queue.
+# Installed by deploy/oracle/bootstrap.sh into /etc/systemd/system/. See docs/ORACLE_VM.md.
+[Unit]
+Description=TransitPulse Dagster daemon (schedules and run queue)
+Documentation=https://github.com/braaaeeedyn/transitpulse/blob/main/docs/ORACLE_VM.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=transitpulse
+Group=transitpulse
+WorkingDirectory=/opt/transitpulse
+EnvironmentFile=/etc/transitpulse/transitpulse.env
+# the venv comes first: SparkRunner and dagster-dbt start `python` / `dbt` by name
+Environment=PATH=/opt/transitpulse/.venv/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/opt/transitpulse/.venv/bin/dagster-daemon run -w /opt/transitpulse/deploy/oracle/workspace.yaml
+Restart=on-failure
+RestartSec=30
+# Runs are child processes of the daemon, so this budget includes a Spark run (4 GB driver + JVM overhead).
+# Sized for a 2 OCPU / 12 GB VM shared with SeismicSoCal. No MemoryHigh: a soft cap below the Spark peak throttles
+# the run instead of protecting anything. Change it with `sudo systemctl edit transitpulse-dagster-daemon`
+# (a drop-in survives bootstrap.sh updates; editing this file on the VM does not). See docs/ORACLE_VM.md.
+MemoryMax=7G
+# if the VM ever runs out of memory, the kernel kills TransitPulse before SeismicSoCal
+OOMScoreAdjust=500
+# lower priority than everything else on the VM, so SeismicSoCal keeps priority
+Nice=10
+CPUWeight=50
+IOWeight=50
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

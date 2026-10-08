@@ -1,7 +1,9 @@
-// Page bootstrap: nav behaviour, the Ask card, and the live map.
+// Page bootstrap: nav behaviour, the Ask card, the live map, the Trends band and the Forecast explorer.
 
 import { initAsk } from "./ask.js";
+import { initForecast } from "./forecast.js";
 import { initMap } from "./map/map.js";
+import { initTrends } from "./trends.js";
 
 // --- nav: hairline once scrolled -------------------------------------------------------------------
 const nav = document.querySelector("[data-nav]");
@@ -79,3 +81,5 @@ export function toast(text) {
 
 initAsk(document.querySelector("[data-ask]"), document.querySelector("[data-ask-result]"));
 initMap(document.querySelector("[data-map]"));
+initTrends(document.querySelector("[data-trends]"));
+initForecast(document.querySelector("[data-forecast]"));

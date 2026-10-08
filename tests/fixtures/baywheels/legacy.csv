@@ -1,0 +1,4 @@
+duration_sec,start_time,end_time,start_station_id,start_station_name,start_station_latitude,start_station_longitude,end_station_id,end_station_name,end_station_latitude,end_station_longitude,bike_id,user_type,bike_share_for_all_trip
+227,2019-01-01 00:07:10.5760,2019-01-01 00:10:57.1960,245,Downtown Berkeley BART,37.870139,-122.268422,247,Fulton St at Bancroft Way,37.8677892,-122.2658964,4861,Subscriber,No
+1767,2019-01-01 00:08:39.6590,2019-01-01 00:38:06.8480,16,Steuart St at Market St,37.79413,-122.39443,115,Jackson Playground,37.7650259,-122.3987734,5506,Customer,No
+600,2019-01-15 08:00:00.0000,2019-01-15 08:10:00.0000,NULL,NULL,37.77,-122.41,NULL,NULL,37.78,-122.40,1234,Subscriber,Yes

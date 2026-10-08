@@ -95,21 +95,21 @@ this section is the checklist.
 - [x] `infra/terraform/`: provider + backend; BigQuery datasets `raw`, `staging`, `marts`, `ml`, `ci`; *(applied to `transitpulse-511002`; `plan` shows no changes)*
       raw bucket; Artifact Registry repo with a cleanup policy (keep last 3); service accounts
       `sa-pipeline` (write raw/staging/marts), `sa-agent` (read-only on `marts`), `sa-deploy`.
-- [~] Verify the data source links and licences in `TRANSITPULSE_PLAN.md §4`; record them in `README.md`. *(listed in README; licences still to verify)*
+- [~] Verify the data source links and licences in `TRANSITPULSE_PLAN.md §4`; record them in `README.md`. *(listed in README; Bay Wheels licence link verified 2026-10-08; the BART terms still to verify)*
 - **Done when:** `terraform apply` is clean, `make lint test` passes on an empty project, budget alerts are visible in the console.
 
 ### M1: data platform (weeks 1–3) · #4 #10 #11 #17 #2
 - [~] Install Java 17 + Spark 3.5 locally; `make spark` runs a hello-world `spark-submit`. *(Spark runs in Docker (`pipeline/spark/Dockerfile`, Java 17) instead — Spark 3.5 hangs on Windows)*
-- [~] Dagster assets `bart_od_files`, `baywheels_files`, `bart_gtfs` (download → GCS `raw/…/year=/month=`, idempotent by checksum). *(`bart_od_files` + `bart_gtfs` done; `baywheels_files` not started)*
+- [x] Dagster assets `bart_od_files`, `baywheels_files`, `bart_gtfs` (download → GCS `raw/…/year=/month=`, idempotent by checksum). *(`baywheels_files` discovers keys from the bucket listing; ETag/size + sha256 manifest; run locally for 2019 + 2025, GCS upload path not run yet)*
 - [x] `pipeline/spark/clean_bart_od.py`: explicit schema, trim/cast, drop + count malformed rows, de-dup, derive
       `trip_date/hour/weekday/is_holiday` (broadcast join), write Parquet partitioned by year/month, write `ingest_audit`.
 - [x] Unit-test the Spark transforms on a 1,000-row fixture (`tests/spark/`).
-- [~] BigQuery load → `raw.bart_od` (partition `trip_date`, cluster `origin`). Same for Bay Wheels. *(BART done and verified; Bay Wheels not started)*
+- [~] BigQuery load → `raw.bart_od` (partition `trip_date`, cluster `origin`). Same for Bay Wheels. *(BART done and verified; Bay Wheels cleaned locally with DuckDB (`pipeline/baywheels.py`) and modelled in dbt (`stg_baywheels_trips` → `fct_bike_trips_daily` → `mart_bikes_vs_trains`); the `raw/baywheels_trips` BigQuery load is written but not run)*
 - [x] Monthly schedule + backfill of all historical years; record final raw size in GB (for the résumé bullet). *(2018–2025 in BigQuery: 67.8M rows, 4.2 GB logical; 2026 not published yet)*
 - [x] dbt: `stg_*` → `dim_station` (SCD2 snapshot), `dim_date` → `fct_trips_hourly`, `fct_station_daily` →
       `mart_recovery`, `mart_peak_load`, `mart_od_flows`. Set `maximum_bytes_billed` in `profiles.yml`.
 - [x] dbt tests (generic + custom "no negative ridership"); `dbt build` green.
-- [ ] Deploy Dagster on the Oracle VM as `transitpulse-dagster.service` (systemd), key file gitignored.
+- [~] Deploy Dagster on the Oracle VM as `transitpulse-dagster.service` (systemd), key file gitignored. *(files + runbook ready: `deploy/oracle/` (daemon + web units, `bootstrap.sh`), `docs/ORACLE_VM.md`; not deployed yet)*
 - **Done when:** a scheduled Dagster run goes raw → marts end to end on the VM, and every dbt test passes.
 
 ### M2: KPIs + BI (weeks 4–5) · #8 #9
@@ -120,10 +120,11 @@ this section is the checklist.
 - **Done when:** the same KPI shows the same value in all three places for a chosen week.
 
 ### M3: forecasting (week 6) · #7
-- [ ] `ml/forecast/`: features (lags, rolling, calendar, holidays), LightGBM, seasonal-naive baseline.
-- [ ] Walk-forward validation; MAE/RMSE with bootstrap CIs → `ml.forecast_runs`.
-- [ ] Weekly Dagster asset writes `marts.forecast_station_daily` (14-day horizon, with p10/p90 intervals).
+- [x] `ml/forecast/`: features (lags, rolling, calendar, holidays), LightGBM, seasonal-naive baseline.
+- [x] Walk-forward validation; MAE/RMSE with bootstrap CIs → `ml.forecast_runs`. *(6 folds, paired bootstrap over stations, B = 1000)*
+- [~] Weekly Dagster asset writes `marts.forecast_station_daily` (14-day horizon, with p10/p90 intervals). *(asset + Monday schedule done and run locally; the BigQuery write path isn't run yet)*
 - **Done when:** LightGBM beats the baseline with a CI that excludes zero (or you've written down honestly why not).
+  *Met locally: MAE 364.9 vs 548.5, improvement 183.7 [139.5, 234.1]. Caveat: the p10–p90 range covers 48%, not 80%.*
 
 ### M4: causal analysis (week 7) · #21 #7
 - [ ] Confirm the eBART opening date and pick treated/control stations; write them down *before* looking at results.
@@ -150,7 +151,7 @@ this section is the checklist.
 ### M7: ship (weeks 11–12) · #1 #13 #3 #18
 - [ ] Dockerfile (multi-stage, non-root); serves `api/` **and** `web/` (static mount with long cache headers on hashed assets).
 - [ ] Terraform: Cloud Run (`min=0`, `max=2`), Workload Identity Federation for GitHub.
-- [~] `ci.yml` on PR: ruff, pytest, Playwright (F7), `dbt build --target ci`, `terraform plan`. *(`.github/workflows/ci.yml`: ruff, pytest, Spark, node tests, Playwright, `dbt parse`, terraform validate; `dbt build --target ci` + `terraform plan` wait for GCP)*
+- [~] `ci.yml` on PR: ruff, pytest, Playwright (F7), `dbt build --target ci`, `terraform plan`. *(`.github/workflows/ci.yml`: ruff, `dbt parse`, pytest (incl. a DuckDB `dbt build` on a generated fixture), shellcheck, Spark, node tests, Playwright, terraform validate; `dbt build --target ci` + `terraform plan` not yet)*
 - [ ] `deploy.yml` on `main`: build → push → `terraform apply` → deploy.
 - [ ] Locust: forecast + agent (LLM mocked) at 1/10/25 users; p50/p95/p99 + cold start → README.
 - [ ] README: architecture diagram, `make up`, results, cost, limitations, screenshots of the site at phone + desktop width.
@@ -246,19 +247,19 @@ Build exactly to `DESIGN.md §6` (base layer, train glyph, controls, tooltips). 
   and the map looks right at 320, 390, 768, 1024, 1440 and 2560 px wide, in portrait and landscape.
 
 ### F4: KPI tiles + station panel (weeks 4–5, after M2)
-- [ ] API: `GET /api/kpis` (from `mart_kpis_daily`), `GET /api/stations/{code}/summary`. Cache in memory 1 h (data is daily).
-- [ ] KPI tiles: grid with `repeat(auto-fit, minmax(min(100%, 220px), 1fr))`, so 1 column on phones, up to 4 on desktop, with no media queries.
-- [ ] Each tile: value, delta vs. 2019, one-line definition (from `METRICS.md`) behind an ⓘ toggle.
-- [ ] Trend charts: inline SVG with `viewBox` (no chart library needed; or Vega-Lite, which the agent's chart tool already uses).
-      Re-layout on container resize; fewer x-axis ticks below 600 px.
-- [ ] Skeleton loaders while loading; an error tile with "Retry" if the API fails; never a blank box.
-- **Done when:** tiles show the same numbers as Looker Studio for the same date.
+- [x] API: `GET /api/kpis` (from `mart_kpis_daily`), `GET /api/stations/{code}/summary`. Cache in memory 1 h (data is daily). *(plus `/api/trends/ridership`, `/api/trends/bikes-vs-trains`; DuckDB or BigQuery via `TP_WAREHOUSE`)*
+- [x] KPI tiles: grid with `repeat(auto-fit, minmax(min(100%, 220px), 1fr))`, so 1 column on phones, up to 4 on desktop, with no media queries.
+- [x] Each tile: value, delta vs. 2019, one-line definition (from `METRICS.md`) behind an ⓘ toggle.
+- [~] Trend charts: inline SVG with `viewBox` (no chart library needed; or Vega-Lite, which the agent's chart tool already uses).
+      Re-layout on container resize; fewer x-axis ticks below 600 px. *("Ridership since 2019" and "Bikes and trains" done; hour × weekday heatmap not started)*
+- [x] Skeleton loaders while loading; an error tile with "Retry" if the API fails; never a blank box.
+- **Done when:** tiles show the same numbers as Looker Studio for the same date. *(tiles = mart values, checked by `tests/local`; Looker Studio doesn't exist yet)*
 
 ### F5: forecast explorer (week 6)
-- [ ] `GET /api/forecast/{station}` → 14 days with p10/p50/p90 + last 28 days of actuals.
-- [ ] Station picker: searchable combobox (type "mac" → MacArthur), plus chips for 5 popular stations. Clicking a station on the map also selects it.
-- [ ] Chart: actuals line + forecast line + shaded interval; plain-English caption ("Expect about 12,400 entries next Tuesday, likely between 11,100 and 13,600").
-- **Done when:** works with keyboard only and on a phone in portrait.
+- [x] `GET /api/forecast/{station}` → 14 days with p10/p50/p90 + last 28 days of actuals.
+- [~] Station picker: searchable combobox (type "mac" → MacArthur), plus chips for 5 popular stations. Clicking a station on the map also selects it. *(combobox + chips done; map click → forecast not done)*
+- [x] Chart: actuals line + forecast line + shaded interval; plain-English caption ("Expect about 12,400 entries next Tuesday, likely between 11,100 and 13,600").
+- **Done when:** works with keyboard only and on a phone in portrait. *(met: Playwright `forecast:` tests)*
 
 ### F6: Ask TransitPulse (weeks 8–9, after M5)
 - [x] The hero Ask card: one input row ("Ask about BART or Bay Wheels ridership…"), 4 suggestion chips that fill and submit
@@ -273,7 +274,7 @@ Build exactly to `DESIGN.md §6` (base layer, train glyph, controls, tooltips). 
 - **Done when:** the 10 suggested/sample questions all return a correct answer on the deployed site, on a phone.
 
 ### F7: polish + QA (weeks 11–12, with M7)
-- [~] **Playwright** tests (`tests/web/`) at 320, 390, 768, 1024, 1440, 1920 px: *(17 tests in `tests/web/site.spec.js` cover all of these except screenshot snapshots)*
+- [~] **Playwright** tests (`tests/web/`) at 320, 390, 768, 1024, 1440, 1920 px: *(27 tests in `site.spec.js` + `data.spec.js` (API mocked with fixtures) cover all of these except screenshot snapshots)*
   - `document.documentElement.scrollWidth <= innerWidth` (no horizontal scroll) on every viewport
   - map canvas size equals container size × DPR after a resize
   - nav overlay opens/closes; Ask flow with the API mocked

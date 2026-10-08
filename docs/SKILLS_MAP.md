@@ -4,27 +4,30 @@ Where each skill from [`TRANSITPULSE_PLAN.md`](TRANSITPULSE_PLAN.md) (§2 gap ta
 what it does in this project, and how it works. Links point at exact lines.
 
 **Status:** ✅ implemented and verified · 🟡 partly implemented (what's missing is stated) · ⬜ not started.
-Verified = it ran on real data or passed tests on 2026-10-07 (see [`CURRENT_STATE.md`](CURRENT_STATE.md)).
+Verified = it ran on real data or passed tests on 2026-10-08 (see [`CURRENT_STATE.md`](CURRENT_STATE.md)).
 
 | # | Skill (gap) | Status | Main location |
 |---|---|---|---|
 | 1 | Cloud + Terraform | 🟡 | [`infra/terraform/`](../infra/terraform/) |
 | 2 | Advanced SQL | 🟡 | [`dbt/transitpulse/models/marts/`](../dbt/transitpulse/models/marts/) |
 | 3 | Load and latency testing | ⬜ | — |
-| 4 | Larger datasets | 🟡 | [`pipeline/spark/clean_bart_od.py`](../pipeline/spark/clean_bart_od.py) |
+| 4 | Larger datasets | 🟡 | [`pipeline/spark/clean_bart_od.py`](../pipeline/spark/clean_bart_od.py), [`pipeline/baywheels.py`](../pipeline/baywheels.py) |
 | 5 | Monitoring (LLM tracing) | ⬜ | — |
 | 6 | A/B testing | ⬜ | — |
-| 7 | Formal statistics | ⬜ | — |
+| 7 | Formal statistics | 🟡 | [`ml/forecast/evaluate.py`](../ml/forecast/evaluate.py) |
 | 8 | Business metrics | ✅ | [`docs/METRICS.md`](METRICS.md), [`mart_kpis_daily.sql`](../dbt/transitpulse/models/marts/mart_kpis_daily.sql) |
 | 9 | BI dashboards | ⬜ | — |
 | 10 | Warehouse + dbt + dimensional modeling | ✅ (local) / 🟡 (BigQuery) | [`dbt/transitpulse/`](../dbt/transitpulse/) |
-| 11 | Orchestration | ✅ (local) / 🟡 (VM) | [`pipeline/definitions.py`](../pipeline/definitions.py) |
+| 11 | Orchestration | ✅ (local) / 🟡 (VM: files ready, not deployed) | [`pipeline/definitions.py`](../pipeline/definitions.py), [`deploy/oracle/`](../deploy/oracle/) |
 | 13 | CI/CD | 🟡 | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) |
 | 16 | Fine-tuning | ⬜ | — |
 | 17 | Spark / PySpark | ✅ | [`pipeline/spark/clean_bart_od.py`](../pipeline/spark/clean_bart_od.py) |
 | 18 | Reproducibility | 🟡 | [`tasks.py`](../tasks.py), [`uv.lock`](../uv.lock), [`pipeline/spark/Dockerfile`](../pipeline/spark/Dockerfile) |
 | 19 | Agents and tool use | ⬜ | (API contract + UI only: [`api/routes/ask.py`](../api/routes/ask.py), [`web/js/ask.js`](../web/js/ask.js)) |
 | 21 | Causal inference | ⬜ | — |
+| — | Forecasting (LightGBM, walk-forward, quantiles) | ✅ (local) | [`ml/forecast/`](../ml/forecast/) |
+| — | Bay Wheels ingest + cleaning (second data source) | ✅ (local) / 🟡 (BigQuery) | [`pipeline/baywheels.py`](../pipeline/baywheels.py) |
+| — | Data API over the warehouse (DuckDB / BigQuery) | ✅ | [`api/warehouse.py`](../api/warehouse.py), [`api/routes/data.py`](../api/routes/data.py) |
 | — | Responsive, accessible web front end (added for the site) | ✅ | [`web/`](../web/) |
 
 ---
@@ -70,7 +73,9 @@ de-duplicated, holiday-tagged Parquet partitioned by year/month. Verified on 201
 | Tests | `schema.yml` per layer; [`tests/generic/non_negative.sql`](../dbt/transitpulse/tests/generic/non_negative.sql), [`unique_combination.sql`](../dbt/transitpulse/tests/generic/unique_combination.sql) | `not_null`, `unique`, `relationships` (facts → dims), `accepted_values` (hour 0–23, weekday 1–7) and two custom generic tests (no negative ridership, composite-key uniqueness). |
 | Cost cap | [`profiles.yml:22`](../dbt/transitpulse/profiles.yml#L22) | `maximum_bytes_billed` (2 GB dev, 500 MB CI) makes BigQuery refuse any query that would scan more. |
 
-**Missing:** running against BigQuery (`dev`/`ci` targets), and Bay Wheels models.
+**Bay Wheels models (local):** [`stg_baywheels_trips.sql`](../dbt/transitpulse/models/staging/stg_baywheels_trips.sql) → [`fct_bike_trips_daily.sql`](../dbt/transitpulse/models/core/fct_bike_trips_daily.sql) → [`mart_bikes_vs_trains.sql`](../dbt/transitpulse/models/marts/mart_bikes_vs_trains.sql), which is a **full outer join** of the two monthly series ([:32](../dbt/transitpulse/models/marts/mart_bikes_vs_trains.sql#L32)), so a month with only one source still appears, plus an index vs the same month of 2019 ([:35](../dbt/transitpulse/models/marts/mart_bikes_vs_trains.sql#L35)). [`mart_ridership_monthly.sql`](../dbt/transitpulse/models/marts/mart_ridership_monthly.sql) feeds the site's chart. Local build: 83/83 nodes (68 tests). [`tests/test_dbt_fixture.py`](../tests/test_dbt_fixture.py) runs `dbt build` on a generated dataset in CI.
+
+**Missing:** the `ci` target, and the Bay Wheels models on BigQuery (the BART models are built there).
 
 ---
 
@@ -121,17 +126,21 @@ partitions, keeps monthly schedules, and records metadata (row counts, drops, fi
 | Partitions + backfills | [`ingest.py:27-28`](../pipeline/assets/ingest.py#L27) | Static yearly partitions 2018 → now; historical years are a UI backfill and the current year is re-run monthly. |
 | Idempotent downloads | [`ingest.py:31`](../pipeline/assets/ingest.py#L31) | SHA-256 before/after; metadata records whether the file changed. |
 | dbt integration | [`pipeline/assets/dbt.py:23-38`](../pipeline/assets/dbt.py#L23) | `@dbt_assets` turns every model/snapshot/test into an asset; the translator maps dbt sources onto the ingest assets so lineage is one graph. |
-| Schedules | [`definitions.py:42`, `:48`](../pipeline/definitions.py#L42) | 6th of each month 06:00 Pacific: ingest the current year; 08:00: stations, map data, `dbt build`. |
+| Schedules | [`definitions.py:63`, `:69`, `:75`, `:81`](../pipeline/definitions.py#L63) | Pacific time: BART ingest on the 6th at 06:00, Bay Wheels on the 7th at 06:30, models on the 6th at 08:00, forecast every Monday at 09:00. |
+| Bay Wheels assets | [`pipeline/assets/baywheels.py:26`, `:55`, `:84`](../pipeline/assets/baywheels.py#L26) | `baywheels_files[year]` → `baywheels_parquet[year]` → `raw/baywheels_trips[year]`; the dbt source maps onto the last one, so lineage runs through to the marts. |
+| ML asset | [`pipeline/assets/forecast.py:21`](../pipeline/assets/forecast.py#L21) | `forecast_station_daily` (group `ml`) depends on `marts/fct_station_daily` and records MAE, the CI and coverage as metadata. |
+| VM deployment (files) | [`deploy/oracle/`](../deploy/oracle/), [`docs/ORACLE_VM.md`](ORACLE_VM.md) | systemd daemon + web units (non-root, venv on `PATH`, `MemoryMax`, `Nice`, UI on 127.0.0.1 only); an idempotent [`bootstrap.sh`](../deploy/oracle/bootstrap.sh) (apt/dnf, Java 17, `uv sync --frozen`, `dbt parse`, key-file checks at [:123](../deploy/oracle/bootstrap.sh#L123)). |
 | Swappable resources | [`pipeline/resources.py`](../pipeline/resources.py) | `Storage` (`local` files vs `gcp` GCS+BigQuery) and `SparkRunner` (in-process vs Docker), chosen by environment variables. |
 
-**Missing:** deployment on the Oracle VM (systemd unit), and the GCP mode exercised for real.
+**Missing:** actually running it on the Oracle VM (the files are ready, not installed), and the Bay Wheels and forecast steps in GCP mode.
 
 ---
 
 ## 🟡 #4 Larger datasets
 
-**What it does now:** 19.3M rows (2019 + 2025) processed with Spark, partitioned Parquet, and BigQuery partitioning
-and clustering configured. **Missing:** the full 2018–2025 backfill (~70M rows) and Bay Wheels.
+**What it does now:** BART 2018–2025 (67.8M rows, 4.2 GB) cleaned with Spark and loaded into partitioned,
+clustered BigQuery tables. Bay Wheels 2019 + 2025 (6.9M trips from 24 irregularly named monthly zips) cleaned with
+DuckDB in 56 s into partitioned Parquet. **Missing:** Bay Wheels for every year and in BigQuery.
 
 ---
 
@@ -155,7 +164,7 @@ and clustering configured. **Missing:** the full 2018–2025 backfill (~70M rows
 ## 🟡 #13 CI/CD
 
 **What it does:** [`ci.yml`](../.github/workflows/ci.yml) runs on every PR in four jobs:
-1. Python: ruff, pytest, `dbt parse`
+1. Python: ruff, `dbt parse`, pytest (incl. a DuckDB `dbt build` on a generated fixture, forecast and Bay Wheels tests), shellcheck
 2. Spark tests on Java 17 ([:30](../.github/workflows/ci.yml#L30))
 3. Web: node schedule tests + Playwright ([:42](../.github/workflows/ci.yml#L42))
 4. `terraform fmt/validate` ([:58](../.github/workflows/ci.yml#L58))
@@ -191,11 +200,88 @@ scheduled BART train drawn as small pills that scale with the map.
 | Schedule interpolation | [`schedule.js:42` `tripPosition`, `:81` `trainsAt`](../web/js/map/schedule.js#L42) | Picks the services running on a Pacific date (holiday exceptions included) and interpolates each trip between departure and arrival; after-midnight trips belong to the previous service day. |
 | Parallel lanes | [`geometry.js:49` `offsetPolyline`](../web/js/map/geometry.js#L49) | Offsets each line sideways by lane index, with a consistent west/south side and a miter limit. |
 | Small trains that scale | [`trains.js:6` `trainSize`](../web/js/map/trains.js#L6) | Length `clamp(6, 1.2% of map width, 14)` px; drawn on a DPR-sized canvas so they're sharp. |
-| Resize handling | [`map.js:166`, `:526`](../web/js/map/map.js#L166) | `ResizeObserver` → re-fit, re-render, resize canvas × `devicePixelRatio`. |
+| Resize handling | [`map.js:167`, `:558`](../web/js/map/map.js#L167) | `ResizeObserver` → re-fit, re-render, resize canvas × `devicePixelRatio`. |
 | Label collision avoidance | [`network.js:149` `placeLabels`](../web/js/map/network.js#L149) | Greedy placement (hubs first), skipping labels that would overlap labels, stations or track. |
-| Battery/perf | [`map.js:527`](../web/js/map/map.js#L527) | Pauses off-screen/hidden; redraw rate follows replay speed. |
-| Accessibility | [`index.html:193`](../web/index.html#L193), [`map.js:77`](../web/js/map/map.js#L77) | Live-region summary, List view, reduced motion, focus-trapped menu, skip link, 44 px touch targets. |
-| Tests | [`tests/web/site.spec.js`](../tests/web/site.spec.js), [`schedule.test.mjs`](../tests/web/schedule.test.mjs) | 17 Playwright + 5 node tests. |
+| Battery/perf | [`map.js:559`](../web/js/map/map.js#L559) | Pauses off-screen/hidden; redraw rate follows replay speed. |
+| Accessibility | [`index.html:194`](../web/index.html#L194), [`map.js:78`](../web/js/map/map.js#L78) | Live-region summary, List view, reduced motion, focus-trapped menu, skip link, 44 px touch targets. |
+| Chart helpers | [`chart.js:22` `niceTicks`, `:56` `linePath`, `:80` `bandPath`](../web/js/chart.js#L22) | Pure functions (node-tested): nice 1/2/2.5/5 ticks, fewer below 600 px, and paths that **break at missing months** instead of bridging gaps. |
+| No layout shift | [`charts.css:20-45`](../web/css/charts.css#L20), [`index.html:206`](../web/index.html#L206) | Skeleton heights are the same `font-size × line-height` calcs as the loaded text, and charts have fixed aspect ratios; Playwright checks the Trends height changes by ≤ 2 px. |
+| Trends band | [`trends.js:184` `initTrends`](../web/js/trends.js#L184) | KPI tiles with ⓘ definitions and ink ▲/▼ deltas, the ridership chart and the bikes-vs-trains chart; 503 / error + Retry / empty states; the bike chart fails on its own. |
+| ARIA combobox | [`forecast.js:25` `matchStations`, `:123` `initForecast`](../web/js/forecast.js#L25) | Focus stays in the input; `aria-activedescendant` tracks the option; ↑/↓, Enter, Esc; ranked matches by name or code. |
+| Tests | [`tests/web/site.spec.js`](../tests/web/site.spec.js), [`data.spec.js`](../tests/web/data.spec.js), [`chart.test.mjs`](../tests/web/chart.test.mjs), [`forecast.test.mjs`](../tests/web/forecast.test.mjs) | 27 Playwright (data endpoints mocked with JSON fixtures) + 13 node tests. |
+
+---
+
+## ✅ Forecasting (local)
+
+**What it does:** forecasts daily entries at every BART station for the 14 days after the latest data, with an
+80% range, and checks it honestly against a seasonal-naive baseline. Latest local run: MAE 364.9 vs 548.5,
+improvement 183.7 [139.5, 234.1].
+
+| Concept | Where | How |
+|---|---|---|
+| Direct multi-horizon rows | [`features.py:51` `make_rows`](../ml/forecast/features.py#L51) | One row per (station, origin t, horizon h); one global model learns all 14 horizons, with `horizon` as a feature. |
+| No leakage | [`features.py:69`](../ml/forecast/features.py#L69), [`:102`](../ml/forecast/features.py#L102) | Every feature comes from data at or before t (rolling windows at t, the same weekday at t−k with k ≤ 6). A test wrecks all data after t and checks the features don't change. |
+| Gaps are never bridged | [`features.py:137`](../ml/forecast/features.py#L137) | Calendar-based windows: a missing day makes the 28-day stats NaN and the row is dropped. |
+| Scale-free target | [`model.py:41` `fit`](../ml/forecast/model.py#L41) | Targets are divided by the station's 28-day mean, so busy and quiet stations share one model; predictions are multiplied back. |
+| Quantile regression | [`model.py:48`](../ml/forecast/model.py#L48), [`:63`](../ml/forecast/model.py#L63) | LightGBM `objective="quantile"` at α = 0.1/0.5/0.9; outputs are sorted and clipped at 0 so p10 ≤ p50 ≤ p90. |
+| Baseline | [`model.py:23` `seasonal_naive`](../ml/forecast/model.py#L23) | The last observed value on the target's weekday at or before the origin. |
+| Walk-forward validation | [`evaluate.py:16`, `:22`, `:30`](../ml/forecast/evaluate.py#L16) | 6 origins 14 days apart; each fold trains only on targets ≤ its origin (730-day window) and is scored on the next 14 days. |
+| Run log + outputs | [`run.py:27` `run_forecast`](../ml/forecast/run.py#L27), [`io.py:35`](../ml/forecast/io.py#L35) | `marts.forecast_station_daily` is replaced and `ml.forecast_runs` appended (metrics, CIs, per-fold JSON, params); DuckDB locally, BigQuery in gcp mode. |
+| Tests | [`tests/test_forecast.py`](../tests/test_forecast.py) | Leakage, baseline, fold boundaries, bootstrap determinism, quantile order, and an end-to-end run into a temp DuckDB. |
+
+**Honest limits:** the p10–p90 range held 48% of days in back-testing (nominal 80%), and the training data is one
+contiguous year (2025), so holidays like New Year's Day are poorly forecast.
+
+---
+
+## 🟡 #7 Formal statistics
+
+**What it does now:** confidence intervals for model comparison. **Missing:** McNemar and power analysis (M5) and
+clustered standard errors (M4).
+
+| Technique | Where | How |
+|---|---|---|
+| Paired bootstrap over stations | [`evaluate.py:73` `paired_bootstrap`](../ml/forecast/evaluate.py#L73) | Resamples stations with replacement (B = 1000, fixed seed) and recomputes MAE/RMSE for both models on the **same** resample, so the CI of the difference accounts for the pairing. Stations are the resampling unit because errors within a station are correlated across days. |
+| Vectorised resampling | [`evaluate.py:88-91`](../ml/forecast/evaluate.py#L88) | Per-station error sums, then a (B × stations) count matrix times the sums: 1000 resamples in milliseconds. |
+| Percentile CIs | [`evaluate.py:112`](../ml/forecast/evaluate.py#L112) | 2.5th/97.5th percentiles for every metric, the MAE difference and the interval coverage. |
+| Walk-forward (time-series CV) | [`evaluate.py:22` `fold_split`](../ml/forecast/evaluate.py#L22) | Out-of-time evaluation only; no random splits. |
+
+---
+
+## ✅ Bay Wheels ingest + cleaning (local) · 🟡 BigQuery
+
+**What it does:** finds, downloads and cleans Lyft's monthly Bay Wheels files (two schemas, irregular names) into
+one Parquet dataset: 6.9M trips for 2019 + 2025, with every dropped row counted by reason.
+
+| Concept | Where | How |
+|---|---|---|
+| Discovery, not templates | [`baywheels.py:91` `parse_listing`, `:106` `monthly_files`](../pipeline/baywheels.py#L91) | Parses the S3 ListObjects XML (paginated) and keys files by their `YYYYMM-` prefix, so typos (`baywheeels`), `.zip` vs `.csv.zip`, `lyftbikes` and missing months just work. |
+| Idempotent downloads | [`baywheels.py:137` `download`](../pipeline/baywheels.py#L137) | Skips files whose ETag + size match the manifest; records sha256. |
+| Untrusted archives | [`baywheels.py:169` `extract_csv`](../pipeline/baywheels.py#L169) | Extracts exactly one CSV by basename (no path traversal), skipping `__MACOSX/`. |
+| Explicit schema + rejects | [`baywheels.py:260`](../pipeline/baywheels.py#L260) | DuckDB `read_csv` with all-VARCHAR columns from the (validated) header and `store_rejects`, so malformed lines are counted, not fatal. |
+| Schema normalisation + drop reasons | [`baywheels.py:269`](../pipeline/baywheels.py#L269), [`:283`](../pipeline/baywheels.py#L283) | Legacy and Lyft rows map to one schema; a `CASE` gives each bad row one reason; `row_number()` de-duplicates on `ride_id`. |
+| Partitioned output | [`baywheels.py:314`](../pipeline/baywheels.py#L314) | `COPY … TO` Parquet (zstd) per `year=/month=`, replacing only the months processed. |
+| Tests | [`tests/test_baywheels.py`](../tests/test_baywheels.py) | Listing with irregular names + pagination, both schemas, every drop reason counted once. |
+
+**Why DuckDB, not Spark:** 2–5M rows a year fits one machine, and DuckDB runs natively on Windows, CI and the ARM
+VM without a JVM. **Missing:** years other than 2019/2025 and the BigQuery load (written, not run).
+
+---
+
+## ✅ Data API over the warehouse
+
+**What it does:** serves the site's numbers from the dbt marts, from either the local DuckDB file or BigQuery,
+with the same SQL.
+
+| Concept | Where | How |
+|---|---|---|
+| One interface, two backends | [`warehouse.py:32` `Warehouse`, `:41` DuckDB, `:81` BigQuery](../api/warehouse.py#L32) | `query(sql, params)` and `table(name)`. Endpoint SQL is dialect-neutral; anything dialect-specific lives in dbt. |
+| Short-lived DuckDB connections | [`warehouse.py:55`](../api/warehouse.py#L55) | Read-only, opened and closed per query, so the API doesn't hold the file lock that blocks dbt on Windows. |
+| Typed BigQuery parameters + cost cap | [`warehouse.py:107-110`](../api/warehouse.py#L107) | `ScalarQueryParameter` with INT64/DATE/… types (BigQuery won't compare INT64 to strings) and a 100 MB `maximum_bytes_billed`. |
+| TTL cache | [`cache.py:18`](../api/cache.py#L18) | `time.monotonic` expiry per warehouse + endpoint + arguments; failures aren't stored. |
+| Endpoints | [`data.py:74` `_kpis`, `:250` summary, `:294` forecast](../api/routes/data.py#L74) | KPI windows computed by date (not the gap-spanning rolling column); 503 without a warehouse; 404 codes for unknown stations or missing forecasts. |
+| Tests | [`tests/test_api_data.py`](../tests/test_api_data.py), [`tests/local/test_local_warehouse.py`](../tests/local/test_local_warehouse.py) | A fixture DuckDB built in `tmp_path`, a fake BigQuery client, and checks that the API equals direct mart queries on the real file. |
 
 ---
 
@@ -205,9 +291,7 @@ scheduled BART train drawn as small pills that scale with the map.
 | 3 | Load and latency testing (Locust) | M7 | `tests/load/` |
 | 5 | LLM tracing (Langfuse) | M5 | `api/agent/` |
 | 6 | A/B testing (power analysis, offline A/B) | M5 | `eval/`, `docs/AB_TEST.md` |
-| 7 | Formal statistics (bootstrap CIs, McNemar, clustered SEs) | M3–M5 | `ml/forecast/`, `analysis/causal/`, `eval/` |
 | 9 | BI dashboards (Looker Studio, Power BI + DAX) | M2 | `bi/` |
 | 16 | Fine-tuning (QLoRA) | M6 | `ml/finetune/` |
 | 19 | Agents and tool use (LangGraph text-to-SQL) | M5 | `api/agent/` (the API contract and the streaming UI already exist) |
 | 21 | Causal inference (difference-in-differences) | M4 | `analysis/causal/`, `docs/FINDINGS.md` |
-| — | Forecasting (LightGBM, walk-forward) | M3 | `ml/forecast/` |

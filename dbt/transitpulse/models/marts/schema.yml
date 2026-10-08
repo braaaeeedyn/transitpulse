@@ -33,3 +33,27 @@ models:
         data_tests: [not_null, unique]
       - name: total_entries
         data_tests: [not_null, non_negative]
+
+  - name: mart_ridership_monthly
+    description: Monthly averages of mart_kpis_daily (daily entries, service-weekday recovery and peak-hour share).
+    columns:
+      - name: month_start
+        data_tests: [not_null, unique]
+      - name: days
+        data_tests: [not_null, non_negative]
+      - name: avg_daily_entries
+        data_tests: [not_null, non_negative]
+      - name: avg_service_weekday_recovery
+        data_tests: [non_negative]
+
+  - name: mart_bikes_vs_trains
+    description: >
+      Monthly BART entries and Bay Wheels trips, average per day, and each as an index vs the same month of 2019
+      (= 100). Full outer join, so a month with only one of the two sources still appears.
+    columns:
+      - name: month_start
+        data_tests: [not_null, unique]
+      - name: bart_entries
+        data_tests: [non_negative]
+      - name: bike_trips
+        data_tests: [non_negative]

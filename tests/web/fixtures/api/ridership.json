@@ -1,0 +1,150 @@
+{
+  "data_through": "2025-12-31",
+  "rows": [
+    {
+      "month_start": "2019-01-01",
+      "days": 31,
+      "avg_daily_entries": 311122.3,
+      "avg_service_weekday_recovery": 1.023
+    },
+    {
+      "month_start": "2019-02-01",
+      "days": 28,
+      "avg_daily_entries": 321650.6,
+      "avg_service_weekday_recovery": 0.9988
+    },
+    {
+      "month_start": "2019-03-01",
+      "days": 31,
+      "avg_daily_entries": 322314.4,
+      "avg_service_weekday_recovery": 0.9978
+    },
+    {
+      "month_start": "2019-04-01",
+      "days": 30,
+      "avg_daily_entries": 343754.1,
+      "avg_service_weekday_recovery": 1.0012
+    },
+    {
+      "month_start": "2019-05-01",
+      "days": 31,
+      "avg_daily_entries": 333123.7,
+      "avg_service_weekday_recovery": 0.9988
+    },
+    {
+      "month_start": "2019-06-01",
+      "days": 30,
+      "avg_daily_entries": 331088.1,
+      "avg_service_weekday_recovery": 1.0
+    },
+    {
+      "month_start": "2019-07-01",
+      "days": 31,
+      "avg_daily_entries": 326906.4,
+      "avg_service_weekday_recovery": 1.0014
+    },
+    {
+      "month_start": "2019-08-01",
+      "days": 31,
+      "avg_daily_entries": 336286.0,
+      "avg_service_weekday_recovery": 0.9986
+    },
+    {
+      "month_start": "2019-09-01",
+      "days": 30,
+      "avg_daily_entries": 333835.3,
+      "avg_service_weekday_recovery": 0.9977
+    },
+    {
+      "month_start": "2019-10-01",
+      "days": 31,
+      "avg_daily_entries": 347953.5,
+      "avg_service_weekday_recovery": 1.0043
+    },
+    {
+      "month_start": "2019-11-01",
+      "days": 30,
+      "avg_daily_entries": 307284.2,
+      "avg_service_weekday_recovery": 0.9975
+    },
+    {
+      "month_start": "2019-12-01",
+      "days": 31,
+      "avg_daily_entries": 284375.6,
+      "avg_service_weekday_recovery": 0.9803
+    },
+    {
+      "month_start": "2025-01-01",
+      "days": 31,
+      "avg_daily_entries": 137457.0,
+      "avg_service_weekday_recovery": 0.4194
+    },
+    {
+      "month_start": "2025-02-01",
+      "days": 28,
+      "avg_daily_entries": 147501.1,
+      "avg_service_weekday_recovery": 0.4285
+    },
+    {
+      "month_start": "2025-03-01",
+      "days": 31,
+      "avg_daily_entries": 146156.4,
+      "avg_service_weekday_recovery": 0.4238
+    },
+    {
+      "month_start": "2025-04-01",
+      "days": 30,
+      "avg_daily_entries": 161554.8,
+      "avg_service_weekday_recovery": 0.4439
+    },
+    {
+      "month_start": "2025-05-01",
+      "days": 31,
+      "avg_daily_entries": 154046.2,
+      "avg_service_weekday_recovery": 0.4389
+    },
+    {
+      "month_start": "2025-06-01",
+      "days": 30,
+      "avg_daily_entries": 159215.4,
+      "avg_service_weekday_recovery": 0.4459
+    },
+    {
+      "month_start": "2025-07-01",
+      "days": 31,
+      "avg_daily_entries": 155580.7,
+      "avg_service_weekday_recovery": 0.4445
+    },
+    {
+      "month_start": "2025-08-01",
+      "days": 31,
+      "avg_daily_entries": 158348.3,
+      "avg_service_weekday_recovery": 0.4494
+    },
+    {
+      "month_start": "2025-09-01",
+      "days": 30,
+      "avg_daily_entries": 157477.1,
+      "avg_service_weekday_recovery": 0.4267
+    },
+    {
+      "month_start": "2025-10-01",
+      "days": 31,
+      "avg_daily_entries": 159055.9,
+      "avg_service_weekday_recovery": 0.4383
+    },
+    {
+      "month_start": "2025-11-01",
+      "days": 30,
+      "avg_daily_entries": 134366.7,
+      "avg_service_weekday_recovery": 0.416
+    },
+    {
+      "month_start": "2025-12-01",
+      "days": 31,
+      "avg_daily_entries": 121578.3,
+      "avg_service_weekday_recovery": 0.3897
+    }
+  ],
+  "source": "BART hourly origin-destination ridership reports."
+}

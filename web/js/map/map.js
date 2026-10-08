@@ -2,6 +2,7 @@
 // Owns the clock (live or replay), sizing, the animation loop, pointer interaction, the list view and the
 // screen-reader summary. Rendering lives in network.js (SVG) and trains.js (canvas).
 
+import { formatDate, formatNumber, formatPercent } from "../chart.js";
 import { formatClock, formatDay, pacificParts, shiftDay } from "../util/time.js";
 import { makeView } from "./geometry.js";
 import { renderNetwork, setActiveStation } from "./network.js";
@@ -302,7 +303,38 @@ export async function initMap(root) {
     const s = network.stations[i];
     const lines = s.lines.map((l) => `${swatch(l)}`).join("");
     const names = s.lines.map((l) => lineName[l].replace(" line", "")).join(", ");
-    return `<div class="tooltip__title">${s.name}</div><div class="tooltip__title">${lines}<span class="tooltip__muted">${names}</span></div>`;
+    const sum = stationSummary(s.code);
+    let entries = "";
+    if (sum) {
+      const rec = sum.recovery_ratio === null ? "" : ` (${formatPercent(sum.recovery_ratio)} of 2019)`;
+      entries = `<div data-station-entries>Entries on ${formatDate(sum.data_through)}: ${formatNumber(sum.entries)}${rec}</div>`;
+    }
+    return `<div class="tooltip__title">${s.name}</div><div class="tooltip__title">${lines}<span class="tooltip__muted">${names}</span></div>${entries}`;
+  }
+
+  // Ridership numbers for the station tooltip (GET /api/stations/{code}/summary), fetched once per station
+  // after the first hover/tap. While the warehouse isn't connected (503) or a request fails, the tooltip simply
+  // has no numbers line.
+  const summaries = new Map(); // code → summary | null (none available) | "pending"
+  let summariesOff = false;
+
+  function stationSummary(code) {
+    const have = summaries.get(code);
+    if (have !== undefined) return have === "pending" ? null : have;
+    if (summariesOff) return null;
+    summaries.set(code, "pending");
+    fetch(`api/stations/${encodeURIComponent(code)}/summary`, { headers: { Accept: "application/json" } })
+      .then(async (res) => {
+        if (res.status === 503) summariesOff = true;
+        const body = res.ok ? await res.json() : null;
+        summaries.set(code, body && Number.isFinite(body.entries) ? body : null);
+      })
+      .catch(() => summaries.set(code, null))
+      .finally(() => {
+        const sel = state.selected;
+        if (sel?.type === "station" && network.stations[sel.index].code === code && geom) updateTooltip(now());
+      });
+    return null;
   }
 
   function placeTooltip(x, y) {

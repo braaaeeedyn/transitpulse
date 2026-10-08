@@ -1,0 +1,309 @@
+/* Trends band and chart cards (DESIGN.md §7 stat tile, chart card, skeletons).
+   Every async region reserves its final size: skeleton heights are the same line-height calcs the loaded text uses,
+   and charts have a fixed aspect ratio, so nothing shifts when data arrives. */
+
+.trends {
+  display: grid;
+  gap: var(--space-grid);
+}
+
+.trends__through,
+.trends__source {
+  min-height: calc(var(--type-caption) * var(--lh-caption));
+}
+
+.trends__tiles {
+  display: grid;
+  gap: var(--space-md);
+}
+
+/* --- skeleton line sizes (match the text they stand in for) ------------- */
+.skeleton--caption,
+.skeleton--label,
+.skeleton--stat,
+.skeleton--body {
+  display: block;
+  border-radius: var(--radius-sm);
+}
+
+.skeleton--caption {
+  height: calc(var(--type-caption) * var(--lh-caption));
+}
+
+.skeleton--label {
+  width: 60%;
+  height: calc(var(--type-body-sm) * var(--lh-body-sm));
+}
+
+.skeleton--stat {
+  width: 45%;
+  height: calc(var(--type-stat) * var(--lh-stat));
+}
+
+.skeleton--body {
+  width: min(100%, 32rem);
+  height: calc(var(--type-body-md) * var(--lh-body));
+}
+
+/* --- stat tile parts ---------------------------------------------------- */
+.stat-tile {
+  position: relative;
+}
+
+.stat-tile__label {
+  min-height: calc(var(--type-body-sm) * var(--lh-body-sm));
+  padding-right: var(--space-3xl);
+}
+
+.stat-tile__value {
+  display: flex;
+  align-items: flex-end;
+  min-height: calc(var(--type-stat) * var(--lh-stat));
+}
+
+/* station names: a stat-size word wouldn't fit a 4-up tile (DESIGN_BACKLOG 2026-10-08) */
+.stat-tile__value--text {
+  font-size: var(--type-display-md);
+  line-height: var(--lh-display-md);
+  letter-spacing: var(--tracking-display-sm);
+}
+
+.stat-tile__delta {
+  min-height: calc(var(--type-body-sm) * var(--lh-body-sm));
+  font-size: var(--type-body-sm);
+  line-height: var(--lh-body-sm);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-tile__def {
+  font-size: var(--type-body-sm);
+  line-height: var(--lh-body-sm);
+  color: var(--color-body);
+}
+
+/* ⓘ: a 20 px icon with a 44 px hit area in the tile's top-right corner */
+.stat-tile__info {
+  position: absolute;
+  top: calc(var(--space-xl) - 12px);
+  right: calc(var(--space-xl) - 12px);
+  display: grid;
+  place-items: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-body);
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.stat-tile__info:hover,
+.stat-tile__info[aria-expanded="true"] {
+  background: var(--color-pressed);
+  color: var(--color-ink);
+}
+
+/* --- chart card --------------------------------------------------------- */
+.chart-card .card__takeaway {
+  min-height: calc(var(--type-body-md) * var(--lh-body));
+}
+
+.chart {
+  position: relative;
+  aspect-ratio: 5 / 2;
+  margin-bottom: var(--space-md);
+}
+
+@container (max-width: 599px) {
+  .chart {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+.chart__skeleton {
+  position: absolute;
+  inset: 0;
+}
+
+.chart__svg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.chart__grid {
+  stroke: var(--gridline);
+  stroke-width: 1px;
+  shape-rendering: crispEdges;
+}
+
+.chart__tick {
+  font-size: var(--type-caption);
+  fill: var(--color-mute);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart__line {
+  fill: none;
+  stroke: var(--series-primary);
+  stroke-width: 2px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* comparisons: BART solid, Bay Wheels dashed (DESIGN.md §2) */
+.chart__line--primary {
+  stroke: var(--series-primary);
+}
+
+.chart__line--secondary {
+  stroke: var(--series-secondary);
+  stroke-dasharray: 4 3;
+  stroke-linecap: butt;
+}
+
+/* legend above the chart on wide cards, under it below 600 px (DESIGN.md §7 chart card) */
+.chart-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.chart-legend {
+  margin-bottom: var(--space-md);
+}
+
+.chart-key {
+  width: 24px;
+  height: 8px;
+  overflow: visible;
+}
+
+@container (max-width: 599px) {
+  .chart-legend {
+    order: 1;
+    margin-bottom: var(--space-md);
+  }
+  .chart-card__source {
+    order: 2;
+  }
+}
+
+/* --- forecast explorer (DESIGN.md §7 combobox, chart card; §2 forecasts) --- */
+.forecast {
+  display: grid;
+  gap: var(--space-grid);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+@media (min-width: 768px) {
+  .forecast {
+    grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+  }
+}
+
+.forecast > .message {
+  grid-column: 1 / -1;
+}
+
+.forecast__picker {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.forecast__label {
+  font-size: var(--type-body-sm);
+  font-weight: 500;
+  color: var(--color-body);
+}
+
+.combobox {
+  position: relative;
+}
+
+.combobox__list {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + var(--space-xs));
+  left: 0;
+  right: 0;
+  max-height: calc(6 * 44px + 2 * var(--space-xs)); /* 6 visible rows */
+  margin: 0;
+  padding: var(--space-xs);
+  overflow-y: auto;
+  list-style: none;
+  border-radius: var(--radius-md);
+  background: var(--color-canvas);
+  box-shadow: var(--shadow-1);
+}
+
+.combobox__option,
+.combobox__empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  min-height: 44px;
+  padding: 0 var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--type-body-md);
+}
+
+.combobox__option {
+  cursor: pointer;
+}
+
+.combobox__option:hover,
+.combobox__option[aria-selected="true"] {
+  background: var(--color-canvas-soft);
+}
+
+.combobox__code {
+  font-size: var(--type-body-sm);
+  color: var(--color-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.combobox__empty {
+  color: var(--color-body);
+}
+
+/* the selected station chip uses the pressed grey, like a pressed subtle pill (no selected-chip token yet) */
+.chip[aria-pressed="true"] {
+  background: var(--color-pressed);
+  box-shadow: inset 0 0 0 1px var(--color-ink);
+}
+
+.skeleton--title {
+  display: block;
+  width: min(100%, 12rem);
+  height: calc(var(--type-display-md) * var(--lh-display-md));
+  border-radius: var(--radius-sm);
+}
+
+.chart--forecast {
+  aspect-ratio: 16 / 9;
+}
+
+@container (max-width: 599px) {
+  .chart--forecast {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+.chart__line--actual {
+  stroke: var(--series-primary);
+}
+
+.chart__line--forecast {
+  stroke: var(--series-primary);
+  stroke-dasharray: 4 3;
+  stroke-linecap: butt;
+}
+
+.chart__band {
+  fill: var(--interval-fill);
+  stroke: none;
+}

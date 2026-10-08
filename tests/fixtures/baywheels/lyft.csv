@@ -1,0 +1,4 @@
+"ride_id","rideable_type","started_at","ended_at","start_station_name","start_station_id","end_station_name","end_station_id","start_lat","start_lng","end_lat","end_lng","member_casual"
+"FFCB0B7C5AAB3418","electric_bike","2025-03-15 00:54:03.804","2025-03-15 00:58:40.531","Pierce Ave at Market St","SJ-O10","San Pedro Square","SJ-L9",37.327581,-121.884559,37.336802,-121.8940901,"member"
+"D76A01E90A788D05","classic_bike","2025-03-15 17:46:55.310","2025-03-15 17:51:25.817","Ryland Park","SJ-K9","San Pedro Square","SJ-L9",37.342725,-121.895617,37.336802,-121.8940901,"casual"
+"CA21CBB0978537B6","electric_bike","2025-03-02 18:43:44.948","2025-03-02 18:44:35.441",,,,,37.76,-122.44,37.76,-122.44,"member"

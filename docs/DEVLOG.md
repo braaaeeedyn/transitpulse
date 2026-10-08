@@ -259,3 +259,156 @@ Entry format: `## YYYY-MM-DD · milestone · short title`, then **Did / Decided 
 **Fixed**
 - `.ask-card` and its form use `grid-template-columns: minmax(0, 1fr)`; chips get `max-width: 100%` so long
   suggestions wrap to two lines. Verified: 17/17 Playwright on Linux and on Windows; Linux page width = 320 px.
+
+## 2026-10-08 · F4 · ridership numbers on the site
+**Did**
+- `api/warehouse.py`: one `Warehouse` interface with two backends. `DuckDBWarehouse` opens a read-only connection
+  per query and closes it straight away. `BigQueryWarehouse` uses typed `ScalarQueryParameter`s, a 100 MB
+  `maximum_bytes_billed` cap and location `us-west1`. Endpoint SQL is plain `SELECT … WHERE … ORDER BY … LIMIT`
+  with `@name` parameters; dates are computed in Python.
+- `api/cache.py`: in-process TTL cache keyed by warehouse + endpoint + arguments (1 h for KPIs, trends and
+  stations; 6 h for forecasts). Errors are never cached.
+- Endpoints: `/api/kpis`, `/api/trends/ridership`, `/api/trends/bikes-vs-trains`, `/api/stations/{code}/summary`,
+  `/api/forecast/{code}`. All answer 503 `warehouse_not_connected` unless a warehouse is configured. Unknown or
+  malformed codes get 404 `unknown_station`.
+- New mart `mart_ridership_monthly` (the chart series), so the API doesn't need dialect-specific month truncation.
+- Trends band: 4 KPI tiles (ⓘ definitions, ▲/▼ deltas in ink), a "Data through" line and a "Ridership since 2019"
+  SVG chart (`web/js/chart.js` helpers, `web/js/trends.js`). The chart line breaks at months with no data.
+  Skeletons are the same size as the loaded content (Playwright checks the height changes by ≤ 2 px). 503 keeps
+  the honest empty message; errors show Retry. The map's station tooltip now adds
+  "Entries on Dec 31, 2025: 4,956 (17% of 2019)" from the summary endpoint.
+- Values on the local build, for the 28 days to 2025-12-31 (holiday season): recovery 38%, 115,501 average daily
+  entries, peak-hour share 10.9% (▼ 0.9 pts vs the same weeks of 2019), busiest station Powell St (9.9% of entries,
+  busiest on 17 of 28 days). YoY and recovery deltas are null locally because 2024 isn't loaded.
+
+**Decided**
+- The warehouse is explicit opt-in: `TP_WAREHOUSE=none|duckdb|bigquery`. The default is `none`; if
+  `TP_GCP_PROJECT` is set the default becomes `bigquery`. The app never auto-detects the DuckDB file, so tests and CI
+  behave the same whether or not `data/` exists. `tasks.py api` sets `TP_WAREHOUSE=duckdb` when the file exists.
+- KPI windows are computed by date, not from `rolling_28d_avg_entries`.
+
+**Found**
+- `mart_kpis_daily.rolling_28d_avg_entries` is a 28-*row* window, so locally it spans the 2020–2024 gap
+  (Jan 2025 averages include Dec 2019). Known issue, not fixed (out of scope); the API doesn't use that column.
+- DuckDB `DECIMAL` (and BigQuery `NUMERIC`) values come back as `Decimal`, which FastAPI serialises as strings.
+  Fixed: the warehouse layer converts them to floats.
+- `data/parquet/bart_od` locally holds 2018–2025 (written by the gcp-mode backfill), but the local facts only have
+  2019 and 2025 because `fct_trips_hourly` is incremental. `stg_bart_od` tests now scan all 8 years, so a full local
+  `dbt build` takes ~5.5 min.
+
+## 2026-10-08 · M1 · Bay Wheels
+**Did**
+- `pipeline/baywheels.py`: keys come from the bucket listing (ListObjects XML, paginated) by their `YYYYMM-` prefix,
+  never from a template. That handles `fordgobike`/`baywheels`/`baywheeels`/`lyftbikes`, `.zip` without `.csv`,
+  the yearly 2017 file (skipped) and the missing months (2020-04, 2024-12). Downloads are skipped when the ETag
+  and size match `data/raw/baywheels/manifest.json`, which also records each file's sha256. Zips are untrusted:
+  only the single CSV member is extracted (basename only, `__MACOSX/` skipped).
+- Cleaning in DuckDB with an explicit all-VARCHAR schema from the header (`store_rejects` counts malformed rows).
+  Both schemas are normalised to one; each dropped row gets one reason, and rows are de-duplicated on `ride_id`
+  (legacy rows get an md5 of their source fields). Output is Parquet `year=/month=` (replacing only the months
+  processed) plus `parquet/baywheels_audit/year=YYYY/audit.json`.
+- Local run, 2019 + 2025 (24 files, 252 MB of zips): **56 s** for download + clean; 236 MB of Parquet.
+  - 2019: 2,506,983 rows in, 2,506,867 kept. Dropped: 104 outside the Bay Area, 11 non-positive duration, 1 over 24 h.
+  - 2025: 4,397,438 in, 4,395,116 kept. Dropped: 1,767 over 24 h, 435 outside the file's month, 76 missing
+    coordinates, 41 non-positive duration, 3 outside the Bay Area.
+  - No malformed rows or duplicates in either year.
+- dbt: source `raw.baywheels_trips`, `stg_baywheels_trips`, `fct_bike_trips_daily`, `mart_bikes_vs_trains`
+  (full outer join of the monthly series; index vs the same month of 2019 = 100). Local build 83/83 pass.
+- Dagster: `baywheels_files[year]` → `baywheels_parquet[year]` → `raw/baywheels_trips[year]`, job `baywheels_ingest`,
+  schedule on the 7th at 06:30 Pacific. Materialized 2019 through Dagster as well (downloads skipped, 11 s clean).
+  The BigQuery load code (partition `trip_date`, cluster `start_station_id`) exists but **was not run**.
+- Site: second chart card "Bikes and trains" (BART solid `series-primary`, Bay Wheels dashed `series-secondary`,
+  legend in text, under the chart below 600 px). If bike data is missing the card says so and the BART parts stay.
+- Footer + README: Bay Wheels licence link verified (Lyft "Data License Agreement",
+  `baywheels-assets.s3.amazonaws.com/data-license-agreement.html`, linked from the Lyft system-data page).
+
+**Decided**
+- Python + DuckDB instead of Spark for Bay Wheels: 2–5 M rows/year is single-machine work. DuckDB runs natively on
+  Windows, in CI and on the ARM VM (no JVM, no Docker), and has an explicit-schema CSV reader with reject tracking and
+  partitioned Parquet output. Spark stays on the BART OD data, which is 3–4× larger.
+
+**Found (sanity numbers)**
+- Bikes per 1,000 BART entries: **21.1 in 2019 → 80.6 in 2025**. In 2025, Bay Wheels ran at 127–210% of its
+  2019 trips per day (month by month), while BART ran at 43–48%. 2025 is 79% e-bike trips; 4.7% are dockless.
+
+## 2026-10-08 · M3 + F5 · station forecast
+**Did**
+- `ml/forecast/`: direct multi-horizon model. Rows are (station, origin t, horizon 1–14) and every feature uses
+  only data up to t: last value, previous day, 7-day mean, the seasonal-naive value, the mean of the last 4 same
+  weekdays, 28-day CV, and target-date calendar + US federal holiday flags. Values are scaled by the station's
+  28-day mean so one global LightGBM fits all stations. Quantile objectives give p10/p50/p90, which are then
+  sorted and clipped at ≥ 0. Rows whose 28-day window has a missing day are dropped. Seeds are fixed and
+  `deterministic=True`.
+- Walk-forward: 6 folds, origins every 14 days ending 2025-12-17, each trained only on targets ≤ its origin
+  (730-day window; locally that means 2025-01-29 onwards, because 2020–2024 isn't loaded). Paired bootstrap over
+  stations (B = 1000, seed 0).
+- Results (local, data through 2025-12-31, 50 stations, 4,200 test rows):
+
+  | | LightGBM (p50) | Seasonal naive |
+  |---|---|---|
+  | MAE | **364.9** [277.1, 470.1] | 548.5 [416.9, 698.2] |
+  | RMSE | 819.3 [548.2, 1080.2] | 1246.7 [857.4, 1630.2] |
+
+  **MAE improvement 183.7, 95% CI [139.5, 234.1]: excludes zero.** Per fold, MAE (model vs baseline):
+  242 vs 250 · 196 vs 285 · 200 vs 267 · 518 vs 637 · 230 vs 828 · 802 vs 1024. The big wins are the
+  Thanksgiving and Christmas folds, where repeating last week fails.
+- Outputs: `marts.forecast_station_daily` (latest run, replaced) and `ml.forecast_runs` (appended: metrics + CIs,
+  coverage, per-fold JSON, params). Dagster asset `forecast_station_daily` (group `ml`) + job/schedule
+  `weekly_forecast` (Mondays 09:00 Pacific). `tasks.py forecast`. One full run takes ~1–3.5 min locally.
+- F5 explorer: ARIA combobox ("mac" → MacArthur; ↑/↓, Enter, Esc), 5 station chips, and a chart with actuals solid,
+  forecast dashed and the p10–p90 band in `interval-fill`. Caption: "Expect about 11,400 entries on Tue, Jan 6,
+  likely between 10,100 and 14,100". The source line says "Forecast from data through Dec 31, 2025", plus model vs
+  baseline error and the measured interval coverage.
+
+**Found**
+- **The intervals are too narrow:** p10–p90 held 47.5% [45.8, 49.3] of actual days, not 80%. The worst fold
+  (Christmas) held 21%. The site says so. Not tuned on the test folds.
+- New Year's Day is not in the training window (it starts Jan 29), so the forecast for Jan 1 2026 is implausibly
+  high (Embarcadero p50 10,275). Expected with one contiguous year; more history (BigQuery 2018–2025) should fix it.
+
+**Fixed**
+- LightGBM with 4 threads ran up to 10× slower inside the full test session (thread contention). `n_jobs` is now a
+  parameter (default 4); the tests use 1, and the forecast tests went from ~60 s to ~12 s.
+
+**Next**
+- Conformal calibration of the interval (calibration split inside the training window), and train on the full
+  BigQuery history so holidays are seen more than once.
+
+## 2026-10-08 · M1 · Oracle VM deployment files (not deployed)
+**Did**
+- `deploy/oracle/`: `transitpulse-dagster-daemon.service` (schedules + run queue) and `transitpulse-dagster-web.service`
+  (UI on 127.0.0.1 only, reached by SSH tunnel). Both run as the non-root `transitpulse` user from
+  `/opt/transitpulse` with `EnvironmentFile=/etc/transitpulse/transitpulse.env` and the venv first on `PATH`
+  (SparkRunner calls bare `python`). `Restart=on-failure`; `MemoryMax=` 6 G (daemon, includes a Spark run) and
+  1 G (web); `Nice=10` and `CPUWeight=50`, so SeismicSoCal keeps priority.
+- `bootstrap.sh` (bash, `set -euo pipefail`, idempotent; shellcheck clean). It warns on non-aarch64 and installs
+  git + Java 17 with apt or dnf, detecting `JAVA_HOME`. It then creates the user and directories, installs uv,
+  clones or fast-forwards the repo, runs `uv sync --frozen` for the pipeline/dbt/ml/spark groups, and installs the
+  env file only if absent (mode 600). It copies `dagster.yaml` and runs `dbt parse`. It checks that the key file is
+  owned by `transitpulse` with mode 600 and refuses to start services otherwise; the key is never printed.
+  Last, it installs the units and runs `daemon-reload` + enable/restart.
+- `docs/ORACLE_VM.md` runbook; `tests/test_oracle_vm.py` (static checks). CI now syncs the dbt/ml/pipeline groups,
+  runs `dbt parse` before pytest (the Dagster test needs the manifest), excludes `localdata`, and runs shellcheck.
+
+**Blocked / not done**
+- Nothing deployed: the VM can't be reached from here. Runs on the existing VM next to `seismicsocal.service`;
+  no second VM assumed. OS (Oracle Linux vs Ubuntu) unknown, hence the apt/dnf detection.
+
+## 2026-10-08 · Oracle VM · sized for the real VM
+**Found**
+- SeismicSoCal VM (measured via SSH): VM.Standard.A1.Flex **1 OCPU / 5.8 GiB, 3.2 GiB available, no swap**;
+  SeismicSoCal ~0.8 GB + MLflow ~1.1 GB; load ~0; disk 31 GB free. Tenancy limits page: 1 A1 core used, 3 available.
+- Oracle halved the Always Free A1 allowance on 2026-06-15 to **2 OCPU / 12 GB per tenancy** (max 2 instances).
+  A Spark run (~5–6 GB) doesn't fit next to SeismicSoCal on the current shape.
+
+**Decided**
+- Recommend resizing the existing VM to 2 OCPU / 12 GB (= the free allowance) rather than a second VM.
+
+**Changed** (follow-ups from the build-loop final review)
+- Daemon unit: removed `MemoryHigh=5G` (a soft cap below the Spark peak throttled the run), `MemoryMax=7G`;
+  web unit: removed `MemoryHigh`. Both: `OOMScoreAdjust=500`, so the kernel kills TransitPulse before SeismicSoCal.
+- New env knobs (defaults unchanged elsewhere): `TP_SPARK_DRIVER_MEMORY` (SparkRunner), `TP_ML_THREADS`
+  (LightGBM `n_jobs`), `DBT_THREADS` (all dbt targets); the VM env example sets 4g / 2 / 2.
+- `docs/ORACLE_VM.md`: sizing section with the free-tier limit, the measured VM, the resize steps, an optional
+  swap file, and `systemctl edit` drop-ins instead of editing unit files (bootstrap re-copies them).
+- Verified: pytest 42/42, Oracle VM + forecast tests, shellcheck, `systemd-analyze verify`, Dagster validate.

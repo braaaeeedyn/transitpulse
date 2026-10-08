@@ -1,0 +1,31 @@
+# Dagster web UI, bound to 127.0.0.1 only: reach it through an SSH tunnel (no firewall or security-list change).
+# Installed by deploy/oracle/bootstrap.sh into /etc/systemd/system/. See docs/ORACLE_VM.md.
+[Unit]
+Description=TransitPulse Dagster web UI (localhost only)
+Documentation=https://github.com/braaaeeedyn/transitpulse/blob/main/docs/ORACLE_VM.md
+After=network-online.target transitpulse-dagster-daemon.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=transitpulse
+Group=transitpulse
+WorkingDirectory=/opt/transitpulse
+Environment=TP_DAGSTER_PORT=3000
+# values in the env file override the default port above
+EnvironmentFile=/etc/transitpulse/transitpulse.env
+Environment=PATH=/opt/transitpulse/.venv/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/opt/transitpulse/.venv/bin/dagster-webserver -h 127.0.0.1 -p ${TP_DAGSTER_PORT} -w /opt/transitpulse/deploy/oracle/workspace.yaml
+Restart=on-failure
+RestartSec=30
+MemoryMax=1G
+OOMScoreAdjust=500
+Nice=10
+CPUWeight=50
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

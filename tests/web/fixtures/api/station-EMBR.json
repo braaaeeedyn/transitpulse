@@ -1,0 +1,10 @@
+{
+  "code": "EMBR",
+  "name": "Embarcadero",
+  "data_through": "2025-12-31",
+  "entries": 6399,
+  "recovery_ratio": 0.52,
+  "avg_weekday_entries_28d": 11528.1,
+  "peak_hour": 17,
+  "peak_hour_share": 0.2023
+}

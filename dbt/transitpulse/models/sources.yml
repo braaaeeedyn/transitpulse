@@ -23,3 +23,16 @@ sources:
         description: Station list from the BART GTFS feed, one row per station per observation (pipeline/stations.py).
         config:
           external_location: "read_csv_auto('{{ env_var('TP_DATA_ROOT', 'data/parquet') }}/bart_stations/*.csv', header = true)"
+      - name: baywheels_trips
+        description: >
+          Bay Wheels (Lyft) trips, one row per trip, cleaned by pipeline/baywheels.py from the monthly files in the
+          public bucket (both the Ford GoBike and the Lyft schema, normalised). BigQuery: partitioned by trip_date,
+          clustered by start_station_id.
+        config:
+          external_location: "read_parquet('{{ env_var('TP_DATA_ROOT', 'data/parquet') }}/baywheels_trips/*/*/*.parquet', hive_partitioning = true)"
+        columns:
+          - name: ride_id
+          - name: started_at
+          - name: trip_date
+          - name: member_type
+          - name: rideable_type

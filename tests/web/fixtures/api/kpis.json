@@ -1,0 +1,48 @@
+{
+  "data_through": "2025-12-31",
+  "window": {
+    "start": "2025-12-04",
+    "end": "2025-12-31",
+    "days": 28
+  },
+  "tiles": [
+    {
+      "id": "recovery",
+      "label": "Recovery vs 2019",
+      "value": 0.3829,
+      "unit": "percent",
+      "delta": null,
+      "delta_label": null,
+      "definition": "Service-weekday entries as a share of an average 2019 weekday in the same week of the year, averaged over the 28 days to Dec 31, 2025."
+    },
+    {
+      "id": "entries",
+      "label": "Average daily entries",
+      "value": 115500.7143,
+      "unit": "entries",
+      "delta": 0.031,
+      "delta_label": "vs a year earlier",
+      "definition": "Trips started per day, averaged over the 28 days to Dec 31, 2025. The change compares the same 28 days 52 weeks earlier, so weekdays line up."
+    },
+    {
+      "id": "peak_share",
+      "label": "Peak-hour share",
+      "value": 0.1094,
+      "unit": "percent",
+      "delta": -0.0087,
+      "delta_label": "vs 2019",
+      "definition": "Share of a service weekday's entries made in its busiest hour, averaged over the 28 days to Dec 31, 2025, compared with the same weeks of 2019."
+    },
+    {
+      "id": "busiest_station",
+      "label": "Busiest station",
+      "value": "Powell Street",
+      "code": "POWL",
+      "unit": null,
+      "delta": null,
+      "delta_label": "9.9% of all entries",
+      "definition": "The station with the most entries on the most days in the 28 days to Dec 31, 2025 (busiest on 17 of 28 days), and its average share of all entries on those days."
+    }
+  ],
+  "source": "BART hourly origin-destination ridership reports."
+}

@@ -9,7 +9,7 @@ transitpulse:
       type: duckdb
       path: "{{ env_var('TP_DUCKDB_PATH', 'data/transitpulse.duckdb') }}"
       schema: main
-      threads: 4
+      threads: "{{ env_var('DBT_THREADS', '4') | int }}"
 
     dev:
       type: bigquery
@@ -18,7 +18,7 @@ transitpulse:
       project: "{{ env_var('TP_GCP_PROJECT', 'unset') }}"
       dataset: staging
       location: us-west1
-      threads: 4
+      threads: "{{ env_var('DBT_THREADS', '4') | int }}"
       # per-query cap (TRANSITPULSE_PLAN §8). A full rebuild reads ~3-6 GB of raw.bart_od (2018-2025);
       # incremental runs read a few hundred MB. Free tier: 1 TB/month.
       maximum_bytes_billed: 20000000000
@@ -30,5 +30,5 @@ transitpulse:
       project: "{{ env_var('TP_GCP_PROJECT', 'unset') }}"
       dataset: ci
       location: us-west1
-      threads: 4
+      threads: "{{ env_var('DBT_THREADS', '4') | int }}"
       maximum_bytes_billed: 500000000

@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="css/layout.css" />
     <link rel="stylesheet" href="css/components.css" />
     <link rel="stylesheet" href="css/map.css" />
+    <link rel="stylesheet" href="css/charts.css" />
     <script type="module" src="js/main.js"></script>
   </head>
   <body>
@@ -194,7 +195,7 @@
         </div>
       </section>
 
-      <!-- KPIs + trends (filled in once the warehouse is connected) -->
+      <!-- KPIs + trends (web/js/trends.js; the skeletons below have the loaded content's size) -->
       <section class="band" id="trends" aria-labelledby="trends-title">
         <div class="container">
           <div class="section-head">
@@ -202,8 +203,39 @@
             <h2 id="trends-title">How the Bay Area rides</h2>
             <p>Recovery since 2019, the busiest stations and hours, and bikes compared with trains.</p>
           </div>
-          <div class="message" data-pending="kpis">
-            <p class="message__text"><svg class="icon" aria-hidden="true"><use href="#i-info" /></svg>Ridership numbers will appear here once the data pipeline is connected.</p>
+          <div class="trends" data-trends aria-busy="true" aria-live="polite">
+            <p class="caption trends__through" data-trends-through><span class="skeleton skeleton--caption" style="width: min(100%, 22rem)"></span></p>
+            <div class="trends__tiles">
+              <div class="grid-auto" data-kpi-tiles>
+                <div class="stat-tile" aria-hidden="true"><span class="skeleton skeleton--label"></span><span class="skeleton skeleton--stat"></span><span class="skeleton skeleton--label"></span></div>
+                <div class="stat-tile" aria-hidden="true"><span class="skeleton skeleton--label"></span><span class="skeleton skeleton--stat"></span><span class="skeleton skeleton--label"></span></div>
+                <div class="stat-tile" aria-hidden="true"><span class="skeleton skeleton--label"></span><span class="skeleton skeleton--stat"></span><span class="skeleton skeleton--label"></span></div>
+                <div class="stat-tile" aria-hidden="true"><span class="skeleton skeleton--label"></span><span class="skeleton skeleton--stat"></span><span class="skeleton skeleton--label"></span></div>
+              </div>
+              <p class="caption trends__source" data-kpi-source>Source: BART hourly origin-destination ridership reports.</p>
+            </div>
+            <article class="card chart-card" aria-labelledby="ridership-chart-title">
+              <div class="card__head">
+                <h3 id="ridership-chart-title" data-chart-title>Ridership since 2019</h3>
+                <p class="card__takeaway" data-takeaway><span class="skeleton skeleton--body"></span></p>
+              </div>
+              <div class="chart" data-chart><div class="skeleton chart__skeleton"></div></div>
+              <div data-chart-table></div>
+              <p class="caption chart-card__source">Average entries per day, by month. Gaps are months with no data loaded. Source: BART hourly origin-destination ridership reports.</p>
+            </article>
+            <article class="card chart-card" aria-labelledby="bikes-chart-title" data-bikes-card>
+              <div class="card__head">
+                <h3 id="bikes-chart-title">Bikes and trains</h3>
+                <p class="card__takeaway" data-bikes-takeaway><span class="skeleton skeleton--body"></span></p>
+              </div>
+              <ul class="legend chart-legend" aria-label="Series">
+                <li><svg class="chart-key" viewBox="0 0 24 8" aria-hidden="true"><line class="chart__line chart__line--primary" x1="1" y1="4" x2="23" y2="4" /></svg>BART entries</li>
+                <li><svg class="chart-key" viewBox="0 0 24 8" aria-hidden="true"><line class="chart__line chart__line--secondary" x1="1" y1="4" x2="23" y2="4" /></svg>Bay Wheels trips</li>
+              </ul>
+              <div class="chart" data-bikes-chart><div class="skeleton chart__skeleton"></div></div>
+              <div data-bikes-table></div>
+              <p class="caption chart-card__source">Average per day each month (BART entries, Bay Wheels trips) as a percentage of the same month in 2019. Gaps are months with no data loaded. Sources: BART hourly origin-destination ridership reports; Lyft Bay Wheels trip data.</p>
+            </article>
           </div>
         </div>
       </section>
@@ -212,11 +244,29 @@
         <div class="container">
           <div class="section-head">
             <p class="eyebrow">Forecast</p>
-            <h2 id="forecast-title">The next two weeks, station by station</h2>
-            <p>Expected daily entries at every BART station, with a likely range.</p>
+            <h2 id="forecast-title">Two weeks ahead, station by station</h2>
+            <p>Expected daily entries at every BART station for the 14 days after the latest published ridership data, with a likely range.</p>
           </div>
-          <div class="message" data-pending="forecast">
-            <p class="message__text"><svg class="icon" aria-hidden="true"><use href="#i-info" /></svg>Forecasts will appear here once the forecasting model has run.</p>
+          <div class="forecast" data-forecast>
+            <div class="forecast__picker">
+              <label class="forecast__label" for="fc-station">Find a station</label>
+              <div class="combobox">
+                <div class="input-row">
+                  <svg class="icon" aria-hidden="true"><use href="#i-search" /></svg>
+                  <input id="fc-station" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="fc-listbox" autocomplete="off" spellcheck="false" placeholder="Name or code, e.g. MacArthur" data-fc-input />
+                </div>
+                <ul class="combobox__list" id="fc-listbox" role="listbox" aria-label="Stations" hidden data-fc-list></ul>
+              </div>
+              <p class="forecast__label">Busy stations</p>
+              <div class="chip-row" role="group" aria-label="Busy stations">
+                <button class="chip" type="button" aria-pressed="false" data-fc-chip="EMBR">Embarcadero</button>
+                <button class="chip" type="button" aria-pressed="false" data-fc-chip="MONT">Montgomery St</button>
+                <button class="chip" type="button" aria-pressed="false" data-fc-chip="POWL">Powell St</button>
+                <button class="chip" type="button" aria-pressed="false" data-fc-chip="12TH">12th St Oakland</button>
+                <button class="chip" type="button" aria-pressed="false" data-fc-chip="MCAR">MacArthur</button>
+              </div>
+            </div>
+            <div class="forecast__result" aria-live="polite" data-fc-result></div>
           </div>
         </div>
       </section>
@@ -280,7 +330,7 @@
             <ul class="footer__muted">
               <li>Schedule: BART GTFS. Data provided by BART.</li>
               <li>Ridership: BART ridership reports</li>
-              <li>Bikes: Lyft Bay Wheels system data</li>
+              <li>Bikes: Lyft Bay Wheels system data, under the <a href="https://baywheels-assets.s3.amazonaws.com/data-license-agreement.html">Bay Wheels Data License Agreement</a></li>
               <li>Coastline: US Census Bureau (public domain)</li>
             </ul>
           </div>

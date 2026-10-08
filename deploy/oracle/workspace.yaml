@@ -1,0 +1,6 @@
+# Dagster code location for the VM services (dagster-daemon / dagster-webserver -w this file).
+# Runs from /opt/transitpulse (the services' WorkingDirectory), with the project venv on PATH.
+load_from:
+  - python_module:
+      module_name: pipeline.definitions
+      working_directory: /opt/transitpulse

@@ -31,7 +31,7 @@ def fmt() -> None:
 
 
 def test() -> None:
-    run("uv", "run", "pytest", "-m", "not spark and not gcp")
+    run("uv", "run", "pytest", "-m", "not spark and not gcp and not localdata")
     run("node", "--test", "tests/web/")
 
 
@@ -41,7 +41,13 @@ def web_data(*args: str) -> None:
 
 
 def api() -> None:
-    """Serve the API and the static site on http://localhost:8000."""
+    """Serve the API and the static site on http://localhost:8000.
+
+    Reads the local warehouse (data/transitpulse.duckdb) when it exists, unless TP_WAREHOUSE says otherwise.
+    The API itself never guesses: without TP_WAREHOUSE (or TP_GCP_PROJECT) its data endpoints answer 503.
+    """
+    if (ROOT / "data" / "transitpulse.duckdb").exists() and not os.environ.get("TP_GCP_PROJECT"):
+        os.environ.setdefault("TP_WAREHOUSE", "duckdb")
     run("uv", "run", "uvicorn", "api.main:app", "--reload", "--port", "8000")
 
 
@@ -72,6 +78,11 @@ def stations(*args: str) -> None:
     run("uv", "run", "python", "-m", "pipeline.stations", *args)
 
 
+def baywheels(*args: str) -> None:
+    """Download + clean Bay Wheels trips into data/parquet/baywheels_trips (default: the two local years)."""
+    run("uv", "run", "python", "-m", "pipeline.baywheels", *(args or ("--years", "2019", "2025")))
+
+
 def dbt(*args: str) -> None:
     run(
         "uv",
@@ -96,7 +107,13 @@ def dagster() -> None:
     os.environ.setdefault("DAGSTER_HOME", str(home))
     if sys.platform == "win32":
         os.environ.setdefault("TP_SPARK_RUNNER", "docker")
-    run("uv", "run", "--group", "pipeline", "--group", "dbt", "dagster", "dev", "-m", "pipeline.definitions")
+    run("uv", "run", "--group", "pipeline", "--group", "dbt", "--group", "ml",
+        "dagster", "dev", "-m", "pipeline.definitions")  # fmt: skip
+
+
+def forecast(*args: str) -> None:
+    """Train, validate and publish the 14-day station forecast (local DuckDB unless TP_WAREHOUSE=bigquery)."""
+    run("uv", "run", "--group", "ml", "python", "-m", "ml.forecast.run", *args)
 
 
 TASKS = {
@@ -108,8 +125,10 @@ TASKS = {
     "web-test": web_test,
     "spark": spark,
     "stations": stations,
+    "baywheels": baywheels,
     "dbt": dbt,
     "dagster": dagster,
+    "forecast": forecast,
 }
 
 if __name__ == "__main__":

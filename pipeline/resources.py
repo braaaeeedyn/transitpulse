@@ -67,5 +67,8 @@ def default_resources() -> dict:
             gcp_project=EnvVar("TP_GCP_PROJECT").get_value(),
             raw_bucket=EnvVar("TP_RAW_BUCKET").get_value(),
         ),
-        "spark": SparkRunner(runner=EnvVar("TP_SPARK_RUNNER").get_value("python") or "python"),
+        "spark": SparkRunner(
+            runner=EnvVar("TP_SPARK_RUNNER").get_value("python") or "python",
+            driver_memory=EnvVar("TP_SPARK_DRIVER_MEMORY").get_value("4g") or "4g",
+        ),
     }

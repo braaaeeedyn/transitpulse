@@ -3,6 +3,9 @@
 Schedules (TRANSITPULSE_PLAN §5 Phase 1):
   * monthly_refresh - 6th of each month, 06:00 Pacific: re-download the current year's ridership file
     (BART appends a month at a time), re-clean it, reload it, rebuild the dbt models, refresh the map data.
+  * baywheels_monthly - 7th of each month, 06:30 Pacific: the current year's Bay Wheels files (Lyft publishes
+    each month's trips early in the next month), cleaned and reloaded.
+  * weekly_forecast - Mondays 09:00 Pacific: retrain and publish the 14-day station forecast (group `ml`).
   * Historical years are loaded once with a backfill of the `years` partitions from the Dagster UI.
 """
 
@@ -15,8 +18,8 @@ from dagster import (
     schedule,
 )
 
+from pipeline.assets import baywheels, forecast, ingest
 from pipeline.assets import dbt as dbt_assets_mod
-from pipeline.assets import ingest
 
 ingest_assets = [
     ingest.bart_gtfs,
@@ -25,6 +28,9 @@ ingest_assets = [
     ingest.bart_od_files,
     ingest.bart_od_parquet,
     ingest.raw_bart_od,
+    baywheels.baywheels_files,
+    baywheels.baywheels_parquet,
+    baywheels.raw_baywheels_trips,
 ]
 
 # Each run starts a Spark job that needs ~4-6 GB. pipeline/dagster.yaml limits runs carrying this tag to one at a time,
@@ -36,6 +42,16 @@ yearly_ingest = define_asset_job(
     selection=AssetSelection.assets(ingest.bart_od_files, ingest.bart_od_parquet, ingest.raw_bart_od),
     partitions_def=ingest.years,
     tags=SPARK_TAG,
+)
+baywheels_ingest = define_asset_job(
+    "baywheels_ingest",
+    selection=AssetSelection.assets(
+        baywheels.baywheels_files, baywheels.baywheels_parquet, baywheels.raw_baywheels_trips
+    ),
+    partitions_def=ingest.years,
+)
+weekly_forecast_job = define_asset_job(
+    "weekly_forecast", selection=AssetSelection.assets(forecast.forecast_station_daily)
 )
 refresh_reference = define_asset_job(
     "refresh_reference_and_models",
@@ -50,10 +66,21 @@ def monthly_ridership(context: ScheduleEvaluationContext):
     return RunRequest(run_key=f"ridership-{context.scheduled_execution_time:%Y-%m}", partition_key=year)
 
 
+@schedule(job=baywheels_ingest, cron_schedule="30 6 7 * *", execution_timezone="America/Los_Angeles")
+def baywheels_monthly(context: ScheduleEvaluationContext):
+    year = str(context.scheduled_execution_time.year)
+    return RunRequest(run_key=f"baywheels-{context.scheduled_execution_time:%Y-%m}", partition_key=year)
+
+
 @schedule(job=refresh_reference, cron_schedule="0 8 6 * *", execution_timezone="America/Los_Angeles")
 def monthly_models(context: ScheduleEvaluationContext):
     # two hours after the ingest run, rebuild stations, the map data and every dbt model
     return RunRequest(run_key=f"models-{context.scheduled_execution_time:%Y-%m}")
+
+
+@schedule(job=weekly_forecast_job, cron_schedule="0 9 * * 1", execution_timezone="America/Los_Angeles")
+def weekly_forecast(context: ScheduleEvaluationContext):
+    return RunRequest(run_key=f"forecast-{context.scheduled_execution_time:%Y-%m-%d}")
 
 
 def _resources() -> dict:
@@ -63,8 +90,8 @@ def _resources() -> dict:
 
 
 defs = Definitions(
-    assets=[*ingest_assets, dbt_assets_mod.transitpulse_dbt],
-    jobs=[yearly_ingest, refresh_reference],
-    schedules=[monthly_ridership, monthly_models],
+    assets=[*ingest_assets, dbt_assets_mod.transitpulse_dbt, forecast.forecast_station_daily],
+    jobs=[yearly_ingest, baywheels_ingest, refresh_reference, weekly_forecast_job],
+    schedules=[monthly_ridership, baywheels_monthly, monthly_models, weekly_forecast],
     resources=_resources(),
 )
