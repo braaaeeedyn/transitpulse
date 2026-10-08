@@ -10,7 +10,7 @@ terraform {
 
   # The state bucket is created once by hand (see infra/README.md) — Terraform can't create its own backend.
   backend "gcs" {
-    bucket = "transitpulse-tfstate"
+    bucket = "transitpulse-511002-tfstate"
     prefix = "terraform/state"
   }
 }

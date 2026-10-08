@@ -21,6 +21,6 @@ select
     h.trip_date is not null as is_holiday,
     h.holiday_name,
     {{ day_of_week('s.date_day') }} not in (1, 7) and h.trip_date is null as is_service_weekday,
-    {{ dbt.date_trunc('month', 's.date_day') }} as month_start
+    cast({{ dbt.date_trunc('month', 's.date_day') }} as date) as month_start
 from spine as s
 left join holidays as h on s.date_day = h.trip_date

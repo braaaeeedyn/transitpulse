@@ -11,6 +11,8 @@ resource "google_service_account" "sa" {
   account_id   = "sa-${each.key}"
   display_name = "TransitPulse ${each.key}"
   description  = each.value
+
+  depends_on = [google_project_service.enabled] # needs iam.googleapis.com on first
 }
 
 # --- pipeline: write everything except ci, run jobs, read/write the raw bucket -----------------------

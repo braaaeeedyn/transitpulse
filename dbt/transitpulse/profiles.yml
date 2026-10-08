@@ -19,7 +19,9 @@ transitpulse:
       dataset: staging
       location: us-west1
       threads: 4
-      maximum_bytes_billed: 2000000000 # 2 GB cap per query (TRANSITPULSE_PLAN §8)
+      # per-query cap (TRANSITPULSE_PLAN §8). A full rebuild reads ~3-6 GB of raw.bart_od (2018-2025);
+      # incremental runs read a few hundred MB. Free tier: 1 TB/month.
+      maximum_bytes_billed: 20000000000
       job_execution_timeout_seconds: 300
 
     ci:

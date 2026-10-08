@@ -91,6 +91,8 @@ def dagster() -> None:
     """Dagster UI on http://localhost:3000 (assets, schedules, backfills)."""
     home = ROOT / ".dagster_home"
     home.mkdir(exist_ok=True)
+    # instance settings (run queue limits) live in the repo; copied in on every start so edits take effect
+    (home / "dagster.yaml").write_text((ROOT / "pipeline" / "dagster.yaml").read_text())
     os.environ.setdefault("DAGSTER_HOME", str(home))
     if sys.platform == "win32":
         os.environ.setdefault("TP_SPARK_RUNNER", "docker")

@@ -66,4 +66,4 @@ select
     ly.total_entries as entries_364_days_earlier,
     (j.total_entries - ly.total_entries) / nullif(ly.total_entries, 0) as yoy_change
 from joined as j
-left join system_daily as ly on ly.trip_date = {{ dbt.dateadd('day', -364, 'j.trip_date') }}
+left join system_daily as ly on ly.trip_date = cast({{ dbt.dateadd('day', -364, 'j.trip_date') }} as date)

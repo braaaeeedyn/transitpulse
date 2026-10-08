@@ -2,7 +2,7 @@
 -- destination's rank among trips leaving the same origin.
 with monthly as (
     select
-        {{ dbt.date_trunc('month', 'trip_date') }} as month_start,
+        cast({{ dbt.date_trunc('month', 'trip_date') }} as date) as month_start,
         origin_code,
         destination_code,
         sum(trips) as trips
@@ -25,4 +25,4 @@ from monthly as m
 left join monthly as ly
     on ly.origin_code = m.origin_code
     and ly.destination_code = m.destination_code
-    and ly.month_start = {{ dbt.dateadd('year', -1, 'm.month_start') }}
+    and ly.month_start = cast({{ dbt.dateadd('year', -1, 'm.month_start') }} as date)

@@ -4,13 +4,18 @@ One-time manual steps, in order:
 
 1. Create a GCP project and attach a billing account.
 2. `gcloud auth application-default login`
-3. Create the state bucket (Terraform can't create its own backend):
+3. Create the state bucket (Terraform can't create its own backend). Bucket names are global, so include your project ID, and set the same name in `versions.tf`:
    ```sh
-   gcloud storage buckets create gs://transitpulse-tfstate --location=us-west1 --uniform-bucket-level-access
-   gcloud storage buckets update gs://transitpulse-tfstate --versioning
+   gcloud storage buckets create gs://YOUR_PROJECT_ID-tfstate --location=us-west1 --uniform-bucket-level-access
+   gcloud storage buckets update gs://YOUR_PROJECT_ID-tfstate --versioning
    ```
-4. `cp terraform.tfvars.example terraform.tfvars` and fill it in.
-5. ```sh
+4. Turn on the two APIs Terraform itself needs before it can manage the rest (a new project has them off):
+   ```sh
+   gcloud services enable cloudresourcemanager.googleapis.com serviceusage.googleapis.com iam.googleapis.com
+   ```
+   then wait about a minute for it to take effect.
+5. `cp terraform.tfvars.example terraform.tfvars` and fill it in.
+6. ```sh
    cd infra/terraform
    terraform init
    terraform plan

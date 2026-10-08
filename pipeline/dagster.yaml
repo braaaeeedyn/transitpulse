@@ -1,0 +1,10 @@
+# Dagster instance settings. `tasks.py dagster` copies this into $DAGSTER_HOME on every start.
+run_queue:
+  # Spark runs need ~4-6 GB each; running several at once exhausted Docker Desktop's VM (2026-10-07).
+  tag_concurrency_limits:
+    - key: "transitpulse/spark"
+      value: "true"
+      limit: 1
+
+telemetry:
+  enabled: false

@@ -4,7 +4,7 @@ with recent as (
     select date_day
     from {{ ref('dim_date') }}
     where is_service_weekday
-        and date_day > (select {{ dbt.dateadd('day', -90, 'max(date_day)') }} from {{ ref('dim_date') }})
+        and date_day > (select cast({{ dbt.dateadd('day', -90, 'max(date_day)') }} as date) from {{ ref('dim_date') }})
 ),
 
 hourly as (

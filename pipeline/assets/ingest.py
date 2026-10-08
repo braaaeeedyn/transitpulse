@@ -90,6 +90,14 @@ def web_map_data(storage: Storage) -> MaterializeResult:
     return MaterializeResult(metadata={"bytes": MetadataValue.json(sizes)})
 
 
+def _has_rows(gz_path) -> bool:
+    """BART serves an empty gzip for years it hasn't published yet (e.g. the current year early on)."""
+    import gzip
+
+    with gzip.open(gz_path, "rb") as f:
+        return bool(f.read(1))
+
+
 @asset(
     group_name="ingest", partitions_def=years, description="Raw yearly BART origin-destination CSV (gzip)."
 )
@@ -97,9 +105,18 @@ def bart_od_files(context: AssetExecutionContext, storage: Storage) -> Materiali
     year = context.partition_key
     dest = storage.path("raw", "bart_od", f"date-hour-soo-dest-{year}.csv.gz")
     digest, size, changed = _download(OD_URL.format(year=year), dest)
+    if not _has_rows(dest):
+        context.log.warning(f"BART hasn't published {year} ridership yet (empty file); nothing to load")
+        return MaterializeResult(metadata={"published": False, "bytes": size})
     uri = storage.upload(dest, f"bart_od/year={year}/{dest.name}")
     return MaterializeResult(
-        metadata={"sha256": digest, "bytes": size, "changed": changed, "uri": uri or str(dest)}
+        metadata={
+            "published": True,
+            "sha256": digest,
+            "bytes": size,
+            "changed": changed,
+            "uri": uri or str(dest),
+        }
     )
 
 
@@ -113,6 +130,9 @@ def bart_od_parquet(
     context: AssetExecutionContext, storage: Storage, spark: SparkRunner
 ) -> MaterializeResult:
     year = context.partition_key
+    if not _has_rows(storage.root / "raw" / "bart_od" / f"date-hour-soo-dest-{year}.csv.gz"):
+        context.log.warning(f"no {year} ridership published yet; skipping Spark")
+        return MaterializeResult(metadata={"published": False, "rows_out": 0})
     rel = storage.root.relative_to(ROOT).as_posix()  # relative paths work both in-process and inside Docker
     audit_dir = f"{rel}/parquet/ingest_audit/year={year}"
     spark.run_module(
@@ -143,6 +163,9 @@ def bart_od_parquet(
 def raw_bart_od(context: AssetExecutionContext, storage: Storage) -> MaterializeResult:
     year = context.partition_key
     parquet_dir = storage.root / "parquet" / "bart_od" / f"year={year}"
+    if not any(parquet_dir.rglob("*.parquet")):
+        context.log.warning(f"no Parquet for {year} (not published yet); nothing to load")
+        return MaterializeResult(metadata={"published": False, "files": 0})
     if storage.mode != "gcp":
         files = list(parquet_dir.rglob("*.parquet"))
         return MaterializeResult(metadata={"mode": "local", "files": len(files)})
@@ -156,7 +179,12 @@ def raw_bart_od(context: AssetExecutionContext, storage: Storage) -> Materialize
         uris.append(storage.upload(f, blob))
     client = bigquery.Client(project=storage.gcp_project)
     table = f"{storage.gcp_project}.raw.bart_od"
-    client.query(f"delete from `{table}` where extract(year from trip_date) = {int(year)}").result()
+    from google.api_core.exceptions import NotFound
+
+    try:  # replace this year's rows; on the very first load the table doesn't exist yet
+        client.query(f"delete from `{table}` where extract(year from trip_date) = {int(year)}").result()
+    except NotFound:
+        context.log.info(f"{table} doesn't exist yet; the load job will create it")
     job = client.load_table_from_uri(
         uris,
         table,

@@ -4,7 +4,7 @@
 > It is rewritten whenever behaviour changes. History lives in [`DEVLOG.md`](DEVLOG.md); the task list in
 > [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
 >
-> **Last verified:** 2026-10-07, on Windows 11 (local only; nothing is deployed).
+> **Last verified:** 2026-10-07, on Windows 11. Cloud resources exist (Terraform applied); no app is deployed.
 
 ---
 
@@ -16,9 +16,9 @@
 | API (`api/`) | **Working shell**: serves the site; data/agent endpoints answer 503 | same as above |
 | Map data build (`pipeline/webdata/`) | **Working** | `uv run python tasks.py web-data` |
 | Spark cleaning job (`pipeline/spark/`) | **Working** (Docker on Windows, native on Linux) | `uv run python tasks.py spark` |
-| dbt warehouse models (`dbt/transitpulse/`) | **Working on the `local` (DuckDB) target**; BigQuery targets configured but never run | `uv run python tasks.py stations` then `uv run python tasks.py dbt` |
-| Dagster orchestration (`pipeline/definitions.py`) | **Working locally** (`TP_PIPELINE_MODE=local`) | `uv run python tasks.py dagster` → http://localhost:3000 |
-| Terraform (`infra/terraform/`) | **Valid, never applied** | see `infra/README.md` |
+| dbt warehouse models (`dbt/transitpulse/`) | **Working on both targets**: `local` (DuckDB) and `dev` (BigQuery, all of 2018–2025) | `uv run python tasks.py stations` then `uv run python tasks.py dbt` (`DBT_TARGET=dev` for BigQuery) |
+| Dagster orchestration (`pipeline/definitions.py`) | **Working** in `local` and `gcp` mode, run from this PC (not yet on the Oracle VM) | `uv run python tasks.py dagster` → http://localhost:3000 |
+| Terraform (`infra/terraform/`) | **Applied** to GCP project `transitpulse-511002` (33 resources; `plan` = no changes) | see `infra/README.md` |
 | CI (`.github/workflows/ci.yml`) | **Written, never run** (no GitHub remote yet) | — |
 | Forecasting, causal analysis, agent, fine-tuning, BI reports, deployment | **Not implemented** | — |
 
@@ -39,15 +39,19 @@ bart.gov OD CSV.gz ─► data/raw/bart_od/ ─► Spark clean_bart_od ─► da
 
 - Everything under `data/` is generated and gitignored. `web/data/*.json` is generated **and committed**
   (the site needs it to run).
-- In `gcp` mode (`TP_PIPELINE_MODE=gcp`) the same assets upload to GCS and load BigQuery. That code path exists but
-  has never run.
+- In `gcp` mode (`TP_PIPELINE_MODE=gcp`, `DBT_TARGET=dev`) the same assets upload to GCS
+  (`gs://transitpulse-511002-raw`) and load BigQuery (`raw.bart_od`, `raw.bart_stations`); dbt then builds
+  `staging` and `marts` in BigQuery. Spark runs are queued one at a time (`pipeline/dagster.yaml`).
+- Years BART hasn't published yet (currently 2026: an empty gzip) are skipped: the three yearly assets succeed with
+  `published: false` and a warning.
 
-### Data currently loaded locally
-| Dataset | Coverage | Size |
-|---|---|---|
-| BART hourly origin-destination | 2019 and 2025 (full years) | 19,257,542 rows; 73 MB raw gzip → 46 MB Parquet |
-| BART GTFS | feed version 72 (service 2026-08-10 → 2027-01-10) | 50 stations, 3,762 rail trips |
-| Bay Wheels | **none** | — |
+### Data currently loaded
+| Dataset | Where | Coverage | Size |
+|---|---|---|---|
+| BART hourly origin-destination | **BigQuery** `raw.bart_od` → `marts.*` | 2018–2025 (2020 is missing 4 days in BART's file) | 67,770,440 rows; 4.2 GB logical |
+| BART hourly origin-destination | local Parquet / DuckDB | 2019 and 2025 | 19,257,542 rows; 46 MB Parquet |
+| BART GTFS | web/data, `raw.bart_stations` | feed version 72 (service 2026-08-10 → 2027-01-10) | 50 stations, 3,762 rail trips |
+| Bay Wheels | — | **none** | — |
 
 ---
 
@@ -135,9 +139,9 @@ Local mode needs ~4 GB driver memory for two years.
 | core | `dim_station` (SCD2, first version back-dated to 1900), `dim_date`, `fct_trips_hourly` (incremental, last 35 days re-processed), `fct_station_daily` | tables |
 | marts | `mart_recovery`, `mart_peak_load`, `mart_od_flows`, `mart_kpis_daily` | tables |
 
-41 data tests, all passing. KPI definitions: `docs/METRICS.md`. Targets: `local` (DuckDB, default), `dev` and
-`ci` (BigQuery; never run). On BigQuery, facts are partitioned by `trip_date` and clustered by station, and queries
-are capped at 2 GB billed (`maximum_bytes_billed`).
+41 data tests. KPI definitions: `docs/METRICS.md`. Targets: `local` (DuckDB, default; 52/52 pass), `dev`
+(BigQuery: all 11 models built and tested over 2018–2025), `ci` (never run). On BigQuery, facts are partitioned by `trip_date` and clustered by station, and queries
+are capped at 20 GB billed in `dev` / 500 MB in `ci` (`maximum_bytes_billed`).
 
 ### Dagster (`pipeline/definitions.py`)
 - Assets: `bart_gtfs`, `bart_stations_raw`, `web_map_data`; `bart_od_files` → `bart_od_parquet` → `raw/bart_od`
@@ -159,13 +163,13 @@ are capped at 2 GB billed (`maximum_bytes_billed`).
 | Browser (Playwright, Chromium) | `npx playwright test` | 17 | pass |
 | dbt data tests | `uv run python tasks.py dbt` | 41 (+11 models/snapshot) | pass |
 | Lint/format | `uv run ruff check . && uv run ruff format --check .` | — | clean |
-| Terraform | `terraform validate` / `fmt -check` (via Docker) | — | clean |
+| Terraform | `terraform validate` / `fmt -check` / `plan` | — | clean; plan shows no changes |
 
 ---
 
 ## 7. Known limitations (current behaviour)
 - Train positions follow the timetable; delays and disruptions are not shown.
 - Ridership numbers are not yet shown on the site (the API doesn't read the warehouse).
-- Only 2019 and 2025 ridership is loaded locally; there is no Bay Wheels data.
+- Local DuckDB has only 2019 and 2025; BigQuery has 2018–2025. There is no Bay Wheels data.
 - On Windows, Spark runs only through Docker.
-- Nothing is deployed and no cloud resources exist.
+- No app is deployed. GCP has the warehouse (raw → marts), bucket, registry, service accounts and $1/$5 budget alerts.

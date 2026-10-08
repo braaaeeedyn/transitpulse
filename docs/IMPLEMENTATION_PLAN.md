@@ -89,10 +89,10 @@ this section is the checklist.
 ### M0: setup (week 0)
 - [x] `git init` done; add `.gitignore` (Python, `.env`, `*.json` keys, `.terraform/`, `target/`, `*.gguf`, `data/raw/`).
 - [x] `uv init`, Python 3.12; dev deps: `ruff`, `pytest`, `pre-commit`. Add `make lint` / `make test`.
-- [ ] GCP project → billing → **budget alerts at $1 and $5** (do this before anything else).
-- [ ] Enable APIs: BigQuery, Cloud Storage, Cloud Run, Artifact Registry, IAM, IAM Credentials, STS.
-- [ ] Create the Terraform state bucket by hand (`gs://transitpulse-tfstate`, `us-west1`, versioning on).
-- [~] `infra/terraform/`: provider + backend; BigQuery datasets `raw`, `staging`, `marts`, `ml`, `ci`; *(written + `terraform validate` passes; not applied (needs the GCP project))*
+- [x] GCP project → billing → **budget alerts at $1 and $5** (do this before anything else).
+- [x] Enable APIs: BigQuery, Cloud Storage, Cloud Run, Artifact Registry, IAM, IAM Credentials, STS.
+- [x] Create the Terraform state bucket by hand (`gs://transitpulse-tfstate`, `us-west1`, versioning on).
+- [x] `infra/terraform/`: provider + backend; BigQuery datasets `raw`, `staging`, `marts`, `ml`, `ci`; *(applied to `transitpulse-511002`; `plan` shows no changes)*
       raw bucket; Artifact Registry repo with a cleanup policy (keep last 3); service accounts
       `sa-pipeline` (write raw/staging/marts), `sa-agent` (read-only on `marts`), `sa-deploy`.
 - [~] Verify the data source links and licences in `TRANSITPULSE_PLAN.md §4`; record them in `README.md`. *(listed in README; licences still to verify)*
@@ -104,8 +104,8 @@ this section is the checklist.
 - [x] `pipeline/spark/clean_bart_od.py`: explicit schema, trim/cast, drop + count malformed rows, de-dup, derive
       `trip_date/hour/weekday/is_holiday` (broadcast join), write Parquet partitioned by year/month, write `ingest_audit`.
 - [x] Unit-test the Spark transforms on a 1,000-row fixture (`tests/spark/`).
-- [~] BigQuery load → `raw.bart_od` (partition `trip_date`, cluster `origin`). Same for Bay Wheels. *(`raw_bart_od` asset written; untested until BigQuery exists; Bay Wheels not started)*
-- [~] Monthly schedule + backfill of all historical years; record final raw size in GB (for the résumé bullet). *(schedules done; only 2019 + 2025 loaded locally (backfill 2018–2025 pending); 73 MB gz / 19.3M rows so far)*
+- [~] BigQuery load → `raw.bart_od` (partition `trip_date`, cluster `origin`). Same for Bay Wheels. *(BART done and verified; Bay Wheels not started)*
+- [x] Monthly schedule + backfill of all historical years; record final raw size in GB (for the résumé bullet). *(2018–2025 in BigQuery: 67.8M rows, 4.2 GB logical; 2026 not published yet)*
 - [x] dbt: `stg_*` → `dim_station` (SCD2 snapshot), `dim_date` → `fct_trips_hourly`, `fct_station_daily` →
       `mart_recovery`, `mart_peak_load`, `mart_od_flows`. Set `maximum_bytes_billed` in `profiles.yml`.
 - [x] dbt tests (generic + custom "no negative ridership"); `dbt build` green.

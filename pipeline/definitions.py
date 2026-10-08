@@ -27,10 +27,15 @@ ingest_assets = [
     ingest.raw_bart_od,
 ]
 
+# Each run starts a Spark job that needs ~4-6 GB. pipeline/dagster.yaml limits runs carrying this tag to one at a time,
+# so a backfill of every year runs them in sequence instead of all at once (which crashed Docker Desktop).
+SPARK_TAG = {"transitpulse/spark": "true"}
+
 yearly_ingest = define_asset_job(
     "yearly_ingest",
     selection=AssetSelection.assets(ingest.bart_od_files, ingest.bart_od_parquet, ingest.raw_bart_od),
     partitions_def=ingest.years,
+    tags=SPARK_TAG,
 )
 refresh_reference = define_asset_job(
     "refresh_reference_and_models",

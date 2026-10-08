@@ -156,3 +156,91 @@ Entry format: `## YYYY-MM-DD · milestone · short title`, then **Did / Decided 
 1. User: create the GCP project + billing + state bucket → `terraform apply` → run Dagster with `TP_PIPELINE_MODE=gcp`.
 2. M1: Bay Wheels ingest; backfill 2018–2024; Oracle VM deployment.
 3. F4 + M2: `/api/kpis` reading the marts → KPI tiles and trend charts; Looker Studio; Power BI.
+
+## 2026-10-07 · M0 · GCP project ready for apply
+**Did**
+- User created project `transitpulse-511002`, linked billing, signed in (`gcloud` + application-default
+  credentials) and created the state bucket `transitpulse-511002-tfstate`. `versions.tf` now points at it;
+  `terraform.tfvars` (gitignored) filled in.
+- `terraform init` + `plan` against the real project: **31 to add, 0 to change, 0 to destroy**.
+
+**Fixed (before first apply / first load)**
+- Budget email channel needs `monitoring.googleapis.com`, which wasn't enabled → added to the API list.
+- `raw_bart_od` deleted the year's rows before loading, which fails when `raw.bart_od` doesn't exist yet
+  (first run) → `NotFound` is now caught.
+
+## 2026-10-07 · M0 · first terraform apply: bootstrap APIs
+**Found**
+- First apply on the new project failed with 403s: `google_project_service` needs the **Cloud Resource Manager
+  API** already on to manage other APIs, and service accounts were created before `iam.googleapis.com` was enabled.
+  BigQuery, Storage and Monitoring APIs were enabled before it stopped (kept in state).
+
+**Fixed**
+- `infra/README.md` step 4: enable `cloudresourcemanager`, `serviceusage`, `iam` once by hand (bootstrap, like the
+  state bucket). They're also in the Terraform list so they stay on.
+- Service accounts now `depends_on` the enabled APIs.
+
+## 2026-10-07 · M0 done · GCP applied
+**Did**
+- `terraform apply` succeeded on `transitpulse-511002`: 30 added, 6 replaced (the API records tainted by the first
+  failed run; `disable_on_destroy = false`, so no API was switched off). Verified: 12 APIs on, 3 service accounts,
+  both budgets, datasets, bucket, registry.
+
+**Fixed**
+- Two permanent diffs (every `plan` showed "3 to change"): the Budgets API stores the project **number**, not the ID
+  → `data.google_project.this.number`; Artifact Registry drops `older_than = "0s"` → `tag_state = "ANY"`.
+  `plan` now: **No changes**.
+- BART serves an **empty gzip** for unpublished years (2026 today). The yearly assets now skip cleanly with
+  `published: false` instead of failing every month. Verified with a local 2026 run.
+- dbt `dev` cost cap 2 GB → 20 GB: the first full BigQuery build reads ~3–6 GB of raw data and would have been refused.
+
+## 2026-10-07 · M1 · first GCP backfill crashed Docker Desktop
+**Found**
+- The backfill launched all 9 yearly runs at once → 8 Spark containers × 4 GB driver heap. At 20:35:04 every
+  container lost its Docker connection (`error waiting for container: unexpected EOF`, exit 125): the Docker Desktop
+  VM ran out of memory. 2026 (skipped, no Spark) succeeded. Raw files had already downloaded.
+
+**Fixed**
+- `yearly_ingest` runs carry the tag `transitpulse/spark`; `pipeline/dagster.yaml` (copied into `$DAGSTER_HOME` by
+  `tasks.py dagster`) limits those runs to **one at a time**, so backfills run in sequence.
+- Docker runner adds `--memory 6g`: a runaway job is killed alone instead of taking down the VM.
+
+## 2026-10-07 · M1 · raw data in BigQuery
+**Did**
+- Sequential backfill succeeded (one Spark container at a time). `raw.bart_od`: **67,770,440 rows, 2018–2025**,
+  4.2 GB logical, partitioned by day. 2019 and 2025 row counts match the local build exactly. `raw.bart_stations` loaded.
+- Docker Desktop's VM has 8 GB total: confirms the one-at-a-time limit and the 6 GB container cap are required.
+
+**Found (to check)**
+- 2020 has 362 day-partitions, not 366: 4 days missing from BART's 2020 file.
+- ADC has no quota project (google-auth warning) → `gcloud auth application-default set-quota-project transitpulse-511002`.
+
+## 2026-10-07 · M1 · first BigQuery dbt build
+**Found**
+- Warehouse build stopped after `dim_station`: the `accepted_values` tests (hour 0–23, weekday 1–7) failed with
+  `No matching signature for operator IN for argument types INT64 and {STRING}`. dbt quotes accepted values by
+  default; DuckDB casts implicitly, BigQuery doesn't. The failed tests made dbt skip every downstream model.
+- (Also: the first warehouse run was cut off when the terminal running Dagster was closed. Safe to re-run:
+  BigQuery `CREATE OR REPLACE` is atomic, so tables are whole or absent.)
+
+**Fixed**
+- `quote: false` on the three integer `accepted_values` tests. Verified: local 52/52; on BigQuery all 9
+  `stg_bart_od` tests pass over 67.8M rows.
+
+## 2026-10-07 · M1 · warehouse built on BigQuery
+**Did**
+- Dagster `warehouse` run on BigQuery built every model except `mart_od_flows`:
+  `fct_trips_hourly` 67,770,440 rows (= raw), `dim_date` 2,922 days, `mart_kpis_daily` 2,918 days (4 missing 2020
+  days), `fct_station_daily` 143,958, `mart_recovery` 86,525. Biggest query: 2.44 GB billed.
+- KPIs match the local DuckDB build exactly (2019: 324,958 avg daily; 2025: 149,335, recovery 0.431, peak share 0.107).
+- Recovery curve 2018–2025: 1.01 → 1.00 → 0.27 → 0.20 → 0.33 → 0.39 → 0.41 → 0.43. Busiest station moved from
+  Montgomery (2018–19) to Powell (2020–22) to Embarcadero (2023–25).
+
+**Fixed**
+- `mart_od_flows` failed with `TIMESTAMP = DATETIME`: on BigQuery `dbt.date_trunc` returns TIMESTAMP and
+  `dbt.dateadd` returns DATETIME. Every `date_trunc`/`dateadd` result is now cast to DATE (5 models), so both
+  adapters see the same types. Verified: local 52/52; BigQuery dry run of the 4 affected models passes.
+
+## 2026-10-07 · M1 · warehouse complete on BigQuery
+- Re-run (05:50 UTC) succeeded: all 11 models built, `mart_od_flows` 233,631 rows; `fct_trips_hourly` ran
+  incrementally (MERGE of the last 35 days, 0.17 GB billed). Dagster run green, so every error-severity test passed.

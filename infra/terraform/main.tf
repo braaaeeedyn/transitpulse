@@ -1,5 +1,9 @@
+# Bootstrap: cloudresourcemanager + serviceusage must already be on before Terraform can manage any other API
+# (enabled once by hand, see infra/README.md). Listed here too so Terraform keeps them on.
 locals {
   services = [
+    "cloudresourcemanager.googleapis.com",
+    "serviceusage.googleapis.com",
     "bigquery.googleapis.com",
     "storage.googleapis.com",
     "run.googleapis.com",
@@ -8,6 +12,7 @@ locals {
     "iamcredentials.googleapis.com",
     "sts.googleapis.com",
     "billingbudgets.googleapis.com",
+    "monitoring.googleapis.com", # the budget alerts' email channel
   ]
 }
 
@@ -17,11 +22,17 @@ resource "google_project_service" "enabled" {
   disable_on_destroy = false
 }
 
+data "google_project" "this" {
+  project_id = var.project_id
+}
+
 # --- Cost guardrails: alerts at $1 and $5 (TRANSITPULSE_PLAN.md §8) ---------------------------------
 resource "google_monitoring_notification_channel" "budget_email" {
   display_name = "TransitPulse budget alerts"
   type         = "email"
   labels       = { email_address = var.budget_alert_email }
+
+  depends_on = [google_project_service.enabled]
 }
 
 resource "google_billing_budget" "guardrail" {
@@ -30,7 +41,8 @@ resource "google_billing_budget" "guardrail" {
   display_name    = "transitpulse-${each.key}-usd"
 
   budget_filter {
-    projects = ["projects/${var.project_id}"]
+    # the Budgets API stores the project *number*; using the ID here causes a permanent diff
+    projects = ["projects/${data.google_project.this.number}"]
   }
 
   amount {

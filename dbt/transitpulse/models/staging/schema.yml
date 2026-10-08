@@ -16,6 +16,7 @@ models:
           - accepted_values:
               arguments:
                 values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+                quote: false # integer column: BigQuery won't compare INT64 to quoted strings
       - name: origin_code
         data_tests: [not_null]
       - name: destination_code
@@ -27,6 +28,7 @@ models:
           - accepted_values:
               arguments:
                 values: [1, 2, 3, 4, 5, 6, 7]
+                quote: false # integer column: BigQuery won't compare INT64 to quoted strings
 
   - name: stg_bart_stations
     columns:

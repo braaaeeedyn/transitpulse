@@ -17,7 +17,7 @@ resource "google_artifact_registry_repository" "app" {
     id     = "delete-rest"
     action = "DELETE"
     condition {
-      older_than = "0s"
+      tag_state = "ANY" # every image not kept by keep-last-3 (the API drops `older_than = "0s"`, causing a diff)
     }
   }
 

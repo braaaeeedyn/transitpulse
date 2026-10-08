@@ -13,7 +13,7 @@
 with od as (
     select * from {{ ref('stg_bart_od') }}
     {% if is_incremental() %}
-    where trip_date >= (select {{ dbt.dateadd('day', -35, 'max(trip_date)') }} from {{ this }})
+    where trip_date >= (select cast({{ dbt.dateadd('day', -35, 'max(trip_date)') }} as date) from {{ this }})
     {% endif %}
 ),
 

@@ -45,10 +45,16 @@ class SparkRunner(ConfigurableResource):
     runner: str = "python"  # "python" | "docker"
     image: str = "transitpulse-spark"
     driver_memory: str = "4g"
+    # hard ceiling per container (JVM heap + off-heap + Python): a runaway job is killed alone instead of
+    # exhausting the Docker Desktop VM and taking every other container down with it
+    container_memory: str = "6g"
 
     def run_module(self, module: str, *args: str) -> None:
         if self.runner == "docker":
-            cmd = ["docker", "run", "--rm", "-v", f"{ROOT}:/app", self.image, "python", "-m", module, *args]
+            cmd = [
+                "docker", "run", "--rm", "--memory", self.container_memory,
+                "-v", f"{ROOT}:/app", self.image, "python", "-m", module, *args,
+            ]  # fmt: skip
         else:
             cmd = ["python", "-m", module, *args]
         subprocess.run([*cmd, "--driver-memory", self.driver_memory], cwd=ROOT, check=True)
