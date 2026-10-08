@@ -111,6 +111,7 @@
   font-weight: 500;
   line-height: 1.15;
   text-align: left;
+  max-width: 100%; /* a long suggestion wraps to two lines rather than widening the page */
   transition: background-color var(--duration-fast) var(--ease-standard);
 }
 .chip:hover {
@@ -233,6 +234,13 @@
 .ask-card form {
   display: grid;
   gap: var(--space-md);
+}
+
+/* minmax(0, 1fr): the card's columns shrink to the space available instead of growing to fit the longest
+   unwrapped chip (that pushed the page 14 px wider than a 320 px phone on Linux font metrics) */
+.ask-card,
+.ask-card form {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .ask-card__submit {

@@ -244,3 +244,18 @@ Entry format: `## YYYY-MM-DD · milestone · short title`, then **Did / Decided 
 ## 2026-10-07 · M1 · warehouse complete on BigQuery
 - Re-run (05:50 UTC) succeeded: all 11 models built, `mart_od_flows` 233,631 rows; `fct_trips_hourly` ran
   incrementally (MERGE of the last 35 days, 0.17 GB billed). Dagster run green, so every error-severity test passed.
+
+## 2026-10-07 · repo · pushed to GitHub; first CI runs
+**Did**
+- Commits pushed to `github.com/braaaeeedyn/transitpulse` (no co-author trailer, per the user).
+- First two CI runs: terraform, python, spark (native Java 17 on Linux) **pass**; web **failed** in Playwright.
+
+**Found**
+- Reproduced the CI web job in a Linux container (node:20 + `playwright install --with-deps chromium`): at 320 px
+  the page was **334 px** wide. The Ask card's first suggestion chip ("Which stations grew most since 2022?") never
+  wrapped; with Linux font metrics it measured 294 px and the card's `auto` grid column grew to fit it. On Windows
+  it happened to fit, which hid the bug (a phone with larger fonts would hit it too).
+
+**Fixed**
+- `.ask-card` and its form use `grid-template-columns: minmax(0, 1fr)`; chips get `max-width: 100%` so long
+  suggestions wrap to two lines. Verified: 17/17 Playwright on Linux and on Windows; Linux page width = 320 px.
