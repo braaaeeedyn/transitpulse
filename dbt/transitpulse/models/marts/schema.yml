@@ -1,0 +1,35 @@
+version: 2
+
+models:
+  - name: mart_recovery
+    description: Station-level weekday recovery vs the same ISO week of 2019.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            columns: [trip_date, station_code]
+    columns:
+      - name: recovery_ratio
+        data_tests: [non_negative]
+
+  - name: mart_peak_load
+    description: Peak hour and peak-hour share per station (last 90 days of service weekdays).
+    columns:
+      - name: station_code
+        data_tests: [not_null, unique]
+      - name: peak_hour_share
+        data_tests: [not_null, non_negative]
+
+  - name: mart_od_flows
+    description: Monthly origin-destination trips with MoM / YoY change and rank from origin.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            columns: [month_start, origin_code, destination_code]
+
+  - name: mart_kpis_daily
+    description: One row per day with every KPI in docs/METRICS.md.
+    columns:
+      - name: trip_date
+        data_tests: [not_null, unique]
+      - name: total_entries
+        data_tests: [not_null, non_negative]

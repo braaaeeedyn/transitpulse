@@ -1,0 +1,30 @@
+name: transitpulse
+version: "1.0.0"
+config-version: 2
+profile: transitpulse
+
+model-paths: ["models"]
+snapshot-paths: ["snapshots"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  # recovery baseline year
+  baseline_year: 2019
+
+models:
+  transitpulse:
+    staging:
+      +schema: staging
+      +materialized: view
+    core:
+      +schema: marts
+      +materialized: table
+    marts:
+      +schema: marts
+      +materialized: table
+
+snapshots:
+  transitpulse:
+    +target_schema: "{{ 'ci' if target.name == 'ci' else 'staging' }}"

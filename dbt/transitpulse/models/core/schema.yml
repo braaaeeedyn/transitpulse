@@ -1,0 +1,61 @@
+version: 2
+
+models:
+  - name: dim_station
+    description: SCD type 2 station dimension built from the snapshot.
+    columns:
+      - name: station_sk
+        data_tests: [not_null, unique]
+      - name: station_code
+        data_tests: [not_null]
+
+  - name: dim_date
+    columns:
+      - name: date_day
+        data_tests: [not_null, unique]
+      - name: weekday
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6, 7]
+
+  - name: fct_trips_hourly
+    description: Trips per hour per origin-destination pair. BigQuery - partitioned by trip_date, clustered by origin.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            columns: [trip_date, trip_hour, origin_code, destination_code]
+    columns:
+      - name: trip_date
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_day
+      - name: origin_code
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_station')
+                field: station_code
+              config:
+                severity: warn # ridership can include codes for stations no longer in the current GTFS
+      - name: origin_sk
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+      - name: trips
+        data_tests: [not_null, non_negative]
+
+  - name: fct_station_daily
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            columns: [trip_date, station_code]
+    columns:
+      - name: entries
+        data_tests: [not_null, non_negative]
+      - name: exits
+        data_tests: [not_null, non_negative]

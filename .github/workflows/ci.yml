@@ -1,0 +1,65 @@
+# Pull-request checks (IMPLEMENTATION_PLAN M0/M7). Deploy (deploy.yml) is added in M7 once GCP exists.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --group dbt
+      - name: Lint
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+      - name: Unit tests
+        run: uv run pytest -m "not spark and not gcp"
+      - name: dbt parse (models compile; no warehouse needed)
+        run: uv run --group dbt dbt parse --project-dir dbt/transitpulse --profiles-dir dbt/transitpulse
+        env:
+          DBT_TARGET: local
+
+  spark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --group spark
+      - run: uv run pytest -m spark tests/spark
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: uv sync
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Schedule maths (node:test)
+        run: node --test tests/web/
+      - name: Browser tests (Playwright)
+        run: npx playwright test
+
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform -chdir=infra/terraform fmt -check
+      - run: terraform -chdir=infra/terraform init -backend=false
+      - run: terraform -chdir=infra/terraform validate

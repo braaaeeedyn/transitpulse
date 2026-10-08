@@ -1,0 +1,25 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Loaded as-is by the pipeline (Spark Parquet -> BigQuery load job). Never edited by hand.
+    schema: raw
+    tables:
+      - name: bart_od
+        description: >
+          BART hourly origin-destination trips, cleaned and de-duplicated by pipeline/spark/clean_bart_od.py.
+          BigQuery: partitioned by trip_date, clustered by origin.
+        config:
+          # DuckDB (`local` target) reads the Parquet directly; BigQuery ignores this.
+          # TP_DATA_ROOT: where Spark wrote it (relative to the working directory, or absolute)
+          external_location: "read_parquet('{{ env_var('TP_DATA_ROOT', 'data/parquet') }}/bart_od/*/*/*.parquet', hive_partitioning = true)"
+        columns:
+          - name: trip_date
+          - name: hour
+          - name: origin
+          - name: destination
+          - name: trips
+      - name: bart_stations
+        description: Station list from the BART GTFS feed, one row per station per observation (pipeline/stations.py).
+        config:
+          external_location: "read_csv_auto('{{ env_var('TP_DATA_ROOT', 'data/parquet') }}/bart_stations/*.csv', header = true)"

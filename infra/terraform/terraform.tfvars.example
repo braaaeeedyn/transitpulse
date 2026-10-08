@@ -1,0 +1,6 @@
+# Copy to terraform.tfvars (gitignored) and fill in.
+project_id         = "transitpulse-XXXXXX"
+region             = "us-west1"
+billing_account_id = "XXXXXX-XXXXXX-XXXXXX"
+budget_alert_email = "you@example.com"
+raw_bucket_name    = "transitpulse-raw-XXXXXX"

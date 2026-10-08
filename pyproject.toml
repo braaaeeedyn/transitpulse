@@ -1,0 +1,89 @@
+[project]
+name = "transitpulse"
+version = "0.1.0"
+description = "Bay Area transit analytics: BART + Bay Wheels ridership pipelines, forecasts, causal analysis and an AI analyst agent."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.8",
+    "pydantic-settings>=2.4",
+    "httpx>=0.27",
+]
+
+[tool.uv]
+default-groups = ["dev", "webdata"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.6",
+    "pytest>=8.3",
+    "pre-commit>=3.8",
+]
+pipeline = [
+    "dagster>=1.8",
+    "dagster-webserver>=1.8",
+    "dagster-gcp>=0.24",
+    "dagster-dbt>=0.24",
+    "google-cloud-storage>=2.18",
+    "google-cloud-bigquery>=3.25",
+    "holidays>=0.56",
+    "requests>=2.32",
+]
+spark = [
+    "pyspark>=3.5,<3.6",
+    "holidays>=0.56",
+]
+dbt = [
+    "dbt-core>=1.8",
+    "dbt-bigquery>=1.8",
+    "dbt-duckdb>=1.8", # `local` target: runs the same models over the Parquet files, no cloud needed
+]
+ml = [
+    "pandas>=2.2",
+    "numpy>=1.26",
+    "scikit-learn>=1.5",
+    "lightgbm>=4.5",
+    "statsmodels>=0.14",
+    "matplotlib>=3.9",
+]
+agent = [
+    "langgraph>=0.2",
+    "langchain-google-genai>=2.0",
+    "langchain-ollama>=0.2",
+    "langfuse>=2.50",
+    "sqlglot>=25.0",
+]
+webdata = [
+    "pyshp>=2.3",
+    "shapely>=2.0",
+]
+load = [
+    "locust>=2.31",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["api", "pipeline", "ml", "analysis", "eval"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+extend-exclude = ["dbt/transitpulse/target", "web"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["E501"] # line length is the formatter's job
+allowed-confusables = ["–", "×", "→", "↔", "²"] # display text (line names, units) uses real typography
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = [
+    "spark: needs a local Spark + Java 17 install",
+    "gcp: needs GCP credentials",
+]

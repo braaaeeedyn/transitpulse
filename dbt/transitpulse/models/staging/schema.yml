@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: stg_bart_od
+    description: One row per date x hour x origin x destination.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            columns: [trip_date, trip_hour, origin_code, destination_code]
+    columns:
+      - name: trip_date
+        data_tests: [not_null]
+      - name: trip_hour
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+      - name: origin_code
+        data_tests: [not_null]
+      - name: destination_code
+        data_tests: [not_null]
+      - name: trips
+        data_tests: [not_null, non_negative]
+      - name: weekday
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6, 7]
+
+  - name: stg_bart_stations
+    columns:
+      - name: station_code
+        data_tests: [not_null, unique]
+      - name: station_name
+        data_tests: [not_null]

@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+*-key.json
+*.keyfile.json
+credentials/
+
+# Data (raw data lives in GCS, never in git)
+data/
+!web/data/
+spark-warehouse/
+metastore_db/
+derby.log
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform.lock.hcl.bak
+terraform.tfvars
+
+# dbt
+dbt/transitpulse/target/
+dbt/transitpulse/dbt_packages/
+dbt/transitpulse/logs/
+
+# Dagster
+.dagster_home/
+tmp*/
+
+# ML artifacts
+*.gguf
+ml/finetune/checkpoints/
+ml/finetune/merged/
+*.safetensors
+
+# Node / Playwright
+node_modules/
+test-results/
+playwright-report/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+dbt/transitpulse/.user.yml

@@ -1,0 +1,32 @@
+# Three targets, same models:
+#   local - DuckDB file over the Parquet in data/parquet (no cloud; used for development and tests)
+#   dev   - BigQuery, datasets staging/marts (the real warehouse)
+#   ci    - BigQuery, everything in the `ci` dataset (tables auto-expire after 3 days)
+transitpulse:
+  target: "{{ env_var('DBT_TARGET', 'local') }}"
+  outputs:
+    local:
+      type: duckdb
+      path: "{{ env_var('TP_DUCKDB_PATH', 'data/transitpulse.duckdb') }}"
+      schema: main
+      threads: 4
+
+    dev:
+      type: bigquery
+      method: "{{ 'service-account' if env_var('GOOGLE_APPLICATION_CREDENTIALS', '') else 'oauth' }}"
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS', '') }}"
+      project: "{{ env_var('TP_GCP_PROJECT', 'unset') }}"
+      dataset: staging
+      location: us-west1
+      threads: 4
+      maximum_bytes_billed: 2000000000 # 2 GB cap per query (TRANSITPULSE_PLAN §8)
+      job_execution_timeout_seconds: 300
+
+    ci:
+      type: bigquery
+      method: oauth # GitHub Actions authenticates through Workload Identity Federation
+      project: "{{ env_var('TP_GCP_PROJECT', 'unset') }}"
+      dataset: ci
+      location: us-west1
+      threads: 4
+      maximum_bytes_billed: 500000000
