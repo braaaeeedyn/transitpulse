@@ -3,7 +3,8 @@
         partition_by={'field': 'trip_date', 'data_type': 'date', 'granularity': 'month'} if target.type == 'bigquery' else none,
     )
 }}
--- Fact: Bay Wheels trips per day, split by rider type, bike type and docked vs dockless.
+-- Fact: Bay Wheels *bike* trips per day, split by rider type, bike type and docked vs dockless.
+-- Non-bike vehicles in the feed (8 electric_scooter trips in Sept 2024) are excluded, so bikes-vs-trains counts bikes.
 select
     trip_date,
     count(*) as trips,
@@ -15,4 +16,5 @@ select
     sum(case when is_dockless then 1 else 0 end) as dockless_trips,
     avg(duration_sec) / 60.0 as avg_duration_min
 from {{ ref('stg_baywheels_trips') }}
+where rideable_type != 'electric_scooter'
 group by 1

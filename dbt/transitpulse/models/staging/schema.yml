@@ -58,7 +58,8 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ["electric_bike", "classic_bike", "docked_bike", "unknown"]
+                # electric_scooter: 8 trips in Sept 2024 (found on the full 2018-2026 load); kept here, excluded from bike counts
+                values: ["electric_bike", "classic_bike", "docked_bike", "electric_scooter", "unknown"]
       - name: schema_version
         data_tests:
           - accepted_values:

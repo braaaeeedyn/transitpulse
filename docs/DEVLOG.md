@@ -412,3 +412,20 @@ Entry format: `## YYYY-MM-DD · milestone · short title`, then **Did / Decided 
 - `docs/ORACLE_VM.md`: sizing section with the free-tier limit, the measured VM, the resize steps, an optional
   swap file, and `systemctl edit` drop-ins instead of editing unit files (bootstrap re-copies them).
 - Verified: pytest 42/42, Oracle VM + forecast tests, shellcheck, `systemd-analyze verify`, Dagster validate.
+
+## 2026-10-08 · deploy · TransitPulse running on the Oracle VM
+**Did**
+- VM resized to 2 OCPU / 12 GB (free maximum) + 4 GB swap; `bootstrap.sh` installed Java 17, uv, the repo and both
+  Dagster units next to `seismicsocal.service` (key check refused to start until the key was transitpulse:600, as designed).
+- First VM runs: `baywheels_ingest` loaded **25,989,969 trips (2018 → 2026-09)** into `raw.baywheels_trips`; the
+  `warehouse` run rebuilt every BART model on BigQuery as `sa-pipeline`.
+
+**Found**
+- The warehouse run failed one test: `accepted_values` on `stg_baywheels_trips.rideable_type` — **8 trips in
+  September 2024 are `electric_scooter`**. Local data (2019 + 2025 only) never had it. dbt skipped the two bike models
+  downstream (`fct_bike_trips_daily`, `mart_bikes_vs_trains`).
+
+**Fixed**
+- Staging keeps the source truthful (`electric_scooter` is an accepted value); `fct_bike_trips_daily` counts bikes only
+  (`where rideable_type != 'electric_scooter'`), so bikes-vs-trains isn't inflated. Verified: all 10 staging tests
+  pass on BigQuery, dry run of the fact passes, local `stg_baywheels_trips+` build passes.
