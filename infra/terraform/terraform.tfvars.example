@@ -4,3 +4,8 @@ region             = "us-west1"
 billing_account_id = "XXXXXX-XXXXXX-XXXXXX"
 budget_alert_email = "you@example.com"
 raw_bucket_name    = "transitpulse-raw-XXXXXX"
+
+# Optional (M7, Cloud Run). Defaults shown; the agent stays off until you've added the Gemini key's secret version.
+# agent_enabled     = false
+# gemini_model      = "gemini-2.5-flash"
+# github_repository = "owner/transitpulse"

@@ -104,12 +104,12 @@ this section is the checklist.
 - [x] `pipeline/spark/clean_bart_od.py`: explicit schema, trim/cast, drop + count malformed rows, de-dup, derive
       `trip_date/hour/weekday/is_holiday` (broadcast join), write Parquet partitioned by year/month, write `ingest_audit`.
 - [x] Unit-test the Spark transforms on a 1,000-row fixture (`tests/spark/`).
-- [~] BigQuery load → `raw.bart_od` (partition `trip_date`, cluster `origin`). Same for Bay Wheels. *(BART done and verified; Bay Wheels cleaned locally with DuckDB (`pipeline/baywheels.py`) and modelled in dbt (`stg_baywheels_trips` → `fct_bike_trips_daily` → `mart_bikes_vs_trains`); the `raw/baywheels_trips` BigQuery load is written but not run)*
+- [~] BigQuery load → `raw.bart_od` (partition `trip_date`, cluster `origin`). Same for Bay Wheels. *(BART done and verified; Bay Wheels cleaned locally with DuckDB (`pipeline/baywheels.py`) and modelled in dbt (`stg_baywheels_trips` → `fct_bike_trips_daily` → `mart_bikes_vs_trains`); the `raw/baywheels_trips` BigQuery load ran on the VM: 25,989,969 trips, 2018 → 2026-09)*
 - [x] Monthly schedule + backfill of all historical years; record final raw size in GB (for the résumé bullet). *(2018–2025 in BigQuery: 67.8M rows, 4.2 GB logical; 2026 not published yet)*
 - [x] dbt: `stg_*` → `dim_station` (SCD2 snapshot), `dim_date` → `fct_trips_hourly`, `fct_station_daily` →
       `mart_recovery`, `mart_peak_load`, `mart_od_flows`. Set `maximum_bytes_billed` in `profiles.yml`.
 - [x] dbt tests (generic + custom "no negative ridership"); `dbt build` green.
-- [~] Deploy Dagster on the Oracle VM as `transitpulse-dagster.service` (systemd), key file gitignored. *(files + runbook ready: `deploy/oracle/` (daemon + web units, `bootstrap.sh`), `docs/ORACLE_VM.md`; not deployed yet)*
+- [x] Deploy Dagster on the Oracle VM as `transitpulse-dagster.service` (systemd), key file gitignored. *(`deploy/oracle/` daemon + web units, `bootstrap.sh`, `docs/ORACLE_VM.md`; running since 2026-10-08, schedules on)*
 - **Done when:** a scheduled Dagster run goes raw → marts end to end on the VM, and every dbt test passes.
 
 ### M2: KPIs + BI (weeks 4–5) · #8 #9
@@ -122,9 +122,9 @@ this section is the checklist.
 ### M3: forecasting (week 6) · #7
 - [x] `ml/forecast/`: features (lags, rolling, calendar, holidays), LightGBM, seasonal-naive baseline.
 - [x] Walk-forward validation; MAE/RMSE with bootstrap CIs → `ml.forecast_runs`. *(6 folds, paired bootstrap over stations, B = 1000)*
-- [~] Weekly Dagster asset writes `marts.forecast_station_daily` (14-day horizon, with p10/p90 intervals). *(asset + Monday schedule done and run locally; the BigQuery write path isn't run yet)*
+- [x] Weekly Dagster asset writes `marts.forecast_station_daily` (14-day horizon, with p10/p90 intervals). *(runs on the Oracle VM into BigQuery every Monday; since 2026-10-09 the code also writes a split-conformal calibrated band `lower`/`upper`, which production gets on the VM's next run of the new code)*
 - **Done when:** LightGBM beats the baseline with a CI that excludes zero (or you've written down honestly why not).
-  *Met locally: MAE 364.9 vs 548.5, improvement 183.7 [139.5, 234.1]. Caveat: the p10–p90 range covers 48%, not 80%.*
+  *Met: MAE 283.1 vs 548.5, improvement 265.4 [199.6, 339.9] (local and BigQuery agree). Caveat: the p10–p90 range covers 70.5% and the calibrated band 73.0%, not 80%, so the site calls it the "model range".*
 
 ### M4: causal analysis (week 7) · #21 #7
 - [ ] Confirm the eBART opening date and pick treated/control stations; write them down *before* looking at results.
@@ -133,13 +133,13 @@ this section is the checklist.
 - **Done when:** the write-up is finished and the pre-trends plot is in it.
 
 ### M5: agent + evaluation (weeks 8–9) · #19 #5 #6 #7
-- [ ] `api/agent/guardrails.py`: sqlglot SELECT-only, auto-`LIMIT`, dry run ≤ 1 GB, `sa-agent` credentials. Unit-test each rejection path.
-- [ ] LangGraph graph: router → sql_tool / forecast_tool / chart_tool → answer (cites SQL). Out-of-scope refusal.
-- [ ] Ollama for local dev, Gemini Flash for deployed; one env var switches them.
-- [ ] Langfuse callback on every run.
-- [ ] `eval/questions.yaml`: 60–100 questions with gold SQL; `make eval` reports execution accuracy.
-- [ ] Power analysis → A/B (schema card vs. + 5 retrieved examples) → McNemar + bootstrap CI → `docs/AB_TEST.md`.
-- [ ] `POST /api/ask` **streams** progress events (Server-Sent Events): `thinking` → `sql` → `rows` → `chart` → `answer`, so the UI can show progress (F6).
+- [x] `api/agent/guardrails.py`: sqlglot SELECT-only, table allowlist, auto-`LIMIT`, dry run ≤ 1 GB (BigQuery) / `EXPLAIN` on a locked-down read-only DuckDB connection. Unit-test each rejection path. *(`sa-agent` credentials come with the Cloud Run deploy, M7.)*
+- [x] LangGraph graph: router → sql (one repair retry) / forecast tool → answer (cites SQL). Out-of-scope refusal with 3 suggestions. *(chart_tool cut: the client renders no charts.)*
+- [x] Ollama for local dev, Gemini Flash for deployed; one env var (`TP_AGENT_LLM`) switches them. A deterministic FakeLLM for tests.
+- [x] Langfuse callback on every run when its keys are set (no-op and not imported otherwise).
+- [x] `eval/questions.yaml`: 66 questions with gold SQL + 10 out-of-scope; `tasks.py eval` reports execution accuracy, refusal accuracy, guardrail rejections, latency. *(llama3.1:8b: 0.27 execution accuracy, 1.0 refusal accuracy.)*
+- [ ] Power analysis → A/B (schema card vs. + 5 retrieved examples) → McNemar + bootstrap CI → `docs/AB_TEST.md`. *(not started; with accuracy at 27% the few-shot arm is the next thing to try)*
+- [x] `POST /api/ask` **streams** progress events (Server-Sent Events): `thinking` → `sql` → `rows` → `answer` (or `refusal` / `error`), so the UI can show progress (F6). Rate limit per IP and a daily byte budget answer 429 before streaming.
 - **Done when:** `make eval` runs both arms and the A/B write-up has a decision.
 
 ### M6: QLoRA fine-tune (week 10) · #16
@@ -149,11 +149,11 @@ this section is the checklist.
 - **Done when:** arm C results are in `docs/AB_TEST.md`, win or lose.
 
 ### M7: ship (weeks 11–12) · #1 #13 #3 #18
-- [ ] Dockerfile (multi-stage, non-root); serves `api/` **and** `web/` (static mount with long cache headers on hashed assets).
-- [ ] Terraform: Cloud Run (`min=0`, `max=2`), Workload Identity Federation for GitHub.
-- [~] `ci.yml` on PR: ruff, pytest, Playwright (F7), `dbt build --target ci`, `terraform plan`. *(`.github/workflows/ci.yml`: ruff, `dbt parse`, pytest (incl. a DuckDB `dbt build` on a generated fixture), shellcheck, Spark, node tests, Playwright, terraform validate; `dbt build --target ci` + `terraform plan` not yet)*
-- [ ] `deploy.yml` on `main`: build → push → `terraform apply` → deploy.
-- [ ] Locust: forecast + agent (LLM mocked) at 1/10/25 users; p50/p95/p99 + cold start → README.
+- [~] Dockerfile (multi-stage, non-root); serves `api/` **and** `web/` (static mount with long cache headers on hashed assets). *(`Dockerfile` + `.dockerignore`: uv build stage, `python:3.12-slim-bookworm` runtime as uid 10001, 119 MB compressed; smoke-tested locally in `tests/deploy/`. Asset names aren't hashed: fonts are cached a year, map data a day, JS/CSS revalidated)*
+- [~] Terraform: Cloud Run (`min=0`, `max=2`), Workload Identity Federation for GitHub. *(`cloudrun.tf`, `wif.tf`: validated and statically tested, **not applied**; runbook `docs/CLOUD_RUN.md`)*
+- [~] `ci.yml` on PR: ruff, pytest, Playwright (F7), `dbt build --target ci`, `terraform plan`. *(`.github/workflows/ci.yml`: ruff, `dbt parse`, pytest (incl. a DuckDB `dbt build` on a generated fixture), shellcheck, Spark, node tests, Playwright, terraform validate, and a `container` job that builds the image and runs `tests/deploy`; `dbt build --target ci` + `terraform plan` not yet: they need GCP credentials in CI)*
+- [~] `deploy.yml` on `main`: build → push → `terraform apply` → deploy. *(written and actionlint-clean; off until the `DEPLOY_ENABLED` repo variable is `true`; keyless WIF auth. **Changed:** no `terraform apply` in CI (it would need owner rights), Terraform stays manual; to confirm with the user)*
+- [~] Locust: forecast + agent (LLM mocked) at 1/10/25 users; p50/p95/p99 + cold start → README. *(`load/locustfile.py`, `load/run_local.py`: local numbers in README; Cloud Run cold start not measured, nothing is deployed)*
 - [ ] README: architecture diagram, `make up`, results, cost, limitations, screenshots of the site at phone + desktop width.
 - **Done when:** a merge to `main` deploys with no manual steps and the public URL loads on a phone.
 
@@ -258,15 +258,15 @@ Build exactly to `DESIGN.md §6` (base layer, train glyph, controls, tooltips). 
 ### F5: forecast explorer (week 6)
 - [x] `GET /api/forecast/{station}` → 14 days with p10/p50/p90 + last 28 days of actuals.
 - [~] Station picker: searchable combobox (type "mac" → MacArthur), plus chips for 5 popular stations. Clicking a station on the map also selects it. *(combobox + chips done; map click → forecast not done)*
-- [x] Chart: actuals line + forecast line + shaded interval; plain-English caption ("Expect about 12,400 entries next Tuesday, likely between 11,100 and 13,600").
+- [x] Chart: actuals line + forecast line + shaded interval; plain-English caption. *(worded from the measured coverage: "For Tue, Jan 6, 2026 the model expected about 14,200 entries; model range (10th–90th percentile) 10,500–16,800."; "80% range" only once a calibrated band holds 75–85%)*
 - **Done when:** works with keyboard only and on a phone in portrait. *(met: Playwright `forecast:` tests)*
 
 ### F6: Ask TransitPulse (weeks 8–9, after M5)
 - [x] The hero Ask card: one input row ("Ask about BART or Bay Wheels ridership…"), 4 suggestion chips that fill and submit
       the question, black "Ask" pill. `Enter` submits.
-- [~] Results open as a panel below the hero (full-screen sheet on phones), streaming `/api/ask` events: *(streaming client + all message states done; the agent itself is M5)*
+- [~] Results open as a panel below the hero (full-screen sheet on phones), streaming `/api/ask` events: *(streaming client with a spec-compliant SSE parser + all message states done and tested against mocked streams; no copy button or chart yet)*
   progress steps ("Writing SQL… Running query… Drawing chart…") → answer text → table/chart → **"Show SQL"** disclosure with copy button.
-- [~] Friendly states: refusal ("I can only answer questions about the transit data. Try: …" + chips), guardrail rejection *(refusal / rate-limit / error / offline states in `web/js/ask.js`; guardrail message arrives with M5)*
+- [x] Friendly states: refusal ("I can only answer questions about the transit data. Try: …" + chips), guardrail rejection *(refusal / rate-limit / 4xx / 5xx / dropped-stream / offline states in `web/js/ask.js`; guardrail and budget messages come from the agent's `error` event)*
       ("That query would scan too much data; try narrowing the date range"), rate limit ("Lots of questions right now — try again in a minute"), network error with Retry.
 - [x] Tables scroll horizontally *inside* their card on small screens (never the page); first column sticky.
 - [x] `aria-live` on the answer region; focus moves to the answer heading when it arrives.

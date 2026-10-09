@@ -7,6 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 ROOT = Path(__file__).resolve().parents[1]
 
 WarehouseKind = Literal["none", "duckdb", "bigquery"]
+AgentLLM = Literal["fake", "ollama", "gemini"]
 
 
 class Settings(BaseSettings):
@@ -20,7 +21,24 @@ class Settings(BaseSettings):
     warehouse: WarehouseKind | None = None
     gcp_project: str | None = None
     duckdb_path: Path = Path("data/transitpulse.duckdb")  # relative paths are resolved from the repo root
+    # Ask TransitPulse (POST /api/ask). Off unless TP_AGENT_ENABLED=true; the agent packages are imported only then.
     agent_enabled: bool = False
+    agent_llm: AgentLLM = "fake"  # fake = deterministic test double; ollama (local) and gemini are opt-in
+    ollama_model: str = "llama3.1:8b"
+    ollama_url: str = "http://localhost:11434"
+    gemini_model: str = (
+        "gemini-2.5-flash"  # check the current model name; the key is read from GOOGLE_API_KEY
+    )
+    agent_max_bytes: int = (
+        1_000_000_000  # per agent query: BigQuery dry run must be under this, then it's the cap
+    )
+    agent_row_limit: int = 200  # LIMIT added to (or clamped on) every agent query
+    agent_rate_per_min: int = 10  # questions per client IP per minute
+    agent_daily_bytes: int = 10_000_000_000  # per-process daily budget of BigQuery bytes for agent queries
+    agent_timeout_s: float = 20.0  # DuckDB agent queries are interrupted after this
+    # Behind Cloud Run's front end the client IP is the right-most X-Forwarded-For entry; elsewhere the header is
+    # client-controlled, so it is only read when this is set.
+    trust_proxy: bool = False
 
     @property
     def warehouse_kind(self) -> WarehouseKind:

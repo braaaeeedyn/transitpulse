@@ -15,8 +15,9 @@ from pipeline.resources import ROOT, Storage
 @asset(
     group_name="ml",
     deps=[AssetKey(["marts", "fct_station_daily"])],
-    description="14-day forecast of daily entries per station (LightGBM p10/p50/p90), validated walk-forward "
-    "against a seasonal-naive baseline with bootstrap CIs; run log appended to ml.forecast_runs.",
+    description="14-day forecast of daily entries per station (LightGBM p10/p50/p90 plus a split-conformal "
+    "calibrated band), validated walk-forward against a seasonal-naive baseline with bootstrap CIs; run log "
+    "appended to ml.forecast_runs.",
 )
 def forecast_station_daily(context: AssetExecutionContext, storage: Storage) -> MaterializeResult:
     from ml.forecast import io, run
@@ -25,7 +26,8 @@ def forecast_station_daily(context: AssetExecutionContext, storage: Storage) -> 
     warehouse = "bigquery" if gcp else "duckdb"
     path = Path(os.environ.get("TP_DUCKDB_PATH", str(ROOT / "data" / "transitpulse.duckdb")))
     history = io.read_history(warehouse, duckdb_path=path, project=storage.gcp_project)
-    forecast, run_log = run.run_forecast(history)
+    # 6 test folds + 6 warm-up folds that calibrate the published band (about twice the fits of an uncalibrated run)
+    forecast, run_log = run.run_forecast(history, folds=6, calib_folds=run.CALIB_FOLDS)
     io.write_outputs(warehouse, forecast, run_log, duckdb_path=path, project=storage.gcp_project)
     r = run_log.iloc[0]
     context.log.info(
@@ -41,5 +43,7 @@ def forecast_station_daily(context: AssetExecutionContext, storage: Storage) -> 
             "mae_baseline": MetadataValue.float(float(r["mae_baseline"])),
             "mae_diff_ci": MetadataValue.json([float(r["mae_diff_lo"]), float(r["mae_diff_hi"])]),
             "coverage_p10_p90": MetadataValue.float(float(r["coverage_p10_p90"])),
+            "coverage_calibrated": MetadataValue.float(float(r["coverage_calibrated"])),
+            "conformal_q": MetadataValue.float(float(r["conformal_q"])),
         }
     )

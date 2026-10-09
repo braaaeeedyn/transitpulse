@@ -57,3 +57,7 @@ Thumbs.db
 .vscode/
 .idea/
 dbt/transitpulse/.user.yml
+
+# Agent eval: per-run detail stays local; one summary per real-model run is committed
+eval/results/*
+!eval/results/summary-*.json

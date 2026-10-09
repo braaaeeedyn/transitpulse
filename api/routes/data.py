@@ -111,24 +111,28 @@ def _kpis(wh: Warehouse) -> dict:
         else None
     )
 
-    # peak-hour share on service weekdays; delta vs the same ISO weeks of 2019, in percentage points
+    # peak-hour share on service weekdays; delta vs the same ISO weeks of ISO year 2019, in percentage points.
+    # ISO weeks are matched as (iso_year, iso_week) pairs in Python, so 2019-12-30 (week 1 of 2020) is not a
+    # baseline day and 2018-12-31 (week 1 of 2019) is.
     peak = _mean([r["peak_hour_share"] for r in weekdays])
     peak_delta = None
     if peak is not None and start.year != BASELINE_YEAR:
-        dates = wh.table("dim_date")
-        weeks = {
-            r["iso_week"]
-            for r in wh.query(
-                f"select iso_week from {dates} where date_day >= @start and date_day <= @end",
-                {"start": start, "end": end},
-            )
-        }
+        weeks = {(start + dt.timedelta(days=i)).isocalendar().week for i in range((end - start).days + 1)}
         base = wh.query(
-            f"select d.iso_week, k.peak_hour_share from {kpis} as k inner join {dates} as d "
-            "on k.trip_date = d.date_day where d.year = @year and d.is_service_weekday",
-            {"year": BASELINE_YEAR},
+            f"select trip_date, peak_hour_share from {kpis} "
+            "where trip_date >= @start and trip_date <= @end and is_service_weekday",
+            {
+                "start": dt.date.fromisocalendar(BASELINE_YEAR, 1, 1),
+                "end": dt.date.fromisocalendar(BASELINE_YEAR + 1, 1, 1) - dt.timedelta(days=1),
+            },
         )
-        base_peak = _mean([r["peak_hour_share"] for r in base if r["iso_week"] in weeks])
+        base_peak = _mean(
+            [
+                r["peak_hour_share"]
+                for r in base
+                if (iso := _as_date(r["trip_date"]).isocalendar()).year == BASELINE_YEAR and iso.week in weeks
+            ]
+        )
         peak_delta = peak - base_peak if base_peak is not None else None
 
     # busiest station: the one that was busiest on the most days, and its mean share on those days
@@ -291,11 +295,44 @@ def station_summary(code: str) -> dict:
 # --- forecasts ---------------------------------------------------------------------------------------
 
 
+INTERVAL_NOMINAL = 0.8  # the raw band is the model's 10th-90th percentile
+
+
+def _interval(run: dict, has_band: bool) -> dict:
+    """How the published band was made and how often it held the actual value in back-testing.
+
+    Reads either run-log schema: runs written before calibration existed have only `coverage_p10_p90`, and their
+    forecast rows only p10/p90. A calibrated band is published only if it came closer to its nominal coverage than
+    the raw quantiles did; otherwise the raw band is served."""
+    raw_ci = [run.get("coverage_p10_p90_lo"), run.get("coverage_p10_p90_hi")]
+    raw = {
+        "method": "quantile (p10-p90)",
+        "nominal": INTERVAL_NOMINAL,
+        "coverage": run.get("coverage_p10_p90"),
+        "coverage_ci": raw_ci if None not in raw_ci else None,
+        "calibrated": False,
+    }
+    cal = run.get("coverage_calibrated")
+    if not has_band or cal is None or not run.get("calib_folds"):
+        return raw
+    nominal = run.get("interval_nominal") or INTERVAL_NOMINAL
+    if raw["coverage"] is not None and abs(cal - nominal) > abs(raw["coverage"] - nominal):
+        return raw
+    ci = [run.get("coverage_calibrated_lo"), run.get("coverage_calibrated_hi")]
+    return {
+        "method": run.get("interval_method") or "split-conformal",
+        "nominal": nominal,
+        "coverage": cal,
+        "coverage_ci": ci if None not in ci else None,
+        "calibrated": True,
+    }
+
+
 def _forecast(wh: Warehouse, code: str) -> dict:
+    # `select *`: the published band columns (lower/upper) only exist in runs written since calibration
     try:
         rows = wh.query(
-            "select run_id, generated_at, forecast_date, p10, p50, p90 "
-            f"from {wh.table('forecast_station_daily')} where station_code = @code order by forecast_date",
+            f"select * from {wh.table('forecast_station_daily')} where station_code = @code order by forecast_date",
             {"code": code},
         )
     except TableNotFound:
@@ -315,18 +352,24 @@ def _forecast(wh: Warehouse, code: str) -> dict:
     )
     try:
         runs = wh.query(
-            "select mae_lgbm, mae_baseline, mae_diff_lo, mae_diff_hi, coverage_p10_p90 "
-            f"from {wh.table('forecast_runs', schema='ml')} where run_id = @run_id",
+            f"select * from {wh.table('forecast_runs', schema='ml')} where run_id = @run_id",
             {"run_id": rows[0]["run_id"]},
         )
     except TableNotFound:
         runs = []
+    has_band = all(r.get("lower") is not None and r.get("upper") is not None for r in rows)
+    interval = _interval(runs[0], has_band) if runs else None
+    calibrated = bool(interval and interval["calibrated"])
+    run = runs[0] if runs else {}
+    diff_ci = [run.get("mae_diff_lo"), run.get("mae_diff_hi")]
+    # every run column is read with .get(): an older or partial run log still serves the forecast
     model = (
         {
-            "mae": runs[0]["mae_lgbm"],
-            "baseline_mae": runs[0]["mae_baseline"],
-            "mae_diff_ci": [runs[0]["mae_diff_lo"], runs[0]["mae_diff_hi"]],
-            "interval_coverage": runs[0]["coverage_p10_p90"],
+            "mae": run.get("mae_lgbm"),
+            "baseline_mae": run.get("mae_baseline"),
+            "mae_diff_ci": diff_ci if None not in diff_ci else None,
+            "interval_coverage": run.get("coverage_p10_p90"),
+            "interval": interval,
         }
         if runs
         else None
@@ -335,9 +378,19 @@ def _forecast(wh: Warehouse, code: str) -> dict:
         "code": code,
         "name": _station_name(wh, code) or code,
         "data_through": through,
+        "forecast_start": _as_date(rows[0]["forecast_date"]),
+        "forecast_end": _as_date(rows[-1]["forecast_date"]),
         "generated_at": rows[0]["generated_at"],
         "forecast": [
-            {"date": _as_date(r["forecast_date"]), "p10": r["p10"], "p50": r["p50"], "p90": r["p90"]}
+            {
+                "date": _as_date(r["forecast_date"]),
+                "p10": r["p10"],
+                "p50": r["p50"],
+                "p90": r["p90"],
+                # the band the site draws: calibrated when that's what is published, else the raw quantiles
+                "lo": r["lower"] if calibrated else r["p10"],
+                "hi": r["upper"] if calibrated else r["p90"],
+            }
             for r in rows
         ],
         "actuals": [{"date": _as_date(r["trip_date"]), "entries": r["entries"]} for r in actuals],

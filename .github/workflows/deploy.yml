@@ -1,0 +1,77 @@
+# Build the API image, push it to Artifact Registry and deploy it to Cloud Run (IMPLEMENTATION_PLAN M7).
+#
+# Off until the repository variable DEPLOY_ENABLED is set to `true` (Settings → Secrets and variables → Actions →
+# Variables), after `terraform apply` has created the service and Workload Identity Federation. docs/CLOUD_RUN.md
+# is the runbook. Authentication is keyless (GitHub OIDC → WIF → sa-deploy); no JSON key exists anywhere.
+# Terraform is never run here: it needs owner-level rights, so it stays a manual step.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  REGION: us-west1
+  SERVICE: transitpulse-api
+
+jobs:
+  deploy:
+    if: vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # lets google-github-actions/auth exchange the GitHub OIDC token
+    env:
+      GCP_PROJECT: ${{ vars.GCP_PROJECT }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the image (tag = commit SHA)
+        run: |
+          image="${REGION}-docker.pkg.dev/${GCP_PROJECT}/transitpulse/api:${GITHUB_SHA}"
+          docker build -t "$image" .
+          echo "IMAGE=$image" >> "$GITHUB_ENV"
+
+      # This workflow doesn't wait for ci.yml (both start on the same push), so the container smoke tests are the
+      # gate: an image that fails them is never pushed or deployed.
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Smoke test the image before pushing it
+        run: uv run pytest -m docker tests/deploy
+        env:
+          TP_TEST_IMAGE: ${{ env.IMAGE }}
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Push the image
+        run: |
+          gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+          docker push "$IMAGE"
+
+      - name: Deploy to Cloud Run (image only; everything else is Terraform's)
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --project "$GCP_PROJECT" \
+            --region "$REGION" \
+            --image "$IMAGE" \
+            --quiet
+
+      - name: Smoke test the new revision
+        run: |
+          url=$(gcloud run services describe "$SERVICE" --project "$GCP_PROJECT" --region "$REGION" --format 'value(status.url)')
+          curl --fail --silent --show-error --retry 5 --retry-delay 3 "$url/healthz"
+          curl --fail --silent --show-error --output /dev/null "$url/"

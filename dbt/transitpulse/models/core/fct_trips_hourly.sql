@@ -9,11 +9,13 @@
     )
 }}
 -- Fact: trips per hour per origin-destination pair, keyed to the station version valid on that day (SCD2 join).
--- Incremental: each run rewrites only the last 35 days of partitions (late corrections) plus anything new.
+-- Incremental: each run rewrites the last 35 days of partitions (late corrections), anything newer, and any date
+-- not loaded yet, so backfilling an older year after a newer one is picked up instead of silently skipped.
 with od as (
     select * from {{ ref('stg_bart_od') }}
     {% if is_incremental() %}
     where trip_date >= (select cast({{ dbt.dateadd('day', -35, 'max(trip_date)') }} as date) from {{ this }})
+        or trip_date not in (select distinct trip_date from {{ this }})
     {% endif %}
 ),
 

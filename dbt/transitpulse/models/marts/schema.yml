@@ -2,7 +2,9 @@ version: 2
 
 models:
   - name: mart_recovery
-    description: Station-level weekday recovery vs the same ISO week of 2019.
+    description: >
+      Station-level weekday recovery vs the same ISO week of ISO year 2019 (2018-12-31 .. 2019-12-29). Days in ISO
+      year 2019 are the baseline and are not output rows.
     data_tests:
       - unique_combination_of_columns:
           arguments:
@@ -32,6 +34,12 @@ models:
       - name: trip_date
         data_tests: [not_null, unique]
       - name: total_entries
+        data_tests: [not_null, non_negative]
+      - name: rolling_28d_avg_entries
+        description: Mean daily entries over the calendar days present in [trip_date - 27, trip_date].
+        data_tests: [not_null, non_negative]
+      - name: rolling_28d_days
+        description: How many days of [trip_date - 27, trip_date] are loaded (28 when there is no gap).
         data_tests: [not_null, non_negative]
 
   - name: mart_ridership_monthly

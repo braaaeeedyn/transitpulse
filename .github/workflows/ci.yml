@@ -1,4 +1,4 @@
-# Pull-request checks (IMPLEMENTATION_PLAN M0/M7). Deploy (deploy.yml) is added in M7 once GCP exists.
+# Pull-request checks (IMPLEMENTATION_PLAN M0/M7). Deploying is deploy.yml (off until DEPLOY_ENABLED is set).
 name: ci
 
 on:
@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: uv sync --group dbt --group ml --group pipeline
+      - run: uv sync --group dbt --group ml --group pipeline --group agent
       - name: Lint
         run: |
           uv run ruff check .
@@ -26,7 +26,7 @@ jobs:
         env:
           DBT_TARGET: local
       - name: Unit tests (incl. dbt build on a generated fixture, forecast, Bay Wheels cleaning)
-        run: uv run --group dbt --group ml --group pipeline pytest -m "not spark and not gcp and not localdata"
+        run: uv run --group dbt --group ml --group pipeline --group agent pytest -m "not spark and not gcp and not localdata and not docker"
       - name: Shellcheck (Oracle VM bootstrap)
         run: shellcheck deploy/oracle/bootstrap.sh
 
@@ -57,6 +57,20 @@ jobs:
         run: node --test tests/web/
       - name: Browser tests (Playwright)
         run: npx playwright test
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Build the Cloud Run image (same Dockerfile deploy.yml pushes)
+        run: docker build -t transitpulse-api:ci .
+      - name: Image size (Artifact Registry free tier is 0.5 GB for 3 kept images)
+        run: docker image inspect -f '{{.Size}}' transitpulse-api:ci
+      - name: Container smoke tests (non-root, site + health, 503 without a warehouse, agent with the fake LLM)
+        run: uv run pytest -m docker tests/deploy
+        env:
+          TP_TEST_IMAGE: transitpulse-api:ci
 
   terraform:
     runs-on: ubuntu-latest

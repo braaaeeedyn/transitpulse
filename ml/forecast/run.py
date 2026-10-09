@@ -1,11 +1,14 @@
 """Train, validate and publish the 14-day station forecast.
 
     uv run --group ml python -m ml.forecast.run [--warehouse duckdb|bigquery] [--duckdb-path PATH]
-                                                [--horizon 14] [--folds 6] [--seed 0] [--train-days 730]
+                                                [--horizon 14] [--folds 6] [--calib-folds 6] [--seed 0]
+                                                [--train-days 730]
 
-Steps: read marts.fct_station_daily → walk-forward validation (LightGBM quantiles vs seasonal naive, ≥ 6 folds)
-→ paired bootstrap CIs over stations → refit on all data up to the last date → forecast the next `horizon` days
-for every station → write marts.forecast_station_daily (replaced) and append a row to ml.forecast_runs.
+Steps: read marts.fct_station_daily → walk-forward validation (LightGBM quantiles vs seasonal naive) over
+`calib_folds` warm-up folds then `folds` test folds → split-conformal calibration of the p10-p90 band, each test
+fold using only the folds before it → paired bootstrap CIs over stations (test folds only) → refit on all data up to
+the last date → forecast the next `horizon` days for every station, with the raw p10/p50/p90 and the calibrated
+band `lower`/`upper` → write marts.forecast_station_daily (replaced) and append a row to ml.forecast_runs.
 The forecast starts the day after the last date in the data ("data through"), not today.
 """
 
@@ -22,6 +25,8 @@ import pandas as pd
 from ml.forecast import evaluate, features, io, model
 
 ROOT = Path(__file__).resolve().parents[2]
+CALIB_FOLDS = 6  # warm-up folds whose scores calibrate the band; 0 publishes the raw p10-p90
+INTERVAL_NOMINAL = 0.8  # p10-p90
 
 
 def run_forecast(
@@ -29,6 +34,7 @@ def run_forecast(
     *,
     horizon: int = 14,
     folds: int = 6,
+    calib_folds: int = CALIB_FOLDS,
     step: int = 14,
     train_days: int = 730,
     seed: int = 0,
@@ -37,18 +43,38 @@ def run_forecast(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Returns (forecast rows, one-row run log)."""
     params = params or {}
+    if calib_folds and step < horizon:
+        raise ValueError(
+            "calibration needs step >= horizon, so a fold's targets end by the next fold's origin"
+        )
     t0 = time.monotonic()
     started = datetime.now(UTC)
     panel = features.to_panel(history)
     last = panel.index.max()
-    origins = evaluate.fold_origins(last, folds=folds, step=step, horizon=horizon)
+    origins = evaluate.fold_origins(last, folds=folds + calib_folds, step=step, horizon=horizon)
     hol = features.us_holidays(panel.index.min(), last + pd.Timedelta(days=horizon + 1))
     rows = features.make_rows(
         panel, horizon, origin_start=origins[0] - pd.Timedelta(days=train_days), holidays_set=hol
     )
 
-    test, fold_info = evaluate.walk_forward(rows, origins, train_days=train_days, seed=seed, **params)
+    preds, all_folds = evaluate.walk_forward(rows, origins, train_days=train_days, seed=seed, **params)
+    test, fold_q = evaluate.calibrate(preds, calib_folds, coverage=INTERVAL_NOMINAL)
     stats = evaluate.paired_bootstrap(test, b=bootstrap, seed=seed)
+    q_final = evaluate.final_conformal_q(preds, calib_folds, coverage=INTERVAL_NOMINAL)
+    fold_info = []
+    for f in all_folds:
+        if f["fold"] < calib_folds:
+            continue
+        i = f["fold"] - calib_folds
+        part = test[test["fold"] == i]
+        fold_info.append(
+            {
+                **f,
+                "fold": i,
+                "conformal_q": round(fold_q[i], 4),
+                "coverage_calibrated": round(evaluate.metrics(part)["coverage_calibrated"], 3),
+            }
+        )
 
     train, _ = evaluate.fold_split(rows, last, train_days)
     final = model.QuantileForecaster(seed=seed, **params).fit(rows[train])
@@ -56,6 +82,7 @@ def run_forecast(
         panel, horizon, origin_start=last, origin_end=last, holidays_set=hol, future=True
     )
     pred = final.predict(future)
+    lower, upper = evaluate.apply_band(pred.assign(level=future["level"].to_numpy()), q_final)
     generated = datetime.now(UTC)
     run_id = f"fc-{started:%Y%m%dT%H%M%SZ}-{uuid.uuid4().hex[:6]}"
 
@@ -69,6 +96,8 @@ def run_forecast(
             "p10": pred["p10"].round(1).to_numpy(),
             "p50": pred["p50"].round(1).to_numpy(),
             "p90": pred["p90"].round(1).to_numpy(),
+            "lower": lower.round(1),
+            "upper": upper.round(1),
         }
     ).sort_values(["station_code", "forecast_date"], ignore_index=True)
 
@@ -86,6 +115,13 @@ def run_forecast(
         "n_stations": int(forecast["station_code"].nunique()),
         "n_test_rows": len(test),
         **{k: v for k, v in stats.items() if k != "n_stations"},
+        "interval_nominal": INTERVAL_NOMINAL,
+        "interval_method": (
+            f"split-conformal CQR, rolling {calib_folds} folds" if calib_folds else "quantile (p10-p90)"
+        ),
+        "conformal_q": q_final,
+        "calib_folds": calib_folds,
+        **evaluate.interval_widths(test),
         "seed": seed,
         "params_json": json.dumps(
             {
@@ -108,7 +144,13 @@ def main(argv: list[str] | None = None) -> dict:
     ap.add_argument("--duckdb-path", type=Path, default=None)
     ap.add_argument("--project", default=os.environ.get("TP_GCP_PROJECT"))
     ap.add_argument("--horizon", type=int, default=14)
-    ap.add_argument("--folds", type=int, default=6)
+    ap.add_argument("--folds", type=int, default=6, help="test folds (metrics and CIs come from these only)")
+    ap.add_argument(
+        "--calib-folds",
+        type=int,
+        default=CALIB_FOLDS,
+        help="warm-up folds before the test folds that calibrate the band (0 = publish the raw p10-p90)",
+    )
     ap.add_argument("--train-days", type=int, default=730)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--bootstrap", type=int, default=1000)
@@ -133,6 +175,7 @@ def main(argv: list[str] | None = None) -> dict:
         history,
         horizon=args.horizon,
         folds=args.folds,
+        calib_folds=args.calib_folds,
         train_days=args.train_days,
         seed=args.seed,
         bootstrap=args.bootstrap,
@@ -147,7 +190,10 @@ def main(argv: list[str] | None = None) -> dict:
         f"  baseline MAE {r['mae_baseline']:.1f} [{r['mae_baseline_lo']:.1f}, {r['mae_baseline_hi']:.1f}]  "
         f"RMSE {r['rmse_baseline']:.1f} [{r['rmse_baseline_lo']:.1f}, {r['rmse_baseline_hi']:.1f}]\n"
         f"  MAE improvement {r['mae_diff']:.1f} [{r['mae_diff_lo']:.1f}, {r['mae_diff_hi']:.1f}]  "
-        f"p10-p90 coverage {r['coverage_p10_p90']:.3f} [{r['coverage_p10_p90_lo']:.3f}, {r['coverage_p10_p90_hi']:.3f}]"
+        f"p10-p90 coverage {r['coverage_p10_p90']:.3f} [{r['coverage_p10_p90_lo']:.3f}, {r['coverage_p10_p90_hi']:.3f}]\n"
+        f"  calibrated coverage {r['coverage_calibrated']:.3f} "
+        f"[{r['coverage_calibrated_lo']:.3f}, {r['coverage_calibrated_hi']:.3f}]  q {r['conformal_q']:.4f}  "
+        f"width {r['mean_width_raw']:.3f} -> {r['mean_width_calibrated']:.3f} of level"
         f"  ({r['duration_sec']} s)",
         flush=True,
     )

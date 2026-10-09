@@ -1,13 +1,16 @@
 """Dagster entry point: `dagster dev -m pipeline.definitions` (or `uv run python tasks.py dagster`).
 
 Schedules (TRANSITPULSE_PLAN §5 Phase 1):
-  * monthly_refresh - 6th of each month, 06:00 Pacific: re-download the current year's ridership file
-    (BART appends a month at a time), re-clean it, reload it, rebuild the dbt models, refresh the map data.
-  * baywheels_monthly - 7th of each month, 06:30 Pacific: the current year's Bay Wheels files (Lyft publishes
-    each month's trips early in the next month), cleaned and reloaded.
+  * monthly_refresh - 6th of each month, 06:00 Pacific: re-download the ridership file of the previous month's year
+    (BART appends a month at a time, so January reloads last year to pick up December), re-clean it, reload it,
+    rebuild the dbt models, refresh the map data.
+  * baywheels_monthly - 7th of each month, 06:30 Pacific: the Bay Wheels files of the previous month's year (Lyft
+    publishes each month's trips early in the next month), cleaned and reloaded.
   * weekly_forecast - Mondays 09:00 Pacific: retrain and publish the 14-day station forecast (group `ml`).
   * Historical years are loaded once with a backfill of the `years` partitions from the Dagster UI.
 """
+
+from datetime import timedelta
 
 from dagster import (
     AssetSelection,
@@ -60,15 +63,21 @@ refresh_reference = define_asset_job(
 )
 
 
+def _previous_months_year(context: ScheduleEvaluationContext) -> str:
+    """The year of the month before the run: the latest month the publisher can have released."""
+    t = context.scheduled_execution_time
+    return str((t.replace(day=1) - timedelta(days=1)).year)
+
+
 @schedule(job=yearly_ingest, cron_schedule="0 6 6 * *", execution_timezone="America/Los_Angeles")
 def monthly_ridership(context: ScheduleEvaluationContext):
-    year = str(context.scheduled_execution_time.year)
+    year = _previous_months_year(context)
     return RunRequest(run_key=f"ridership-{context.scheduled_execution_time:%Y-%m}", partition_key=year)
 
 
 @schedule(job=baywheels_ingest, cron_schedule="30 6 7 * *", execution_timezone="America/Los_Angeles")
 def baywheels_monthly(context: ScheduleEvaluationContext):
-    year = str(context.scheduled_execution_time.year)
+    year = _previous_months_year(context)
     return RunRequest(run_key=f"baywheels-{context.scheduled_execution_time:%Y-%m}", partition_key=year)
 
 

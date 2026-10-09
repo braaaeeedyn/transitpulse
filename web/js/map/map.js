@@ -6,7 +6,7 @@ import { formatDate, formatNumber, formatPercent } from "../chart.js";
 import { formatClock, formatDay, pacificParts, shiftDay } from "../util/time.js";
 import { makeView } from "./geometry.js";
 import { renderNetwork, setActiveStation } from "./network.js";
-import { nextDeparture, trainsAt } from "./schedule.js";
+import { isOutsideTimetable, nextDeparture, timetableRange, trainsAt } from "./schedule.js";
 import { drawTrains, hitTrain, placeTrain, trainSize } from "./trains.js";
 
 const SCRUB_MIN = 240; // 4:00 AM
@@ -261,9 +261,23 @@ export async function initMap(root) {
     const empty = placed.length === 0;
     notice.hidden = !empty;
     if (!empty) return;
-    const next = nextDeparture(schedule, days, t.minutes >= 1440 ? shiftDay(t.ymd, 1).ymd : t.ymd,
-      t.minutes >= 1440 ? shiftDay(t.ymd, 1).weekday : t.weekday, t.minutes % 1440);
-    notice.querySelector("[data-notice-text]").textContent =
+    const day = t.minutes >= 1440 ? shiftDay(t.ymd, 1) : { ymd: t.ymd, weekday: t.weekday };
+    const text = notice.querySelector("[data-notice-text]");
+    const jump = notice.querySelector("[data-jump]");
+    if (isOutsideTimetable(schedule, day.ymd)) {
+      // the bundled timetable doesn't cover this date, so "no trains" would be misleading
+      const range = timetableRange(schedule);
+      const fmt = (ymd) => formatDate(`${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}`);
+      text.textContent =
+        day.ymd > range.end
+          ? `This site's BART timetable ended on ${fmt(range.end)}. Positions can't be shown until it's updated.`
+          : `This site's BART timetable starts on ${fmt(range.start)}. Positions can't be shown until then.`;
+      jump.hidden = true;
+      return;
+    }
+    jump.hidden = false;
+    const next = nextDeparture(schedule, days, day.ymd, day.weekday, t.minutes % 1440);
+    text.textContent =
       next === null
         ? "No trains running right now."
         : `No trains running right now. Service resumes at ${formatClock(next)}.`;

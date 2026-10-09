@@ -22,6 +22,8 @@ dev = [
     "ruff>=0.6",
     "pytest>=8.3",
     "pre-commit>=3.8",
+    "python-hcl2>=7.0", # tests/test_infra_cloudrun.py parses the Terraform
+    "pyyaml>=6.0", # ... and the GitHub workflows
 ]
 pipeline = [
     "dagster>=1.8",
@@ -90,4 +92,5 @@ markers = [
     "spark: needs a local Spark + Java 17 install",
     "gcp: needs GCP credentials",
     "localdata: needs the local warehouse (data/transitpulse.duckdb) built by the pipeline",
+    "docker: needs Docker and the built API image (tests/deploy)",
 ]

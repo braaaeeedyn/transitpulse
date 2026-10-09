@@ -28,14 +28,44 @@ uv run python tasks.py stations          # GTFS -> station list for the SCD2 sna
 uv run python tasks.py spark             # data/raw/bart_od/*.csv.gz -> partitioned Parquet
 uv run python tasks.py baywheels         # Bay Wheels 2019 + 2025: download (~250 MB) + clean -> Parquet
 uv run python tasks.py dbt               # dbt build on DuckDB (data/transitpulse.duckdb)
-uv run python tasks.py forecast          # 14-day station forecast (LightGBM) -> marts.forecast_station_daily
+uv run python tasks.py forecast          # 14-day station forecast (LightGBM + calibrated band) -> marts.forecast_station_daily
+uv run python tasks.py eval --llm ollama # score the Ask agent on eval/questions.yaml (needs Ollama + llama3.1:8b)
 ```
+
+The Ask card's agent is off by default (the site says it isn't connected). To try it locally:
+`TP_AGENT_ENABLED=true TP_AGENT_LLM=ollama uv run --group agent python tasks.py api` (`TP_AGENT_LLM=fake` needs no
+model and answers a few canned queries).
 
 With `data/transitpulse.duckdb` built, `uv run python tasks.py api` serves real numbers on the site
 (it sets `TP_WAREHOUSE=duckdb`; set `TP_WAREHOUSE=bigquery` + `TP_GCP_PROJECT` to read BigQuery instead).
-Checks on the real local data: `uv run --group dbt --group ml pytest -m localdata tests/local`.
+Checks on the real local data: `uv run --group dbt --group ml --group agent pytest -m localdata tests/local`.
 
 Running the scheduled pipeline on the Oracle VM: [`docs/ORACLE_VM.md`](docs/ORACLE_VM.md).
+
+## Deploy (Cloud Run) and load test
+
+The site and API ship as one container ([`Dockerfile`](Dockerfile): multi-stage, non-root, **119 MB compressed**, so
+the 3 images Artifact Registry keeps fit its 0.5 GB free tier). Terraform for the service and for GitHub's keyless
+Workload Identity Federation is in [`infra/terraform/`](infra/terraform/). [`deploy.yml`](.github/workflows/deploy.yml)
+builds, pushes and deploys on `main`. **None of it is applied or switched on yet.** The workflow is off until the
+`DEPLOY_ENABLED` repository variable is set, and the steps are in [`docs/CLOUD_RUN.md`](docs/CLOUD_RUN.md).
+
+```sh
+uv run python tasks.py image             # docker build + container smoke tests (tests/deploy)
+uv run python tasks.py load              # Locust, 1/10/25 users, on a fixture warehouse with the fake LLM
+```
+
+Local load test (this PC, a 3-station DuckDB fixture, fake LLM, 20 s per step, 0 failures). These are not Cloud Run
+numbers:
+
+| Users | Requests/s | `/api/forecast` p50 / p95 / p99 | `/api/kpis` p50 / p95 / p99 | `/api/ask` p50 / p95 / p99 |
+|---|---|---|---|---|
+| 1 | 1.2 | 54 / 62 / 62 ms | 5 / 540 / 540 ms | 42 / 870 / 870 ms |
+| 10 | 11.8 | 4 / 8 / 17 ms | 4 / 11 / 17 ms | 43 / 58 / 58 ms |
+| 25 | 29.7 | 5 / 14 / 30 ms | 4 / 22 / 29 ms | 37 / 140 / 140 ms |
+
+The slow 1-user p95s are the first requests, before the API's cache and the agent graph are warm. The container
+starts in about 1.5 s locally and uses about 76 MiB of its 512 MiB.
 
 ## Docs
 | File | What it is |
@@ -46,8 +76,9 @@ Running the scheduled pipeline on the Oracle VM: [`docs/ORACLE_VM.md`](docs/ORAC
 | [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) | How the application works right now |
 | [`docs/DEVLOG.md`](docs/DEVLOG.md) | Running log of changes and decisions |
 | [`docs/SKILLS_MAP.md`](docs/SKILLS_MAP.md) | Where each skill is implemented, and how it works |
-| [`docs/METRICS.md`](docs/METRICS.md) | KPI definitions, the website tile windows, bikes vs trains |
+| [`docs/METRICS.md`](docs/METRICS.md) | KPI definitions, the website tile windows, bikes vs trains, forecast coverage, agent eval |
 | [`docs/ORACLE_VM.md`](docs/ORACLE_VM.md) | Runbook: Dagster on the Oracle VM (systemd) |
+| [`docs/CLOUD_RUN.md`](docs/CLOUD_RUN.md) | Runbook: the site + API on Cloud Run (Terraform, WIF, deploy workflow, costs) |
 
 ## Data sources and licences
 | Data | Source | Licence / terms |

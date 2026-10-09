@@ -16,6 +16,8 @@ select
     extract(year from s.date_day) as year,
     extract(month from s.date_day) as month,
     {{ iso_week('s.date_day') }} as iso_week,
+    -- the year iso_week belongs to; always pair iso_week with iso_year, never with the calendar year
+    {{ iso_year('s.date_day') }} as iso_year,
     {{ day_of_week('s.date_day') }} as weekday,
     {{ day_of_week('s.date_day') }} in (1, 7) as is_weekend,
     h.trip_date is not null as is_holiday,

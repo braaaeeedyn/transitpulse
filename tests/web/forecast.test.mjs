@@ -23,8 +23,11 @@ test("station search matches names and codes, best first", () => {
 test("the caption describes the first Tuesday in plain English", () => {
   assert.equal(
     forecastCaption(forecast),
-    "Expect about 3,000 entries on Tue, Jan 6, likely between 2,900 and 3,700.",
+    "For Tue, Jan 6, 2026 the model expected about 3,000 entries; model range (10th–90th percentile) 2,900–3,700.",
   );
   const noTuesday = { forecast: [{ date: "2026-01-01", p10: 40, p50: 52.4, p90: 61 }] };
-  assert.equal(forecastCaption(noTuesday), "Expect about 52 entries on Thu, Jan 1, likely between 40 and 61.");
+  assert.equal(
+    forecastCaption(noTuesday),
+    "For Thu, Jan 1, 2026 the model expected about 52 entries; model range (10th–90th percentile) 40–61.",
+  );
 });

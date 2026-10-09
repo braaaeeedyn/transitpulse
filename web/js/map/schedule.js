@@ -11,6 +11,26 @@ export function serviceRunsOn(svc, ymd, weekday) {
 }
 
 /**
+ * First and last calendar dates (YYYYMMDD) any service in the timetable can run on, counting added dates.
+ * Outside this range the published timetable has no trains at all, which is not the same as "no trains right now".
+ */
+export function timetableRange(schedule) {
+  let start = null;
+  let end = null;
+  for (const svc of schedule.services) {
+    for (const d of [svc.start, ...svc.added]) if (start === null || d < start) start = d;
+    for (const d of [svc.end, ...svc.added]) if (end === null || d > end) end = d;
+  }
+  return { start, end };
+}
+
+/** Is calendar date ymd (YYYYMMDD) before the timetable starts or after it ends? */
+export function isOutsideTimetable(schedule, ymd) {
+  const { start, end } = timetableRange(schedule);
+  return start !== null && (ymd < start || ymd > end);
+}
+
+/**
  * Build a lookup of the trips that run on one service day.
  * Returns [{trip, start, end, pattern, profile}] sorted by start (minutes after that day's midnight).
  */

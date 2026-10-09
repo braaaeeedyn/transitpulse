@@ -139,6 +139,10 @@ sudo bash /opt/transitpulse/deploy/oracle/bootstrap.sh
 Pulls `main` (fast-forward only), re-syncs dependencies, re-parses dbt, re-installs the units and restarts them.
 Your env file and key are left alone.
 
+**After New Year**, restart the daemon once (`sudo systemctl restart transitpulse-dagster-daemon`, or run the
+bootstrap). The yearly partitions are fixed when the code loads, so a daemon started in December doesn't offer the
+new year for backfills. The January schedules don't need this: they load the previous month's year.
+
 ## 9. Uninstall
 
 ```sh

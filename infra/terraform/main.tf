@@ -12,7 +12,8 @@ locals {
     "iamcredentials.googleapis.com",
     "sts.googleapis.com",
     "billingbudgets.googleapis.com",
-    "monitoring.googleapis.com", # the budget alerts' email channel
+    "monitoring.googleapis.com",    # the budget alerts' email channel
+    "secretmanager.googleapis.com", # the agent's Gemini key on Cloud Run (M7)
   ]
 }
 

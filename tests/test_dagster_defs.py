@@ -26,3 +26,25 @@ def test_definitions_include_new_assets_and_schedules():
     assert AssetKey(["marts", "fct_station_daily"]) in forecast.parent_keys
     stg = graph.get(AssetKey(["staging", "stg_baywheels_trips"]))
     assert AssetKey(["raw", "baywheels_trips"]) in stg.parent_keys
+
+
+def test_monthly_schedules_ingest_previous_months_year():
+    # BART and Lyft publish a month's data early in the next month, so the January run must reload last year's
+    # partition (to pick up December), not the new year's (which has nothing yet)
+    import datetime as dt
+    from zoneinfo import ZoneInfo
+
+    from dagster import build_schedule_context
+
+    from pipeline.definitions import baywheels_monthly, monthly_ridership
+
+    pacific = ZoneInfo("America/Los_Angeles")
+    cases = [
+        (monthly_ridership, dt.datetime(2027, 1, 6, 6, 0, tzinfo=pacific), "2026", "ridership-2027-01"),
+        (monthly_ridership, dt.datetime(2026, 7, 6, 6, 0, tzinfo=pacific), "2026", "ridership-2026-07"),
+        (baywheels_monthly, dt.datetime(2027, 1, 7, 6, 30, tzinfo=pacific), "2026", "baywheels-2027-01"),
+        (baywheels_monthly, dt.datetime(2026, 7, 7, 6, 30, tzinfo=pacific), "2026", "baywheels-2026-07"),
+    ]
+    for sched, when, year, run_key in cases:
+        req = sched(build_schedule_context(scheduled_execution_time=when))
+        assert (req.partition_key, req.run_key) == (year, run_key), (sched.name, when)

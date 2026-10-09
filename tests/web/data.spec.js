@@ -203,7 +203,7 @@ test("forecast: keyboard-only station search shows a 14-day forecast", async ({ 
 
   await expect(page.locator("[data-fc-title]")).toHaveText("MacArthur");
   await expect(page.locator("[data-fc-caption]")).toHaveText(
-    "Expect about 3,000 entries on Tue, Jan 6, likely between 2,900 and 3,700.",
+    "For Tue, Jan 6, 2026 the model expected about 3,000 entries; model range (10th–90th percentile) 2,900–3,700.",
   );
   await expect(page.locator("[data-fc-source]")).toContainText("Forecast from data through Dec 31, 2025.");
   await expect(page.locator("[data-fc-source]")).toContainText("in back-testing it held 48% of actual days");
@@ -220,6 +220,51 @@ test("forecast: keyboard-only station search shows a 14-day forecast", async ({ 
   await page.keyboard.press("Escape");
   await expect(page.locator("#fc-listbox")).toBeHidden();
   await expect(page.locator("[data-fc-title]")).toHaveText("MacArthur");
+});
+
+test("forecast: legend and caption describe the calibrated range", async ({ page }) => {
+  await mockForecast(page);
+  await page.goto("/");
+  await expect(page.locator("[data-fc-title]")).toHaveText("Embarcadero"); // calibrated fixture, 79% coverage
+  await expect(page.locator("[data-fc-caption]")).toHaveText(
+    "For Tue, Jan 6, 2026 the model expected about 11,400 entries; 80% range 9,500–14,700.",
+  );
+  await expect(page.locator("[data-fc-band]")).toHaveText("80% range");
+  const source = page.locator("[data-fc-source]");
+  await expect(source).toContainText("Forecast from data through Dec 31, 2025. It covers Jan 1–14, 2026,");
+  await expect(source).toContainText("in back-testing it held 79% of actual days against an 80% target.");
+  await expect(source).not.toContainText("narrower");
+  await expect(page.locator("[data-fc-table] th")).toContainText(["80% range: low", "80% range: high"]);
+  await expect(page.locator("[data-fc-table] tbody tr").first()).toContainText("Thu, Jan 1, 2026");
+  // the band drawn is the published one (lo/hi), not the raw quantiles: its top reaches the highest `hi`
+  await expect(page.locator("[data-fc-chart] .chart__band")).toHaveCount(1);
+  const label = await page.locator("[data-fc-chart] .chart__svg").getAttribute("aria-label");
+  expect(label).toContain("with its 80% range (shaded)");
+  expect(label).not.toContain("likely");
+});
+
+test("forecast: an uncalibrated band is called the model range", async ({ page }) => {
+  await mockForecast(page);
+  await page.goto("/");
+  await page.locator("[data-fc-chip=MCAR]").click(); // the older API shape: raw p10-p90, 47.5% coverage
+  await expect(page.locator("[data-fc-title]")).toHaveText("MacArthur");
+  await expect(page.locator("[data-fc-caption]")).toHaveText(
+    "For Tue, Jan 6, 2026 the model expected about 3,000 entries; model range (10th–90th percentile) 2,900–3,700.",
+  );
+  await expect(page.locator("[data-fc-band]")).toHaveText("Model range (10th–90th percentile)");
+  await expect(page.locator("[data-fc-source]")).toContainText(
+    "in back-testing it held 48% of actual days against an 80% target, so it is narrower than it should be.",
+  );
+  await expect(page.locator("[data-fc-table] th")).toContainText([
+    "Model range low (10th percentile)",
+    "Model range high (90th percentile)",
+  ]);
+  await expect(page.locator("#forecast")).not.toContainText(/likely|80% range/i);
+  // the longer legend label wraps instead of widening the page on the smallest phone
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.locator("[data-fc-band]").scrollIntoViewIfNeeded();
+  const [scrollW, innerW] = await page.evaluate(() => [document.documentElement.scrollWidth, innerWidth]);
+  expect(scrollW).toBeLessThanOrEqual(innerW);
 });
 
 test("forecast: missing forecast offers another station", async ({ page }) => {

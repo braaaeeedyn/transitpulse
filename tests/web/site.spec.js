@@ -58,6 +58,17 @@ test("out of service hours shows the notice and Jump to 8 AM starts a replay", a
   await expect(page.locator("[data-now]")).toHaveAttribute("aria-pressed", "false");
 });
 
+test("map: an expired timetable says so", async ({ page }) => {
+  // a Monday at 8 AM, after every service in web/data/schedule.json has ended
+  await open(page, new Date("2027-02-01T08:00:00-08:00"));
+  await expect(page.locator(".map-notice")).toBeVisible();
+  await expect(page.locator("[data-notice-text]")).toHaveText(
+    "This site's BART timetable ended on Jan 10, 2027. Positions can't be shown until it's updated.",
+  );
+  await expect(page.locator("[data-notice-text]")).not.toContainText("No trains running");
+  await expect(page.locator("[data-jump]")).toBeHidden();
+});
+
 test("list view shows a table of trains", async ({ page }) => {
   await open(page);
   await page.locator("[data-view=list]").click();

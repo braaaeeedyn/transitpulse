@@ -134,6 +134,49 @@ def test_forecast_run_logged_with_cis(con):
     assert len(json.loads(r["fold_metrics_json"])) == r["folds"]
 
 
+def test_local_facts_cover_2018_to_2025(con):
+    # every year of BART Parquet on disk is in the facts (incremental runs used to skip backfilled years)
+    on_disk = sorted(
+        int(p.name.split("=")[1])
+        for p in (ROOT / "data" / "parquet" / "bart_od").glob("year=*")
+        if p.is_dir()
+    )
+    assert on_disk[0] <= 2018 and on_disk[-1] >= 2025, on_disk
+    years = dict(
+        q(
+            con,
+            "select extract(year from trip_date), count(distinct trip_date) from marts.fct_trips_hourly group by 1",
+        )
+    )
+    for y in range(2018, 2026):
+        assert years.get(y, 0) >= 360, (y, years.get(y))  # BART's 2020 file is missing 4 days
+    staged = q(con, "select count(distinct trip_date) from staging.stg_bart_od")[0][0]
+    (loaded,) = q(con, "select count(distinct trip_date) from marts.fct_trips_hourly")[0]
+    assert loaded == staged
+    daily_years = {
+        r[0] for r in q(con, "select distinct extract(year from trip_date) from marts.fct_station_daily")
+    }
+    assert set(range(2018, 2026)) <= daily_years
+
+
+def test_forecast_trained_on_full_history_with_calibration(con):
+    (run_id,) = q(con, "select distinct run_id from marts.forecast_station_daily")[0]
+    cols = ["train_start", "coverage_p10_p90", "coverage_calibrated", "coverage_calibrated_lo",
+            "coverage_calibrated_hi", "calib_folds", "conformal_q", "interval_method"]  # fmt: skip
+    row = q(con, f"select {', '.join(cols)} from ml.forecast_runs where run_id = ?", [run_id])
+    assert len(row) == 1
+    r = dict(zip(cols, row[0], strict=True))
+    assert r["train_start"] <= dt.date(2024, 1, 31), r["train_start"]
+    assert r["coverage_calibrated"] is not None and r["calib_folds"] >= 1 and r["conformal_q"] is not None
+    assert r["coverage_calibrated_lo"] <= r["coverage_calibrated"] <= r["coverage_calibrated_hi"]
+    (n, bad, missing) = q(
+        con,
+        "select count(*), sum(case when lower <= p50 and p50 <= upper and lower >= 0 then 0 else 1 end), "
+        "count(*) - least(count(lower), count(upper)) from marts.forecast_station_daily",
+    )[0]
+    assert n > 0 and bad == 0 and missing == 0
+
+
 def test_api_reads_local_warehouse(con, monkeypatch):
     from api import warehouse
     from api.cache import cache

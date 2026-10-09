@@ -438,3 +438,332 @@ Entry format: `## YYYY-MM-DD · milestone · short title`, then **Did / Decided 
   [199.6, 339.9]; p10–p90 coverage **0.705** [0.691, 0.719] (local, 2025-only training: 0.475). Still under the
   nominal 0.80, but far closer. Wrote `marts.forecast_station_daily` (700 rows) and `ml.forecast_runs`.
 - Schedules turned on in the VM's Dagster (Automation page).
+
+## 2026-10-09 · build loop iter 1 · backfill fix, calibrated forecast band, honest forecast wording
+**Did**
+- **B2 (silent backfill loss).** `fct_trips_hourly`'s incremental filter only took `trip_date >= max − 35`, so a year
+  loaded *after* a newer one was skipped: the local Parquet held 2018–2025 but the facts only 2019 + 2025. The filter
+  now also takes any date not yet in `{{ this }}` (anti-join). New singular dbt test
+  `assert_fct_trips_hourly_has_every_od_date` (error). `tests/test_dbt_regressions.py` builds Dec 2025, adds
+  2018-12-31 / 2019-01-02..04 / 2019-12-30..31 and rebuilds incrementally; it failed before the fix (the new dbt test
+  reported 6 missing dates) and passes after.
+- Local `dbt build` after the fix (2 threads): 84/84 in 2 min 6 s. `fct_trips_hourly` now has **67,770,440** rows and
+  `fct_station_daily` **143,958**, exactly BigQuery's counts; `data/transitpulse.duckdb` 118 → 369 MB. The incremental
+  rerun (the `dbt-build-local` check) takes 2 min 21 s.
+- **Calibration.** Rolling split-conformal on CQR scores (`ml/forecast/evaluate.py`): the walk-forward runs 6 warm-up
+  folds before the usual 6 test folds; each test fold widens/narrows p10/p90 by the finite-sample 80% quantile of
+  `max(p10 − y, y − p90) / level` from the 6 folds before it (asserted: all their targets ≤ its origin). The
+  published forecast uses the last 6 folds. New columns: `lower`, `upper` in `marts.forecast_station_daily`;
+  `coverage_calibrated(_lo/_hi)`, `interval_nominal`, `interval_method`, `conformal_q`, `calib_folds`,
+  `mean_width_raw`, `mean_width_calibrated` in `ml.forecast_runs`. `--calib-folds` CLI; the Dagster asset passes 6.
+- **B5 (run log can't evolve).** DuckDB adds missing columns before `insert … by name`; BigQuery appends with
+  `ALLOW_FIELD_ADDITION`. Without this the VM's next weekly run would have failed on the new columns.
+- **API.** `/api/forecast/{code}` reads `select *` from both tables, so it serves the old production schema and the
+  new one. Items gain `lo`/`hi`; `model.interval = {method, nominal, coverage, coverage_ci, calibrated}`;
+  `forecast_start`/`forecast_end` added. Existing fields unchanged.
+- **B6 (copy overclaims).** Caption, legend, hidden-table headers and chart text alternative are worded from
+  `model.interval`: "80% range" only if calibrated and within ±5 pts of 80%, else "model range (10th–90th
+  percentile)". The caption carries the year and is past tense; the source line gives the window ("It covers
+  Jan 1–14, 2026, the 14 days after the latest ridership BART has published") and says "narrower than it should be"
+  only below 75% / "wider than needed" only above 85%. Heading "Two weeks ahead…" → "A 14-day forecast, station by
+  station". Fixtures: `forecast-EMBR.json` has the new fields (calibrated, 79%); `forecast-MCAR.json` stays on the
+  old shape. The two allowed caption assertions were replaced by the new exact strings.
+
+**Measured** (local run `fc-20261009T131810Z-a3cda6`, data through 2025-12-31, trained from 2024-01-02)
+- MAE **283.147** [215.9, 364.6] vs baseline 548.5; improvement 265.4 [199.6, 339.9]; RMSE 642.6. An in-memory
+  `calib_folds=0` run on the same data gives MAE 283.14707110926554, bit-identical (calibration doesn't touch p50),
+  and the same numbers as production `fc-20261009T045221Z-558f0e` (283.1, coverage 0.705), as predicted.
+- Coverage vs 0.80: raw **0.705** [0.691, 0.719] → calibrated **0.730** [0.717, 0.744]. Per test fold raw →
+  calibrated: 0.807 → 0.833, 0.757 → 0.786, 0.697 → 0.726, 0.650 → 0.683, 0.896 → 0.909, 0.420 → 0.444 (Christmas).
+- Width (÷ level) 0.241 → 0.251 (ratio 1.04, far from the 2.5 "too wide" flag). Per-fold q 0.004–0.006; the
+  published forecast's q is 0.023 because its calibration window includes the Christmas fold.
+- Run time 64.8 s uncalibrated → 122.8 s calibrated (1.9×) on 4 threads here; the VM's ~21 min run should become
+  ~40 min.
+- BigQuery dry run (free, not executed) of the compiled incremental SQL: 2,981,902,160 bytes (2.98 GB) with or
+  without the anti-join (the estimate can't prune on a subquery filter either way), under the 10 GB threshold, so no
+  `INFORMATION_SCHEMA.PARTITIONS` macro. Within the 20 GB `dev` cap.
+
+**Decided**
+- Decision rule applied: calibrated coverage 0.730 is < 0.75 but closer to 0.80 than raw, so the calibrated band is
+  published and called the **model range** with the measured 73% and "narrower than it should be".
+- The API serves the raw band if a calibrated run is *farther* from nominal than the raw one (the plan's "if
+  calibration makes it worse, publish raw"), so this needs no manual step on the VM.
+- The band is clipped to contain p50 and stay ≥ 0, also during back-testing, so the published band and the measured
+  coverage are the same thing.
+- `model.interval_coverage` keeps meaning the raw p10–p90 coverage (existing field, unchanged).
+- Rejected: a global inflation factor fitted on the test folds (tuning on the test set); per-horizon q (300 scores
+  per horizon per window, noisy); refitting a calibration model per fold (doubles cost again). Holiday-aware
+  calibration is the obvious follow-up for the Christmas fold.
+
+**Found**
+- Calibration from the 6 preceding folds barely moves the band (q ≈ 0.005 of level) because those folds were already
+  near 80%; the shortfall is concentrated in the holiday fold. Conformal calibration under a shift like Christmas
+  can't anticipate it.
+- `test_api_data.py::test_forecast_from_duckdb` compares whole dicts, so its expected forecast item and `model` were
+  extended with the new keys (`lo`, `hi`, `interval`), with exact values, not loosened.
+- A new local test first assumed 365 days in 2020; BART's 2020 file is missing 4 days, so the check is ≥ 360 days a
+  year plus "every staged date is in the fact".
+
+**Not done (next iterations)**: B1, B3, B7, B8 (iteration 2); agent + B4 (3); Cloud Run code (4); Locust (5).
+Production keeps the pre-calibration run until the VM pulls this code (the API falls back to the raw band).
+
+## 2026-10-09 · build loop iter 2 · bug hunt (ISO year, schedules, rolling window, timetable expiry) and the Ask agent
+**Did**
+- **B1 (ISO week vs calendar year).** `dim_date` gains `iso_year` (dispatched macro: `extract(isoyear …)` on BigQuery,
+  `isoyear()` on DuckDB). `mart_recovery` and `mart_kpis_daily` take the 2019 baseline from `iso_year = 2019`
+  (2018-12-31 → 2019-12-29), and `mart_recovery` leaves out ISO-2019 days instead of calendar-2019 days. The API's
+  peak-share delta now matches (ISO year, ISO week) pairs in Python from `mart_kpis_daily` dates, so it doesn't need
+  the new `dim_date` column (production BigQuery gets it at the next `dbt build`). New tests:
+  `test_dbt_regressions.py::test_recovery_baseline_uses_iso_year_2019` (failed before: EMBR's week-1 baseline came
+  out 90 instead of 66) and `test_api_data.py::test_peak_share_delta_uses_iso_year_weeks` (failed before: the
+  baseline mixed in Dec 30–31, 2019).
+- **B3 (January ingests the wrong year).** `monthly_ridership` / `baywheels_monthly` request the partition of the
+  previous month's year; run keys unchanged. `test_dagster_defs.py::test_monthly_schedules_ingest_previous_months_year`
+  (Jan 6 2027 → "2026", Jul 6 2026 → "2026", both schedules) failed before with "2027".
+- **B7 (28-row "28-day" average).** `rolling_28d_avg_entries` is now the mean over the days present in the calendar
+  window [d − 27, d] (a range self-join on the daily totals; `RANGE` over dates isn't portable), plus
+  `rolling_28d_days`. `test_rolling_28d_average_ignores_gaps` failed before (the column didn't exist / 2025-12-01
+  averaged in 2019 days). Two schema tests added (not_null, non_negative).
+- **B8 (timetable expiry).** `schedule.js` gains `timetableRange` / `isOutsideTimetable` (service start/end plus
+  added dates). Outside the range the map notice reads "This site's BART timetable ended on Jan 10, 2027. Positions
+  can't be shown until it's updated." (or "starts on …") and hides *Jump to 8:00 AM*. Tests: `tests/web/timetable.test.mjs`
+  and `site.spec.js` "map: an expired timetable says so" (clock 2027-02-01 08:00 PT).
+- **M5 agent (whole).** `api/agent/` (`guardrails.py`, `prompts.py`, `llm.py`, `graph.py`, `tracing.py`,
+  `service.py`), agent methods on both warehouses, `POST /api/ask` as `fastapi.sse` with rate limit, proxy-aware
+  client IP and a daily byte budget; `eval/questions.yaml` (66 in-scope + 10 refusals), `eval/scoring.py`,
+  `eval/gold.py`, `eval/run_eval.py`, `tasks.py eval`. Tests: `test_agent_guardrails.py` (8),
+  `test_agent_graph.py` (7), `test_ask_api.py` (5), `test_agent_eval.py` (5), `tests/local/test_agent_local.py`.
+  The dbt fixture generator moved from `test_dbt_fixture.py` to `tests/dbt_fixture_data.py` (that test's assertions
+  unchanged); `tests/conftest.py` builds it once per session, in a child process, plus a small synthetic forecast.
+- **B4 (SSE client).** `web/js/ask.js` has a spec-compliant incremental parser (`createEventParser`: LF/CRLF/CR, a CR
+  split from its LF across chunks, multi-line `data:` joined with "\n", comments, unfinished events dropped). A 4xx
+  says the question couldn't be read, a 5xx says the analyst had a problem, a dropped stream or one that ends with no
+  answer/refusal/error shows an error instead of a dangling step list. Tests: `tests/web/ask.test.mjs` (3) and
+  `tests/web/ask.spec.js` (5, streams mocked with `page.route`, using CRLF and multi-line data).
+- CI's python job and `tasks.py test` now sync the `agent` group and exclude the new `docker` marker (registered in
+  `pyproject.toml`), so the agent tests run there too. `.gitignore`: `eval/results/*` except `summary-*.json`.
+
+**Measured**
+- Local `dbt build` after B1/B7: 88/88 (73 data tests) in 2 min 17 s.
+- KPI before → after on the local warehouse (28 days to 2025-12-31):
+  - Recovery tile 0.38286 → **0.38209**. Days in ISO week 1 of 2026 changed: 2025-12-29 0.3182 → 0.3131,
+    12-30 0.3398 → 0.3344, 12-31 0.2618 → 0.2576; EMBR on 12-31 0.1683 → 0.1646, MONT 0.1363 → 0.1316.
+  - Peak-share baseline for weeks 49–52 + 1: 0.118151 → 0.118093, so the tile's delta −0.873 → **−0.868 pts**.
+  - 2025 average service-weekday recovery 0.431 → 0.430.
+  - Rolling 28-day: unchanged where there's no gap (e.g. 2025-12-31 115,500.7, 28 days). BART's 2020 file is
+    missing 4 days (Jan 21, Feb 19, Feb 24, Apr 28), so 85 days between 2020-01-22 and 2020-05-25 now average 26–27
+    days instead of reaching back 29–30 calendar days; 2018-01-01..27 average 1–27 days.
+- BigQuery: free dry runs (not executed) of the compiled `dim_date`, `mart_kpis_daily` and `mart_recovery` (with
+  `dim_date` inlined, since production's doesn't have `iso_year` yet) are valid: 0.65 GB, 2.28 GB and 0.65 GB
+  estimated, under the 20 GB `dev` cap. The inequality join in the rolling CTE is accepted (inner join).
+- Agent eval, fake LLM (oracle, harness check): execution 1.0, refusal 1.0, 0 guardrail rejections, p50 0.03 s.
+- **Agent eval, llama3.1:8b (Ollama, RTX 4060, local DuckDB), 76 questions in 3 min 32 s:** execution accuracy
+  **0.273** (18/66), refusal accuracy **1.0** (10/10), 0 guardrail rejections, 11 queries that failed twice, 7
+  in-scope questions refused (bikes and `ml.forecast_runs` questions), latency p50 2.4 s / p95 6.4 s. By tag: station
+  0.47, forecast 0.50, kpi 0.27, bikes 0.18, trend 0.07, od 0.0. Summary committed as
+  `eval/results/summary-ollama-20261009T143938Z.json`. Typical misses: summing `fct_station_daily` instead of reading
+  `mart_kpis_daily`, filtering one day (`trip_date = '2025-01-01'`) for a year, `COUNT(trips)` instead of
+  `SUM(trips)`, station names where codes are needed, extra or missing columns.
+- Test counts: pytest 80 (was 51, ~40 s), node 23 (19), Playwright 35 (29), localdata 8 (7).
+
+**Decided**
+- The API's ISO-week matching is done in Python on dates rather than with `dim_date.iso_year`, so the API keeps
+  working against production BigQuery before the VM rebuilds `dim_date` (same reasoning as the forecast `select *`).
+- `mart_recovery` now excludes ISO-year-2019 days (2018-12-31 drops out, 2019-12-30/31 come in, compared with ISO
+  week 1 of 2019), as the plan specified. `mart_kpis_daily` still outputs 2019 days (recovery ≈ 1 there).
+- Rolling window: range self-join on the ~2,900 daily totals, chosen over `RANGE BETWEEN INTERVAL` (DuckDB and
+  BigQuery spell it differently and BigQuery needs a numeric order key) and over a date spine (would invent zero days).
+- `/api/ask` checks (503, rate limit, budget) live in a FastAPI dependency, because a streaming handler can't change
+  the status once it has started; the handler only yields `ServerSentEvent`s. Returning a response object from an
+  `EventSourceResponse` route doesn't work (FastAPI iterates the return value).
+- The agent's warehouse is `None`-safe: with the agent on but no warehouse, off-topic questions are still refused and
+  in-scope ones get an `agent_unavailable` error (useful for the container smoke test).
+- `fct_trips_hourly` is not on the agent's allowlist (68M rows; a careless query would read GBs on BigQuery);
+  `mart_od_flows` covers origin-destination questions.
+- The forecast tool queries p10/p50/p90 (not `lower`/`upper`) so it works on both forecast-table schemas.
+- Eval scoring is strict on column count (an extra column is wrong), lenient on order/names/float noise. With
+  accuracy < 50%, the plan's rule says: propose the few-shot arm (schema card + retrieved examples) for the next run.
+  I did not tune the prompts on the eval set.
+- The fixture warehouse is built in a child process: dbt-duckdb keeps its connection open in the process that ran
+  it, and DuckDB then refuses the agent's differently configured connection to the same file.
+- Rejected: `sse-starlette` (FastAPI 0.142 has `fastapi.sse`); a chart tool (the client draws no charts); an LLM-only
+  router (the keyword pre-filter catches "drop the tables"/"ignore your instructions" before any model call).
+
+**Found (not fixed)**
+- ISO year 2019 has 52 weeks, so days in ISO week 53 (2020-12-28..2021-01-03, 2026-12-28..2027-01-03) have no
+  baseline and a NULL recovery. Small and pre-existing; options are to map week 53 to week 52 or leave it NULL and
+  say so in METRICS.
+- A long-running Dagster daemon keeps the `years` partitions from import time; on Jan 6 the schedule now asks for
+  the previous year, which exists, but backfilling the new year needs a restart (runbook note, M7).
+- `web/data/schedule.json` expires 2027-01-10; refreshing `web/data` from a newer GTFS feed is a user action.
+
+**Not done (next iterations)**: Cloud Run code (Dockerfile, Terraform + WIF, deploy workflow, runbook, container
+smoke tests) and Locust. Production keeps the old `dim_date`/marts until the VM pulls this code and runs `dbt build`.
+
+## 2026-10-09 · build loop iter 3 · Cloud Run deploy code (M7) and the Locust load test
+**Did**
+- **Image.** `Dockerfile` (multi-stage) and `.dockerignore` (an allowlist).
+  - Build stage: `python:3.12-slim-bookworm` plus the pinned uv binary (`ghcr.io/astral-sh/uv:0.12.11`). It runs
+    `uv sync --frozen --no-dev --no-default-groups --group agent --no-install-project` with bytecode compiled.
+  - Runtime stage: the same base with the venv, `api/` and `web/` only, root-owned and run as uid 10001.
+  - `CMD sh -c "exec uvicorn … --port ${PORT:-8080}"`.
+- **Container smoke tests.** `tests/deploy/test_container.py` (marker `docker`, image `${TP_TEST_IMAGE:-transitpulse-api:loop}`,
+  random host port, `--memory 512m`, containers removed afterwards), 5 tests:
+  - non-root and read-only code
+  - site, health and the three cache-header classes
+  - 503 from the data endpoints and `/api/ask` without a warehouse
+  - the fake-LLM agent refusing an off-topic question over SSE
+  - no keys, `.env`, DuckDB, tfstate, `.git`, `node_modules`, tests or dev packages in the image
+- **Terraform** (validated, **not applied, not planned against the backend**):
+  - `cloudrun.tf`: the service, the public invoker on that service, and the Gemini secret (no version)
+  - `wif.tf`: pool, GitHub provider pinned to repo + main, and `sa-deploy`'s three narrow bindings
+  - `secretmanager.googleapis.com` added to the API list
+  - new variables `agent_enabled` (false), `gemini_model`, `api_initial_image` (Google's hello image) and
+    `github_repository`
+  - outputs `api_url`, `github_wif_provider`, `github_deploy_service_account`
+  - commented optional variables in `terraform.tfvars.example`
+- **`deploy.yml`.** Push to `main` + `workflow_dispatch`. The job runs only if `vars.DEPLOY_ENABLED == 'true'`. It
+  authenticates through WIF (`id-token: write`, repo variables `GCP_WIF_PROVIDER` / `GCP_DEPLOY_SA` / `GCP_PROJECT`),
+  then builds, pushes the image tagged with the commit SHA, runs `gcloud run deploy --image` and curls the result.
+- **CI.** A `container` job in `ci.yml` (build + `tests/deploy`, prints the image size). Both workflows pass
+  actionlint.
+- **`tests/test_infra_cloudrun.py`** (8 tests, python-hcl2 8.1.4 + pyyaml added to the `dev` group). It covers
+  scaling, the runtime SA and its exact roles, that only `run.invoker` is public, the WIF condition and principalSet,
+  `sa-deploy`'s exact roles, budgets $1/$5 and keep-3, the deploy workflow (gate, OIDC, no `credentials_json`, no
+  terraform command or action), and the agent being off by default.
+- **Load test.**
+  - `load/locustfile.py`: kpis 3 : forecast 3 : ask 1, each user hits all three on start, and an ask fails unless its
+    SSE stream ends in `answer`/`refusal`.
+  - `load/run_local.py`: builds the dbt fixture warehouse in a child `uv run --inexact --group dbt` process, fills
+    in the forecast run row's missing columns, starts uvicorn with the fake LLM and the rate limit lifted, runs
+    Locust headless (1/10/25 users or `--users N`), reads the CSV percentiles, stops the server, and exits 1 on any
+    failed request.
+- `tasks.py image` and `tasks.py load`.
+- **Docs.**
+  - new runbook `docs/CLOUD_RUN.md`
+  - `infra/README.md`, `CURRENT_STATE.md`, `SKILLS_MAP.md` (#1, #3, #13, #18; every link and line anchor checked by
+    script), `IMPLEMENTATION_PLAN.md` M7 markers, `README.md` (deploy + load section with the numbers)
+  - `ORACLE_VM.md`: restart the daemon after New Year
+
+**Measured**
+- Image: `docker image inspect` Size 120,062,457 B; `docker save | gzip -1` **119,175,652 B (≈ 119 MB)**, under the
+  166 MB limit, so 3 kept versions ≈ 357 MB fit the 0.5 GB free tier. `keep_count` stays at 3; nothing needed slimming
+  (`langchain-ollama` is tiny). Largest items: DuckDB's `.so` 58 MB, zstandard 23 MB, google 21 MB, grpc 19 MB
+  (uncompressed). The venv is 243 MB uncompressed.
+- Container locally: `/healthz` answers ~1.5 s after `docker run`, the first `/api/ask` (fake LLM, refusal) takes
+  0.7 s, and memory is 76 MiB of 512 MiB.
+- Docker build ~17 s from a warm cache.
+- Locust (this PC, fixture warehouse, fake LLM, 20 s per step), **0 failures**. Each cell is p50 / p95 / p99 in ms:
+
+  | Users | Req/s | forecast | kpis | ask |
+  |---|---|---|---|---|
+  | 1 | 1.2 | 54 / 62 / 62 | 5 / 540 / 540 | 42 / 870 / 870 |
+  | 10 | 11.8 | 4 / 8 / 17 | 4 / 11 / 17 | 43 / 58 / 58 |
+  | 25 | 29.7 | 5 / 14 / 30 | 4 / 22 / 29 | 37 / 140 / 140 |
+
+  The 1-user tails are the cold first requests: cache misses and the agent graph being built.
+- pytest 88 passed (was 80) in ~39 s; node 23; Playwright 35; localdata 8; `tests/deploy` 5.
+
+**Decided**
+- **No `terraform apply` in Actions** (as the plan says). It would need owner-level rights for `sa-deploy`, so
+  Terraform stays a human step and `deploy.yml` changes only the image. This differs from IMPLEMENTATION_PLAN M7, and
+  the user should confirm it.
+- **The Gemini secret is always created, never given a version by Terraform.** Its IAM binding and the env var exist
+  only when `agent_enabled`.
+  - Rejected: a `google_secret_manager_secret_version` resource, which would put the key in state.
+  - Rejected: creating the secret only when enabled, because then the version can't be added before switching on.
+- **The builder stage is `python:3.12-slim-bookworm` + the uv binary**, not the `ghcr.io/astral-sh/uv:python3.12-*`
+  image. That keeps the venv's interpreter path identical between stages and reuses the base already pulled. uv is
+  pinned to the local version.
+- **`.dockerignore` is an allowlist** (`*` plus `!api/ !web/ !pyproject.toml !uv.lock !.python-version`), plus the
+  plan's explicit exclusions. `pipeline/spark/Dockerfile` copies nothing, so it is unaffected.
+- **`startup_cpu_boost = false`** (it bills extra CPU at startup), and the image ships compiled bytecode to keep cold
+  starts short instead.
+- **Containers get `--memory 512m` in the smoke tests**, matching Cloud Run.
+- **The secret scan runs as root**, so no directory is skipped. It ignores directories named `credentials` inside
+  `site-packages`: google-genai ships two source packages with that name.
+- **`deploy.yml` has no `environment:`**: the variables live at repo level and nothing auto-creates an environment.
+- **Load test.**
+  - The per-IP rate limit is lifted, because every simulated user is 127.0.0.1.
+  - The shared fixture's forecast run row is completed in the load harness rather than in `tests/dbt_fixture_data.py`,
+    which leaves the shared test helper alone.
+  - Missing endpoints only warn: the plan says exit non-zero only on startup or request failure, and `on_start`
+    makes every endpoint appear anyway.
+- **BigQuery quota.** The runbook recommends 20 GiB/day per user ("Query usage per day per user") before the agent is
+  enabled, because the agent's 10 GB daily budget is per process and resets on every cold start.
+
+**Found**
+- The load test's first run failed every `/api/forecast` call with a 500 (`KeyError: 'mae_diff_lo'`). The cause: the
+  agent-test fixture's `ml.forecast_runs` row lacks the run metrics every real run writes. This is not an API bug,
+  because production rows always have them. The harness now adds the columns.
+  - Possible hardening, not done: `_forecast` could use `.get()` for `mae_diff_lo/hi`.
+- No DuckDB "different configuration" clash showed up under 25 concurrent users mixing data endpoints and the
+  agent's locked-down connection. The API's 1 h / 6 h response cache keeps the plain connections rare after warm-up.
+- The site's timetable ships inside the image, so the 2027-01-10 GTFS expiry needs a new image after the user
+  refreshes `web/data` (in the runbook).
+
+**Not done**: anything in GCP (by design). Cloud Run cold start and remote latency can only be measured after the user
+applies and deploys. The local `.terraform` dir and the state in `gs://transitpulse-511002-tfstate` were not
+touched: no `init`, `plan` or `apply`.
+
+## 2026-10-09 · build loop iter 4 · final review revision 1 (R1–R6)
+The Architect's final review rejected iteration 3 for six small defects. This entry fixes only those.
+
+**Did**
+- **R1 · band label.** A calibrated band is p10/p90 widened by the conformal correction, so it can no longer be called
+  the "10th–90th percentile". `rangeLabel` (`web/js/forecast.js`) now has three cases:
+  - calibrated and within 5 points of 80% → "80% range"
+  - calibrated but outside that → "calibrated model range"
+  - uncalibrated → "model range (10th–90th percentile)"
+
+  For the calibrated model range, the source line says "the calibrated model range (the model's 10th–90th
+  percentile, widened using earlier back-test weeks)". The hidden table's headers read "Calibrated model range:
+  low/high". The local run (calibrated, 73%) now shows "calibrated model range". Production (uncalibrated, 70%) is
+  unchanged. New test: `tests/web/forecast-label.test.mjs`.
+- **R2 · `_forecast`.** `api/routes/data.py` reads every run-log column with `.get()`, and `mae_diff_ci` is `null`
+  unless both bounds exist. New test: `test_forecast_tolerates_missing_optional_run_columns`. The fixture completion
+  in `load/run_local.py` stays (harmless).
+- **R3 · BigQuery agent timeout.** `agent_query` sets `job_timeout_ms = timeout_s × 1000`, so BigQuery stops the job
+  itself. On `concurrent.futures.TimeoutError` it calls `job.cancel()` (errors suppressed) and raises
+  `AgentQueryError("The query took longer than … s.")` instead of a generic `agent_error`. New test:
+  `test_bigquery_agent_query_timeout_is_capped_and_reported`.
+- **R4 · rate limiter.** Above 10,000 keys, the cleanup drops every key whose newest hit is at least 60 s old, not
+  only empty deques. Idle clients are forgotten, and the O(n) scan no longer repeats on every request. New test:
+  `test_rate_limiter_forgets_idle_clients` (10,001 keys at t=0, then one call at t=61 → 1 key left).
+- **R5 · eval summaries.** `eval/run_eval.py` writes `summary-<llm>-<ts>.json` only with `--save-summary`, and
+  `--results-dir` makes the output directory injectable. The gitignored per-question detail is still written.
+  - Deleted the two duplicate summaries `…150528Z` and `…155658Z`. Kept `…143938Z`, the one the docs cite.
+  - New test: `test_eval_writes_summary_only_when_asked`, which uses the fake LLM on the session fixture and two
+    questions.
+- **R6 · deploy gate.** `deploy.yml` now runs in this order:
+  1. build
+  2. `astral-sh/setup-uv`
+  3. `uv run pytest -m docker tests/deploy` with `TP_TEST_IMAGE` = the built image
+  4. auth and `docker push`
+  5. deploy and curl
+
+  `CLOUD_RUN.md` says that deploy doesn't wait for `ci.yml`, so only the container smoke tests gate it. It also tells
+  the user to check, after the first deploy, that the right-most `X-Forwarded-For` entry is the real client IP. New
+  test: `test_deploy_workflow_smoke_tests_image_before_push`.
+
+**Measured**
+- `node --test tests/web/`: 24/24.
+- pytest (not spark/gcp/localdata/docker): all pass, including the 5 new tests.
+- Playwright: 35/35, including the 320 px tests.
+- `ruff check` and `format --check`: clean. actionlint: clean.
+- `docker build` (cached) and the 5 container smoke tests: pass.
+- SKILLS_MAP links: re-verified by script, 0 broken.
+
+**Decisions**
+- **Two more test edits than R1 listed.** R1 allowed editing only `forecast-caption.test.mjs:69-70`. But lines 31
+  and 37 of the same file also assert that a *calibrated* band off target (0.74/0.86/0.705/0.42, and 0.7 in the
+  caption) is "model range (10th–90th percentile)". That is exactly the behaviour R1 removes, so they can't pass
+  with R1 implemented. I changed them to the new label with the same exactness. The uncalibrated assertions are
+  untouched.
+- **Kept the "80% range" source wording for a calibrated band near target** ("the 80% range, calibrated on earlier
+  back-test weeks"). EMBR's existing Playwright and node assertions require it and may not change. The "widened
+  using earlier back-test weeks" wording is used for the calibrated model range.
+- **`job_timeout_ms` is stored as a string** by google-cloud-bigquery 3.46 (`'2500'`). The test compares
+  `int(config.job_timeout_ms)`.
+
+**Not done**: no forecast or dbt re-run (nothing in `ml/` or `dbt/` changed), no GCP access, no Ollama run.

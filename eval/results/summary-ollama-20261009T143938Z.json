@@ -1,0 +1,22 @@
+{
+  "llm": "ollama:llama3.1:8b",
+  "warehouse": "duckdb:transitpulse.duckdb",
+  "run_at": "20261009T143938Z",
+  "n_in_scope": 66,
+  "n_refusal": 10,
+  "execution_accuracy": 0.2727272727272727,
+  "refusal_accuracy": 1.0,
+  "in_scope_refused": 7,
+  "guardrail_rejections": 0,
+  "errors": 11,
+  "latency_p50_s": 2.448,
+  "latency_p95_s": 6.36775,
+  "by_tag": {
+    "bikes": 0.1818,
+    "forecast": 0.5,
+    "kpi": 0.2667,
+    "od": 0.0,
+    "station": 0.4706,
+    "trend": 0.0667
+  }
+}

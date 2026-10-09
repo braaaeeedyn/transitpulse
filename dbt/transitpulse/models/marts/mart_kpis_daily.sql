@@ -26,7 +26,17 @@ baseline as (
     select d.iso_week, avg(s.total_entries) as baseline_entries
     from system_daily as s
     inner join {{ ref('dim_date') }} as d on s.trip_date = d.date_day
-    where d.year = {{ var('baseline_year') }} and d.is_service_weekday
+    where d.iso_year = {{ var('baseline_year') }} and d.is_service_weekday
+    group by 1
+),
+
+-- Calendar 28-day window [d - 27, d]: days missing from the data are not replaced by older ones
+rolling as (
+    select s.trip_date, avg(w.total_entries) as rolling_28d_avg_entries, count(*) as rolling_28d_days
+    from system_daily as s
+    inner join system_daily as w
+        on w.trip_date <= s.trip_date
+        and w.trip_date >= cast({{ dbt.dateadd('day', -27, 's.trip_date') }} as date)
     group by 1
 ),
 
@@ -60,10 +70,12 @@ select
     j.busiest_station_entries,
     -- Busiest-station share = the busiest station's share of all entries that day
     j.busiest_station_entries / nullif(j.total_entries, 0) as busiest_station_share,
-    -- Rolling 28-day average of daily entries
-    avg(j.total_entries) over (order by j.trip_date rows between 27 preceding and current row) as rolling_28d_avg_entries,
+    -- Rolling 28-day average of daily entries over the calendar days present in [d - 27, d]
+    r.rolling_28d_avg_entries,
+    r.rolling_28d_days,
     -- YoY = vs the same weekday 52 weeks (364 days) earlier
     ly.total_entries as entries_364_days_earlier,
     (j.total_entries - ly.total_entries) / nullif(ly.total_entries, 0) as yoy_change
 from joined as j
+left join rolling as r on j.trip_date = r.trip_date
 left join system_daily as ly on ly.trip_date = cast({{ dbt.dateadd('day', -364, 'j.trip_date') }} as date)

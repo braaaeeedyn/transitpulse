@@ -31,7 +31,8 @@ def fmt() -> None:
 
 
 def test() -> None:
-    run("uv", "run", "pytest", "-m", "not spark and not gcp and not localdata")
+    run("uv", "run", "--group", "dbt", "--group", "ml", "--group", "pipeline", "--group", "agent",
+        "pytest", "-m", "not spark and not gcp and not localdata and not docker")  # fmt: skip
     run("node", "--test", "tests/web/")
 
 
@@ -116,6 +117,22 @@ def forecast(*args: str) -> None:
     run("uv", "run", "--group", "ml", "python", "-m", "ml.forecast.run", *args)
 
 
+def eval_agent(*args: str) -> None:
+    """Score Ask TransitPulse on eval/questions.yaml (default: fake LLM on the local DuckDB; --llm ollama for real)."""
+    run("uv", "run", "--group", "agent", "python", "-m", "eval.run_eval", *args)
+
+
+def load(*args: str) -> None:
+    """Locust load test on a fixture warehouse with the fake LLM (1/10/25 users unless --users N)."""
+    run("uv", "run", "--group", "load", "--group", "agent", "python", "load/run_local.py", *args)
+
+
+def image() -> None:
+    """Build the Cloud Run image and run its smoke tests (tests/deploy). Builds locally only; pushes nothing."""
+    run("docker", "build", "-t", "transitpulse-api:loop", ".")
+    run("uv", "run", "pytest", "-m", "docker", "tests/deploy")
+
+
 TASKS = {
     "lint": lint,
     "fmt": fmt,
@@ -129,6 +146,9 @@ TASKS = {
     "dbt": dbt,
     "dagster": dagster,
     "forecast": forecast,
+    "eval": eval_agent,
+    "load": load,
+    "image": image,
 }
 
 if __name__ == "__main__":

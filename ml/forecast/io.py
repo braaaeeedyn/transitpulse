@@ -4,6 +4,9 @@ Outputs:
   marts.forecast_station_daily  the latest run only (replaced each run): one row per station × forecast day
   ml.forecast_runs              one row per run, appended: data window, validation metrics with CIs, params
 Local mode writes both into the DuckDB file dbt builds; `bigquery` mode loads them into BigQuery.
+
+The run log's schema can grow (new metrics): new columns are added to the existing table before appending, so
+older rows keep NULL there instead of the write failing.
 """
 
 from pathlib import Path
@@ -32,6 +35,20 @@ def read_history(warehouse: str, duckdb_path: Path | None = None, project: str |
     raise ValueError(f"unknown warehouse {warehouse!r}")
 
 
+def _add_missing_columns(con, schema: str, table: str, source: str) -> None:
+    """ALTER TABLE ... ADD COLUMN for every column of `source` that `schema.table` doesn't have yet."""
+    have = {
+        r[0]
+        for r in con.execute(
+            "select column_name from information_schema.columns where table_schema = ? and table_name = ?",
+            [schema, table],
+        ).fetchall()
+    }
+    for name, col_type, *_ in con.execute(f"describe select * from {source}").fetchall():
+        if name not in have:
+            con.execute(f'alter table {schema}.{table} add column "{name}" {col_type}')
+
+
 def write_outputs(
     warehouse: str,
     forecast: pd.DataFrame,
@@ -51,6 +68,7 @@ def write_outputs(
             con.execute("begin")
             con.execute("create or replace table marts.forecast_station_daily as select * from forecast_df")
             con.execute("create table if not exists ml.forecast_runs as select * from run_df where false")
+            _add_missing_columns(con, "ml", "forecast_runs", "run_df")
             con.execute("insert into ml.forecast_runs by name select * from run_df")
             con.execute("commit")
         finally:
@@ -68,7 +86,10 @@ def write_outputs(
         client.load_table_from_dataframe(
             run,
             f"{project}.ml.forecast_runs",
-            job_config=bigquery.LoadJobConfig(write_disposition="WRITE_APPEND"),
+            job_config=bigquery.LoadJobConfig(
+                write_disposition="WRITE_APPEND",
+                schema_update_options=[bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION],
+            ),
         ).result()
         return
     raise ValueError(f"unknown warehouse {warehouse!r}")
