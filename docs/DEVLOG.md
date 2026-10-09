@@ -767,3 +767,15 @@ The Architect's final review rejected iteration 3 for six small defects. This en
   `int(config.job_timeout_ms)`.
 
 **Not done**: no forecast or dbt re-run (nothing in `ml/` or `dbt/` changed), no GCP access, no Ollama run.
+
+## 2026-10-09 · Oracle VM · bootstrap blocked by another program's apt source
+**Found**
+- Updating the VM (`bootstrap.sh`) stopped at `apt-get update`: the **Caddy** package source (SeismicSoCal's web
+  server, `dl.cloudsmith.io/public/caddy/stable`) now answers `402 Payment Required`, and `set -e` aborted the script
+  before any TransitPulse step. Caddy itself is installed and unaffected; only its update channel is broken.
+
+**Fixed**
+- `bootstrap.sh` skips apt when git, curl, ca-certificates and Java 17 are already installed (`dpkg-query`), and
+  treats a failing `apt-get update` as a warning; `apt-get install` still fails if our own packages can't be fetched.
+  Verified in an Ubuntu 22.04 container with the broken Caddy source: all-installed → apt skipped; git missing →
+  warning, git installed. Shellcheck clean; VM file tests pass.

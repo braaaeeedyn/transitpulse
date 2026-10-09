@@ -37,10 +37,21 @@ fi
 
 # --- packages: git, curl, Java 17 (headless) ---------------------------------------------------------
 if command -v apt-get >/dev/null 2>&1; then
-  log "installing packages with apt"
-  export DEBIAN_FRONTEND=noninteractive
-  apt-get update -q
-  apt-get install -y -q git curl ca-certificates openjdk-17-jre-headless
+  apt_pkgs=(git curl ca-certificates openjdk-17-jre-headless)
+  missing=()
+  for p in "${apt_pkgs[@]}"; do
+    dpkg-query -W -f='${Status}' "$p" 2>/dev/null | grep -q "install ok installed" || missing+=("$p")
+  done
+  if ((${#missing[@]} == 0)); then
+    log "packages already installed (${apt_pkgs[*]}); skipping apt"
+  else
+    log "installing packages with apt: ${missing[*]}"
+    export DEBIAN_FRONTEND=noninteractive
+    # another program's package source on a shared VM can fail (e.g. Caddy's returned 402 on 2026-10-09);
+    # that must not block TransitPulse: warn, and let the install below fail only if our packages are unavailable
+    apt-get update -q || warn "apt-get update reported errors (often an unrelated package source); continuing"
+    apt-get install -y -q "${missing[@]}"
+  fi
 elif command -v dnf >/dev/null 2>&1; then
   log "installing packages with dnf"
   dnf install -y -q git curl ca-certificates java-17-openjdk-headless
