@@ -429,3 +429,12 @@ Entry format: `## YYYY-MM-DD · milestone · short title`, then **Did / Decided 
 - Staging keeps the source truthful (`electric_scooter` is an accepted value); `fct_bike_trips_daily` counts bikes only
   (`where rideable_type != 'electric_scooter'`), so bikes-vs-trains isn't inflated. Verified: all 10 staging tests
   pass on BigQuery, dry run of the fact passes, local `stg_baywheels_trips+` build passes.
+
+## 2026-10-09 · deploy · VM pipeline complete on BigQuery
+- After the scooter fix, the VM's `warehouse` run built `fct_bike_trips_daily` (3,165 days, 2018 → 2026-09) and
+  `mart_bikes_vs_trains` (105 months). No BigQuery errors.
+- First `weekly_forecast` on BigQuery (run `fc-20261009T045221Z-558f0e`, 2 threads, 21 min on 2 OCPUs): trained on
+  730 days (2024-01-02 → 2025-12-31). MAE **283.1** [215.9, 364.6] vs baseline 548.5; improvement 265.4
+  [199.6, 339.9]; p10–p90 coverage **0.705** [0.691, 0.719] (local, 2025-only training: 0.475). Still under the
+  nominal 0.80, but far closer. Wrote `marts.forecast_station_daily` (700 rows) and `ml.forecast_runs`.
+- Schedules turned on in the VM's Dagster (Automation page).
