@@ -73,7 +73,7 @@ map only needs the static GTFS feed, not the warehouse, so there's something vis
 | 2–3 | **M1** BigQuery load + dbt | **F2** network data · **F3** train map | Data Engineer demo; live train map |
 | 4–5 | **M2** KPIs, Looker Studio, Power BI | **F4** KPI + station panels | Data Analyst demo |
 | 6 | **M3** forecasting | **F5** forecast explorer | |
-| 7 | **M4** causal analysis | Findings section | |
+| 7 | **M4** causal analysis ✅ | Findings section ✅ | eBART verdict on the site |
 | 8–9 | **M5** agent + eval + A/B | **F6** Ask TransitPulse UI | AI Eng / DS demo |
 | 10 | **M6** QLoRA fine-tune | | |
 | 11–12 | **M7** deploy, CI/CD, Locust | **F7** polish, a11y, perf, device QA | Public launch |
@@ -127,10 +127,11 @@ this section is the checklist.
   *Met: MAE 283.1 vs 548.5, improvement 265.4 [199.6, 339.9] (local and BigQuery agree). Caveat: the p10–p90 range covers 70.5% and the calibrated band 73.0%, not 80%, so the site calls it the "model range".*
 
 ### M4: causal analysis (week 7) · #21 #7
-- [ ] Confirm the eBART opening date and pick treated/control stations; write them down *before* looking at results.
-- [ ] DiD with station + week FE, SEs clustered by station; event-study plot.
-- [ ] `docs/FINDINGS.md`: question → design → assumptions → result (95% CI) → limitations. Export the event-study chart as JSON for the site.
+- [x] Confirm the eBART opening date and pick treated/control stations; write them down *before* looking at results. *(2018-05-26; `analysis/causal/preregistration.json`, sha256 `a05df985…40f4`, committed 2026-10-09, plus Amendment 1 `96395c97…6061` (corridor placebo sets of 3), fixed 2026-10-10 after the synthetic validation and before any real estimate)*
+- [x] DiD with station + week FE, SEs clustered by station; event-study plot. *(statsmodels TWFE, CR1 by station reported; the headline intervals are placebo / randomization inference because there are only 1–4 treated clusters; weekly 2018–2020 primary, monthly 2016–2020 robustness)*
+- [x] `docs/FINDINGS.md`: question → design → assumptions → result (95% CI) → limitations. Export the event-study chart as JSON for the site. *(`api/data/findings.json`, served by `GET /api/findings`; the site's Findings band)*
 - **Done when:** the write-up is finished and the pre-trends plot is in it.
+  *Met: verdict "new" by the pre-registered rule. Corridor +4.2% [+1.6%, +7.1%], legacy stations −23.9% [−25.8%, −21.8%] (95% placebo intervals), caution flag off. Caveat: the monthly series shows the corridor drifting up against the controls before the opening.*
 
 ### M5: agent + evaluation (weeks 8–9) · #19 #5 #6 #7
 - [x] `api/agent/guardrails.py`: sqlglot SELECT-only, table allowlist, auto-`LIMIT`, dry run ≤ 1 GB (BigQuery) / `EXPLAIN` on a locked-down read-only DuckDB connection. Unit-test each rejection path. *(`sa-agent` credentials come with the Cloud Run deploy, M7.)*
@@ -310,7 +311,7 @@ All BigQuery reads go through `sa-agent` (read-only) with `maximum_bytes_billed`
 - [ ] Public URL on Cloud Run; trains running on the map on a phone and a desktop.
 - [ ] `make up` brings up the whole thing locally (API + web + Ollama) from a fresh clone.
 - [ ] CI green: ruff, pytest, Playwright, dbt CI build, terraform plan.
-- [ ] README has real numbers: raw data size, forecast MAE vs. baseline, agent accuracy (A/B/C), McNemar p-values, DiD estimate with CI, Locust p95, monthly cost.
+- [ ] README has real numbers: raw data size, forecast MAE vs. baseline, agent accuracy (A/B/C), McNemar p-values, DiD estimate with CI *(✅ M4: in the README)*, Locust p95, monthly cost.
 - [ ] GCP bill for the month: $0.
 - [ ] Portfolio entry added (see `TRANSITPULSE_PLAN.md §9`).
 

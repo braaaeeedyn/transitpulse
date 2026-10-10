@@ -42,6 +42,28 @@ Checks on the real local data: `uv run --group dbt --group ml --group agent pyte
 
 Running the scheduled pipeline on the Oracle VM: [`docs/ORACLE_VM.md`](docs/ORACLE_VM.md).
 
+## Findings: the eBART causal study
+
+Did the 2018 eBART extension to Antioch bring new riders, or just move them between stations? This is a
+pre-registered difference-in-differences study against 34 BART stations far from the line, with 95% placebo
+intervals. It uses weekly data from 2018 to Feb 2020 and monthly data from 2016. The write-up is
+[`docs/FINDINGS.md`](docs/FINDINGS.md), served on the site from `GET /api/findings`.
+
+| Estimate | Effect | 95% placebo interval |
+|---|---|---|
+| Whole line, Concord → Antioch (incl. new stations) | **+4.2%** (about 500 entries a day) | +1.6% to +7.1% |
+| Pittsburg/Bay Point, North Concord, Concord | **−23.9%** | −25.8% to −21.8% |
+| Rest of the yellow line (spillover check) | +0.5% | −1.7% to +3.0% |
+
+- **Verdict (pre-registered rule): new.** Most riders at the new stations moved from the old ones; the line as a
+  whole is consistent with a small net gain, not a firm finding.
+- **Caveats.** The gain fades after the first year. The longer monthly series also shows the corridor already
+  rising against the controls before the opening, so part of the +4.2% may be trend.
+
+```sh
+uv run python tasks.py causal            # recompute api/data/findings.json + docs/img/ plots from the committed CSVs
+```
+
 ## Deploy (Cloud Run) and load test
 
 The site and API ship as one container ([`Dockerfile`](Dockerfile): multi-stage, non-root, **119 MB compressed**, so
@@ -76,7 +98,8 @@ starts in about 1.5 s locally and uses about 76 MiB of its 512 MiB.
 | [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) | How the application works right now |
 | [`docs/DEVLOG.md`](docs/DEVLOG.md) | Running log of changes and decisions |
 | [`docs/SKILLS_MAP.md`](docs/SKILLS_MAP.md) | Where each skill is implemented, and how it works |
-| [`docs/METRICS.md`](docs/METRICS.md) | KPI definitions, the website tile windows, bikes vs trains, forecast coverage, agent eval |
+| [`docs/METRICS.md`](docs/METRICS.md) | KPI definitions, the website tile windows, bikes vs trains, forecast coverage, agent eval, causal estimates |
+| [`docs/FINDINGS.md`](docs/FINDINGS.md) | The eBART causal study: pre-registration, design, results, limitations |
 | [`docs/ORACLE_VM.md`](docs/ORACLE_VM.md) | Runbook: Dagster on the Oracle VM (systemd) |
 | [`docs/CLOUD_RUN.md`](docs/CLOUD_RUN.md) | Runbook: the site + API on Cloud Run (Terraform, WIF, deploy workflow, costs) |
 
@@ -85,7 +108,18 @@ starts in about 1.5 s locally and uses about 76 MiB of its 512 MiB.
 |---|---|---|
 | BART GTFS schedule | bart.gov → Developers → GTFS | BART developer license agreement (attribution: "Data provided by BART") |
 | BART hourly origin-destination ridership | bart.gov → About → Reports → Ridership | Public BART data; same developer terms |
+| BART monthly ridership reports (2016–2020, eBART study) | bart.gov → About → Reports → Ridership (`ridership_YYYY.zip`) | Public BART data; same developer terms (derived station-month averages committed in `analysis/causal/data/`) |
 | Bay Wheels trip data | [Lyft Bay Wheels System Data](https://www.lyft.com/bikes/bay-wheels/system-data) (bucket `s3.amazonaws.com/baywheels-data`) | [Bay Wheels Data License Agreement](https://baywheels-assets.s3.amazonaws.com/data-license-agreement.html) (verified 2026-10-08) |
 | Bay Area coastline | Natural Earth | Public domain |
 
 *(Verify each licence before publishing; see `docs/IMPLEMENTATION_PLAN.md` M0.)*
+
+## Left to do (M4 eBART study)
+1. **Check the data licence.** Confirm that BART's data terms allow committing the derived
+   `analysis/causal/data/*.csv` files to a public repo. Do this before pushing.
+2. **Redeploy the API to Cloud Run** so `GET /api/findings` is live ([`docs/CLOUD_RUN.md`](docs/CLOUD_RUN.md)).
+3. **Re-export the static pages** (`pipeline/webexport.py`, which includes the findings path) and publish them to
+   braedynthompson.com/transitpulse.
+4. **Optional:** add a trend-adjusted estimate that extrapolates the monthly pre-period trend (about 0.27 pts/month),
+   which could absorb most of the +4.2%. It was not pre-registered, so label it that way, and report it alongside
+   the pre-registered result rather than replacing it.

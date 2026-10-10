@@ -14,7 +14,7 @@ Verified = it ran on real data or passed tests on 2026-10-08 (see [`CURRENT_STAT
 | 4 | Larger datasets | 🟡 | [`pipeline/spark/clean_bart_od.py`](../pipeline/spark/clean_bart_od.py), [`pipeline/baywheels.py`](../pipeline/baywheels.py) |
 | 5 | Monitoring (LLM tracing) | 🟡 | [`api/agent/tracing.py`](../api/agent/tracing.py) (wired, no Langfuse project yet) |
 | 6 | A/B testing | ⬜ | — |
-| 7 | Formal statistics | 🟡 | [`ml/forecast/evaluate.py`](../ml/forecast/evaluate.py) |
+| 7 | Formal statistics | 🟡 | [`ml/forecast/evaluate.py`](../ml/forecast/evaluate.py), [`analysis/causal/did.py`](../analysis/causal/did.py) |
 | 8 | Business metrics | ✅ | [`docs/METRICS.md`](METRICS.md), [`mart_kpis_daily.sql`](../dbt/transitpulse/models/marts/mart_kpis_daily.sql) |
 | 9 | BI dashboards | ⬜ | — |
 | 10 | Warehouse + dbt + dimensional modeling | ✅ (local) / 🟡 (BigQuery) | [`dbt/transitpulse/`](../dbt/transitpulse/) |
@@ -24,7 +24,7 @@ Verified = it ran on real data or passed tests on 2026-10-08 (see [`CURRENT_STAT
 | 17 | Spark / PySpark | ✅ | [`pipeline/spark/clean_bart_od.py`](../pipeline/spark/clean_bart_od.py) |
 | 18 | Reproducibility | 🟡 | [`tasks.py`](../tasks.py), [`uv.lock`](../uv.lock), [`Dockerfile`](../Dockerfile), [`pipeline/spark/Dockerfile`](../pipeline/spark/Dockerfile) |
 | 19 | Agents and tool use | ✅ (local) | [`api/agent/`](../api/agent/), [`api/routes/ask.py`](../api/routes/ask.py), [`eval/`](../eval/), [`web/js/ask.js`](../web/js/ask.js) |
-| 21 | Causal inference | ⬜ | — |
+| 21 | Causal inference | ✅ | [`analysis/causal/`](../analysis/causal/), [`docs/FINDINGS.md`](FINDINGS.md) |
 | — | Forecasting (LightGBM, walk-forward, quantiles) | ✅ (local) | [`ml/forecast/`](../ml/forecast/) |
 | — | Bay Wheels ingest + cleaning (second data source) | ✅ (local) / 🟡 (BigQuery) | [`pipeline/baywheels.py`](../pipeline/baywheels.py) |
 | — | Data API over the warehouse (DuckDB / BigQuery) | ✅ | [`api/warehouse.py`](../api/warehouse.py), [`api/routes/data.py`](../api/routes/data.py) |
@@ -272,10 +272,42 @@ the Christmas fold (44%) drags it down, so the site calls it the "model range", 
 
 ---
 
+## ✅ #21 Causal inference
+
+**What it does:** a pre-registered difference-in-differences study of the 2018 eBART extension (did it bring new
+riders to the Concord–Antioch line, or only move them?), served by `GET /api/findings` and the site's Findings band.
+Result: verdict **new** under the pre-registered rule. The corridor is +4.2% [+1.6%, +7.1%] and the old stations
+−23.9% [−25.8%, −21.8%] (95% placebo intervals), with a caveat about a monthly pre-trend. Details in
+[`FINDINGS.md`](FINDINGS.md).
+
+| Concept | Where | How |
+|---|---|---|
+| Pre-registration + amendment | [`design.py:256` `load`](../analysis/causal/design.py#L256), [`design.py:238` `apply_amendment`](../analysis/causal/design.py#L238) | Every set, window, bin, draw count and the seed is parsed from `preregistration.json` (sha256 pinned by a check), with Amendment 1 applied only if its `amends_sha256` and every `was` match. No station code is written in the code (a test enforces it). |
+| Design validation | [`design.py:194` `validate`](../analysis/causal/design.py#L194), [`:218`](../analysis/causal/design.py#L218) | Sets are disjoint and cover every station, there are 34 controls, and each placebo set has the size of what it stands in for. For the corridor that is its 3 pre-opening stations. |
+| Two-way fixed effects | [`did.py:119` `twfe`](../analysis/causal/did.py#L119) | ln(entries) on station and week dummies plus D = treated × post, statsmodels OLS, CR1 by station. |
+| Exact double differences | [`did.py:208` `dd`](../analysis/causal/did.py#L208), [`did.py:214` `dd_bins`](../analysis/causal/did.py#L214) | On a balanced panel the TWFE coefficient is a weighted gap of means; tests and [`run.py:82`](../analysis/causal/run.py#L82) assert equality with statsmodels to 1e-8, so thousands of placebos cost one matrix product. |
+| Aggregate unit (corridor) | [`did.py:63` `aggregate_unit`](../analysis/causal/did.py#L63) | Sums levels across stations before the log, with a missing station-week counted as 0, so a rider moving from PITT to ANTC leaves the unit unchanged. |
+| Event study | [`did.py:135` `event_study`](../analysis/causal/did.py#L135), [`did.py:188` `bin_weights`](../analysis/causal/did.py#L188) | 4-week bins relative to e ∈ [−5, −2] (monthly: 3-month bins), with per-bin placebo bands. |
+| Placebo (Conley–Taber) intervals | [`did.py:225` `draw_sets`](../analysis/causal/did.py#L225), [`did.py:258` `placebo`](../analysis/causal/did.py#L258), [`did.py:304`](../analysis/causal/did.py#L304) | Treatment is reassigned to sets of control stations only (all C(34,3) = 5,984 for legacy and corridor). The interval is [b − q97.5, b − q2.5] of the placebo estimates. All placebos are computed at once with a one-hot (draws × stations) matrix. |
+| Decision rules | [`did.py:355` `verdict`](../analysis/causal/did.py#L355), [`did.py:367` `caution`](../analysis/causal/did.py#L367) | The pre-registered new / moved / fewer / inconclusive rule and caution flag, applied to the placebo intervals. |
+| One reproducible run | [`run.py:114` `compute`](../analysis/causal/run.py#L114), [`run.py:305` `main`](../analysis/causal/run.py#L305) | Reads only committed CSVs and writes `api/data/findings.json` with sorted keys, 6-decimal floats and data-derived dates; `--check` recomputes byte-for-byte. |
+| Validation before the real run | [`synthetic.py:40` `generate`](../analysis/causal/synthetic.py#L40), [`synthetic.py:89` `study`](../analysis/causal/synthetic.py#L89) | Known-effect panels. The 0.90 coverage bar caught the original corridor placebo, which led to Amendment 1. |
+| Serving | [`api/routes/findings.py:33`](../api/routes/findings.py#L33), [`web/js/findings.js:101` `renderEventStudy`](../web/js/findings.js#L101) | `GET /api/findings` without a warehouse; the ink band renders the verdict, the figures and two event-study panels from the JSON. |
+| Tests | [`tests/test_causal.py`](../tests/test_causal.py), [`tests/test_api_findings.py`](../tests/test_api_findings.py), [`tests/local/test_causal_local.py`](../tests/local/test_causal_local.py) | Prereg and amendment hashes, recovery of synthetic effects, inference formulas, the monthly parser, the FINDINGS.md numbers against the JSON, the API, and the inputs against the warehouse. |
+
+**Honest limits:**
+- There are 3 treated stations and 1 corridor unit, so per-station placebo p-values bottom out at 1/35.
+- The daily data has only 20 pre weeks.
+- The monthly pre-period shows the corridor drifting up against the controls, which the pre-registered caution rule
+  doesn't test.
+
+---
+
 ## 🟡 #7 Formal statistics
 
-**What it does now:** confidence intervals for model comparison. **Missing:** McNemar and power analysis (M5) and
-clustered standard errors (M4).
+**What it does now:** confidence intervals for model comparison, and (M4) cluster-robust standard errors, Wald
+tests, randomization inference and a simulation study of interval coverage. **Missing:** McNemar and power analysis
+(M5).
 
 | Technique | Where | How |
 |---|---|---|
@@ -283,6 +315,10 @@ clustered standard errors (M4).
 | Vectorised resampling | [`evaluate.py:180-184`](../ml/forecast/evaluate.py#L180) | Per-station error sums, then a (B × stations) count matrix times the sums: 1000 resamples in milliseconds. |
 | Percentile CIs | [`evaluate.py:206`](../ml/forecast/evaluate.py#L206) | 2.5th/97.5th percentiles for every metric, the MAE difference and the raw and calibrated interval coverage. |
 | Walk-forward (time-series CV) | [`evaluate.py:30` `fold_split`](../ml/forecast/evaluate.py#L30) | Out-of-time evaluation only; no random splits. |
+| Cluster-robust (CR1) SEs | [`did.py:105` `_fit`](../analysis/causal/did.py#L105), [`did.py:119` `twfe`](../analysis/causal/did.py#L119) | statsmodels OLS with `cov_type="cluster"` by station and `use_t=True` (t with G−1 df). A test checks it against a hand-computed sandwich with the G/(G−1)·(N−1)/(N−K) correction. |
+| Joint Wald test | [`did.py:135` `event_study`](../analysis/causal/did.py#L135) | F test that every pre-period event-study bin is zero (the reference bin excluded). |
+| Randomization inference | [`did.py:258` `placebo`](../analysis/causal/did.py#L258), [`did.py:314`](../analysis/causal/did.py#L314) | Two-sided RI p = (1 + #{\|b_p\| ≥ \|b\|}) / (1 + N) over every placebo assignment; the pre-trend RI p uses the sum of squared pre-bin coefficients ([`did.py:332`](../analysis/causal/did.py#L332)). |
+| Coverage simulation | [`synthetic.py:89` `study`](../analysis/causal/synthetic.py#L89) | 200 panels per scenario (null / moved / new) with AR(1) noise: bias, RMSE and coverage of the CR1 and placebo intervals. CR1 covers 0.79–0.83 with 3 treated clusters, the placebo intervals 0.925–0.965. |
 
 ---
 
@@ -374,4 +410,3 @@ Results are in the README (25 users: ~30 req/s, forecast p95 14 ms, ask p95 140 
 | 6 | A/B testing (power analysis, offline A/B) | M5 second half | `eval/`, `docs/AB_TEST.md` (the eval harness it needs exists) |
 | 9 | BI dashboards (Looker Studio, Power BI + DAX) | M2 | `bi/` |
 | 16 | Fine-tuning (QLoRA) | M6 | `ml/finetune/` |
-| 21 | Causal inference (difference-in-differences) | M4 | `analysis/causal/`, `docs/FINDINGS.md` |

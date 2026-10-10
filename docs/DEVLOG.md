@@ -837,3 +837,252 @@ serves. So: pages from the portfolio, API on Cloud Run, the browser calling acro
   startup probe still works because it reaches the container directly. deploy.yml's post-deploy curl would always
   fail. **Fixed**: added `/api/health` (same handler); deploy.yml and docs/CLOUD_RUN.md use it; test added.
   pytest 100 passed, actionlint clean.
+
+## 2026-10-09 · M4 · build loop iter 1 · eBART study: data, estimator, synthetic validation (no real estimate)
+**Did**
+- Pre-registration: `analysis/causal/preregistration.json` was already committed (`4c80c9b`) byte-identical to the
+  Architect's copy (sha256 `a05df985…40f4`); untouched. `analysis/causal/design.py` loads and validates it (sets
+  disjoint and covering all 50 stations, 34 controls, corridor = treated + new, placebo set sizes = estimand sizes,
+  bins consistent with the windows). Draw counts, interval quantiles (0.025/0.975), the caution threshold (0.10), the
+  in-time fake week and the post bins are parsed from the file's text, so no constant is repeated in code.
+- `analysis/causal/panel.py` → committed `analysis/causal/data/station_week.csv` (5,412 rows, 50 stations, ISO weeks
+  2018-01-01 → 2020-02-17; ANTC/PCTR on every week with missing days as 0). Read-only DuckDB connection, closed.
+- `analysis/causal/monthly.py` → committed `station_month_weekday.csv` (2,388 rows, 2016-01 → 2020-02) and
+  `station_codes_2letter.csv` (50 codes, names from `web/data/network.json`). All 50 workbooks parsed; every column
+  sum matched the sheet's "Entries" row within 1.
+- `analysis/causal/did.py`: TWFE + event study (statsmodels, CR1 by station), exact double differences, aggregate
+  units, placebo / RI inference, verdict and caution rules, implied daily entries, `headline`.
+- `analysis/causal/synthetic.py`: the coverage study. `tests/test_causal.py`: 25 tests (prereg 5, synthetic 7,
+  placebo/randomization/cluster 6 + rules 1, monthly 6), no data/ and no network.
+- `openpyxl>=3.1` added to the `ml` group (`uv.lock`: openpyxl 3.1.5 + et-xmlfile 2.0.0); the arm64 resolve still
+  passes. No other package added.
+- `.gitignore`: `!analysis/causal/data/`, because the global `data/` rule would hide the committed CSVs.
+
+**Decided**
+- Workbook layout is read by header text: the sheet whose name contains "weekday" and "OD" (it is "Weekday OD" to
+  Jan 2018, "Avg Weekday OD" after), the header row = the row with an "Exits" cell, entry codes = the cells before
+  it (19/12/16/24 are numbers in the sheet), row labels = the column holding most of those codes, totals = its
+  "Entries" row. The month comes from the date in the title row (file names change from `Ridership_April2016` to
+  `Ridership_201801`; the name is only a fallback). ML/BE columns (zeros) appear from May 2018 and are kept.
+- `USER_AGENT` is read from `pipeline/assets/ingest.py` with `ast` rather than imported, because importing that
+  module needs Dagster and the plan's commands use the `ml` group only.
+- Placebo draws: for a random-draw estimand, distinct sets in first-seen order from `default_rng(20180526)`; when
+  the draws asked for are ≥ the number of combinations (e.g. 5-station corridors from the 16 suburban controls,
+  C(16,5) = 4,368), every combination is used. The real estimate uses all 34 controls; each placebo draw uses the
+  remaining 34 − k.
+- The monthly cross-check skips station-months under 100 entries a day and the transition month 2018-05.
+- Weeks are dropped as incomplete when any treated, buffer or control station has < 7 days (the new and excluded
+  stations don't count, since ANTC/PCTR are filled with zeros and MLPT/BERY only have test trips).
+
+**Measured**
+- Monthly vs daily cross-check (25 months, 48 stations): median |% diff| over controls + treated **0.78%**, worst
+  control/treated station median 3.30% (19TH), corridor stations ≤ 3.54% (ANTC), none over 10%.
+- Synthetic study, `--sims 200 --seed 0` (σ = 0.04, ρ = 0.5, 141 s):
+
+  | scenario | estimand | truth | bias | RMSE | placebo cov. | CR1 cov. |
+  |---|---|---|---|---|---|---|
+  | null | legacy | 0 | −0.0010 | 0.0100 | 0.935 | 0.79 |
+  | null | corridor | 0 | −0.0015 | 0.0114 | **0.84** | — |
+  | moved | legacy | −0.0744 | −0.00004 | 0.0091 | 0.965 | 1.00 (mean width 0.255) |
+  | moved | corridor | 0 | 0.0001 | 0.0101 | 0.91 | — |
+  | new | legacy | 0 | 0.0008 | 0.0094 | 0.95 | 0.825 |
+  | new | corridor | 0.1398 | 0.0016 | 0.0107 | **0.87** | — |
+
+  RI rejection at 5% under the null: legacy 0.065, corridor **0.175**. Verdicts: new 200/200 in "new", moved
+  182/200 in "moved" (9 new, 9 fewer), inconclusive 168/200 in "null" (15 new, 17 fewer).
+- CR1 coverage for legacy is 0.79–0.825 when the effect is homogeneous, confirming it should not be the headline.
+- pytest (default check): 125 passed (100 before + 25). ruff clean. Localdata 8 passed, Dagster validate OK, image
+  rebuilt (lock changed) and its 5 smoke tests pass.
+
+**Found / escalated (the plan's stop rule)**
+- **The corridor placebo interval under-covers: 0.84 (null) and 0.87 (new), below the 0.90 bar.** Cause: before the
+  opening the real corridor aggregate is only the 3 legacy stations (ANTC/PCTR are 0), and the pre-period mean
+  dominates the variance of the double difference (20 pre vs 89 post weeks), while each placebo corridor sums 5
+  control stations, so placebo corridors are smoother than the real one and the placebo distribution is too narrow.
+  Diagnostic (300 null sims, same DGP, not the pre-registered method): 5-station placebo corridors cover 0.85,
+  3-station placebo corridors cover 0.93.
+- Per the plan I have **not** changed the method. The legacy, buffer and per-station placebo intervals are not
+  affected (placebo sets have the same size as the treated set). The Architect decides before any real run.
+- `test_randomization_null_rejection_rate_is_about_5_percent` therefore checks the legacy estimand only; its
+  docstring points here.
+
+**Not done**: no real-data treatment estimate was computed or looked at (only the panels and the monthly-vs-daily
+data cross-check). No `run.py`, `/api/findings`, site band, FINDINGS.md or other docs (iteration 2). No BigQuery,
+commits or deploys.
+
+## 2026-10-10 · M4 · build loop iter 2 · Amendment 1, the single real run, /api/findings, the Findings band, FINDINGS.md
+**Ruling (Architect, Amendment 1, before any real-data estimate)**
+- Iteration 1's stop rule tripped for the corridor only: placebo coverage 0.84 / 0.91 / 0.87 and RI null rejection
+  0.175. The cause was placebo corridors of 5 controls against a real corridor that is 3 stations before the
+  opening.
+- **Correction:** corridor placebo corridors are all C(34,3) = 5,984 sets of 3 controls, each summed before the
+  log.
+- **Rejected:**
+  - pre-3/post-5 placebos (adding stations at the fake date creates a spurious jump);
+  - a studentized (Ferman–Pinto style) placebo (more modelling choices than needed);
+  - demoting the corridor (it is the estimand that answers new vs moved).
+- Verdict and caution rules are unchanged.
+- `analysis/causal/preregistration-amendment-1.json` (sha256 `96395c97…6061`) was committed and pushed by the user
+  in `39b1a70` before the real run. The orchestrator confirmed the push.
+
+**Did**
+- `design.py`:
+  - `load()` reads the original, then the required amendment. It checks `amends_sha256` against the original's
+    sha256 and applies each `changes` entry (a dotted path; asserts the current value equals `was`, sets `now`)
+    before `parse()`.
+  - New fields: `Design.amendments` (file, sha256, fixed_on) and `apply_amendment()`. `Design.sha256` is still the
+    original's.
+  - `validate()`: the corridor placebo size is now `len(d.treated)`.
+  - `did.py` is unchanged.
+- `synthetic.py`: only adds `placebo_n_draws` per estimand and top-level `amendments`. DGP, noise, scenarios, seed
+  handling and sim counts are unchanged.
+- `tests/test_causal.py`:
+  - 3 `test_amendment_1_*` tests.
+  - Updated this loop's own iteration-1 tests that encoded the old corridor draw: the corridor count is now 5,984,
+    and the seed-determinism and "more draws than combinations" checks moved to the buffer draws (C(16,4) = 1,820).
+    The RI null-rejection test now also covers the corridor, and its docstring points to Amendment 1.
+  - 4 `test_findings_doc_*` tests.
+- **Gate:** `accept-causal-amended-coverage` passed (numbers below). Only after that came the single real run.
+- `analysis/causal/run.py` (`--check`, `--summary`, `--plots`; `tasks.py causal`) → `api/data/findings.json` and
+  `docs/img/findings-event-study-{weekly,monthly}.png`.
+  - Before the real run, the code was exercised end to end on a **scrambled** copy of the inputs (random log-normal
+    values in the real CSV shape), so that bugs could be fixed without seeing a real estimate.
+  - The real run was then done **once**. `--check` reproduces it byte for byte. No bug fix after the run, so there
+    are no before/after numbers to log.
+- **API:** `api/routes/findings.py` (`GET /api/findings`) and the `TP_FINDINGS_PATH` setting. It is cached per
+  process, sends `Cache-Control: public, max-age=86400`, needs no warehouse, and gives 404 `findings_not_available`.
+  `"api/findings"` was added to `webexport._paths`.
+  - `.gitignore`: added `!api/data/`, because the global `data/` rule hid `findings.json`.
+  - `.dockerignore` already lets `api/` in, since its `data/` rule is root-only.
+- **Site:** `web/js/findings.js` (pure formatters exported), the Findings band markup in `web/index.html`, the
+  import in `main.js`, and styles in `charts.css`.
+- **Tests:**
+  - `tests/test_api_findings.py`: 10.
+  - `tests/web/findings.test.mjs`: 8.
+  - `tests/web/findings.spec.js`: 7, with the synthetic fixture `tests/web/fixtures/api/findings.json`.
+  - `tests/local/test_causal_local.py`: 4.
+  - `test_findings_served_from_image` in `tests/deploy/test_container.py`.
+- **Docs:**
+  - new: `docs/FINDINGS.md`;
+  - updated: SKILLS_MAP (#21 ✅, #7), IMPLEMENTATION_PLAN (M4 ticked, §6 DiD line), METRICS ("Causal
+    estimates"), README (Findings section, data source), DESIGN_BACKLOG (4 rows), CLOUD_RUN §5, CURRENT_STATE.
+
+**Decided**
+- **`findings.json`:**
+  - `generated_at` = `data_through` = the last analysed day (2020-02-16), taken from the data so `--check` is
+    byte-stable.
+  - Floats are rounded to 6 decimals (−0.0 → 0.0).
+  - Robustness blocks (exits, suburban controls, monthly, in-time placebo) carry legacy, corridor and buffer in the
+    estimate shape. Monthly also has its pre-trend RI p and event-study series (for the monthly PNG).
+  - CR1 intervals are given for unaggregated estimands only.
+- `run.py` asserts the fast double difference equals statsmodels (1e-8) for every CR1 fit.
+- **Site:**
+  - Event-study panels are drawn in % (100·(e^b − 1)) rather than log points, which lay readers understand.
+  - The method line takes its control count and date from the JSON.
+  - The write-up link is an on-ink text link, not the planned `button-on-ink` (logged in DESIGN_BACKLOG).
+- **Fixed (regression found by the full Playwright run):** the findings SVGs first reused `.chart__svg`. Two existing
+  Trends tests count `.chart__svg` page-wide and saw 4 instead of 2, because the unmocked server now serves the real
+  findings. The findings charts now use their own `findings-chart__svg` class with the same box CSS. The existing
+  tests are unchanged.
+
+**Measured**
+- **Synthetic study after Amendment 1** (`--sims 200 --seed 0`, unchanged DGP; 133 s with CR1), with iteration 1's
+  numbers alongside:
+
+  | scenario | estimand | placebo cov. iter 1 | placebo cov. amended | CR1 cov. | placebo width (amended) |
+  |---|---|---|---|---|---|
+  | null | legacy | 0.935 | 0.935 | 0.79 | 0.039 |
+  | null | corridor | **0.84** | **0.925** | — | 0.041 |
+  | moved | legacy | 0.965 | 0.965 | 1.00 | 0.039 |
+  | moved | corridor | 0.91 | 0.96 | — | 0.041 |
+  | new | legacy | 0.95 | 0.95 | 0.825 | 0.038 |
+  | new | corridor | **0.87** | **0.935** | — | 0.041 |
+
+  - RI rejection at 5% under the null: legacy 0.065 → 0.065, corridor **0.175 → 0.075**. Corridor
+    `placebo_n_draws` = 5,984.
+  - Verdicts: new 200/200 in "new"; moved 192/200 in "moved" (was 182); inconclusive 183/200 in "null".
+  - Bias ≤ 0.002, RMSE ≈ 0.01.
+  - **Gate passed:** min placebo coverage 0.925 ≥ 0.90; null RI ≤ 0.10 for both estimands.
+- **Real data (single run, final):**
+  - **Verdict: new. Caution: false.**
+  - Corridor b = 0.0415, **+4.2% [+1.6%, +7.1%]** (95% placebo), RI p 0.0007; about 505 [199, 824] extra entries
+    a day.
+  - Legacy b = −0.2730, **−23.9% [−25.8%, −21.8%]**, RI p 0.0002; CR1 [−39.6%, −4.1%].
+  - Buffer +0.5% [−1.7%, +3.0%].
+  - Per station: PITT −40.1%, NCON −23.1%, CONC −4.3% [−7.4%, −0.0%].
+  - Weekly pre-trend RI p: legacy 0.43, corridor 0.66. Legacy CR1 Wald p = 0.027.
+  - **Robustness** (corridor / legacy):
+
+    | analysis | corridor | legacy |
+    |---|---|---|
+    | exits | +3.8% [+0.7, +7.2] | −24.1% |
+    | suburban controls | +3.8% [+1.1, +7.3] | −24.2% |
+    | monthly | +6.4% [+2.2, +12.3] | −22.5% |
+    | in-time placebo | +1.2% [−1.0, +2.8] | +1.4% [−0.6, +3.1] |
+
+  - Monthly pre-trend RI p: legacy 0.069, corridor 0.11. The monthly event study shows the corridor about 6.5% below
+    the reference in early 2016, i.e. it was drifting up against the controls before the opening.
+  - The corridor's weekly gain is largest in the first half-year and is +1–3% from week 36. Only 3 of the 23 post
+    bins exclude 0.
+- **Reported, not acted on:** none of these is in the pre-registered caution rule, so the flag stays off. FINDINGS
+  §Interpretation and §Limitations say plainly that part of the +4.2% may be trend. No trend-adjusted estimate was
+  computed (not pre-registered).
+- **The OD data records eBART riders through to their destination:** 1.09% of ANTC/PCTR entries
+  (22,338 / 2,049,800, 2018-05-28 → 2020-02-16) end at PITT.
+- **Checks:**
+  - pytest (default) **142** passed (125 + 17);
+  - localdata 12 (8 + 4);
+  - node 36 (28 + 8);
+  - Playwright **42** (35 + 7);
+  - container smoke 6 (5 + 1) on a rebuilt `transitpulse-api:loop`;
+  - ruff clean; Dagster validate OK; `accept-load-local` OK;
+  - `run --check` reproducible.
+
+**Not done / for the user:**
+- Commit `api/data/findings.json`, `docs/img/*.png` and the rest (no Claude co-author line).
+- Rebuild and deploy the Cloud Run image, then re-export the pages (`CLOUD_RUN.md` §5), so `/api/findings` and the
+  band go live.
+- No BigQuery, commits, pushes or deploys were made here.
+
+## 2026-10-10 · M4 · build loop iter 3 · Revision 1: hedged Findings copy and FINDINGS.md limitations
+**Why:** the final review found that the site said more than the write-up. With the caution flag off, the Findings
+band's "new" sentence read "eBART brought new riders: …", which is an unqualified causal claim. FINDINGS.md itself
+tells readers to treat the result as "a small effect that may partly be trend". The "moved" sentence ("didn't grow")
+likewise overstated a null. The review also found three wording slips in FINDINGS.md and four missing limitations.
+
+**What changed (wording and docs only):**
+- `web/js/findings.js`:
+  - Every verdict sentence is hedged ("consistent with …"), with no "eBART brought" and no "caused".
+  - New exported `VERDICTS_HEDGE_NOTE`, shown under the figures only for `new`, as a muted `findings__note`. It
+    says the effect is largest in the first months and the monthly data show the line rising before the opening.
+  - The note is fixed copy because the run is final. The pre-registered caution sentence is unchanged.
+  - CSS reuses `--color-mute-on-ink` and the body-sm type tokens, so no new tokens and no DESIGN_BACKLOG entry.
+- Tests:
+  - The loop's own findings tests now use the new phrases, with test names unchanged.
+  - Added a node test, "verdict sentences are hedged".
+  - Added a Playwright test: the note is shown for `new` and not for `moved`, using the synthetic fixture.
+  - Added `test_findings_doc_limitations_cover_the_known_threats`.
+- `docs/FINDINGS.md`:
+  - §Assumptions: the weekly pre-bins are "within ±2% but rising about 2 points" rather than "flat", with the CR1
+    Wald p of 0.027 cited.
+  - §Robustness: "every robustness row excludes 0", and the in-time placebo is described as a falsification test
+    that correctly contains 0.
+  - §Limitations: added return-trip contamination of the controls (SUTVA), the COVID cut-off (21 months post),
+    Amendment 1's "wide side" assumption against ramp-up and parking saturation, and BART's own weekday and holiday
+    definitions in the monthly source.
+  - The SUTVA figure is descriptive and comes from the committed `station_week.csv`: about 500 extra entries a day
+    against the 34 controls' post-period mean of about 276,000 a day (about 8,100 per station), roughly 0.2%.
+- README verdict bullet: "consistent with a small net gain, not a firm finding". CURRENT_STATE §Findings band
+  describes the hedged copy and the `new`-only note.
+
+**No estimate was recomputed.** `analysis.causal.run` was run only with `--check` (reproducible). The sha256 of
+`api/data/findings.json` is still `7ba1f859…6218`, and the PNGs, CSVs and both pre-registration files are
+byte-identical.
+
+**Checks:**
+- pytest (default) 143 (142 + 1);
+- node 37 (36 + 1);
+- Playwright 43 (42 + 1);
+- ruff clean.
+
+The container image was not rebuilt. Its findings test reads only the unchanged JSON.

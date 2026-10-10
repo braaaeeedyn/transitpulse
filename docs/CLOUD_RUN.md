@@ -171,6 +171,14 @@ Cloud Run. The API allows only `https://braedynthompson.com` through CORS (`var.
 `TP_CORS_ORIGINS`); add another origin there (and apply) if the pages are ever hosted elsewhere. Re-run the export
 only when the website code changes. The data is live, so new months appear without re-exporting.
 
+The Findings band reads `GET /api/findings`, which serves `api/data/findings.json` from the image. It needs no
+warehouse. After a change to the study (or the first time), do two things:
+1. Rebuild and redeploy the image (§2, or a push to `main` with deploys on).
+2. Re-export the pages, so the new `findings.js` is published.
+
+Until the new image is live, the band says "The analysis is in progress." (a 404). The static snapshot export also
+writes `api/findings`.
+
 Without Cloud Run, `uv run python tasks.py export --to ../portfolio/static/transitpulse` (no `--api-base`) publishes
 a static snapshot instead: the same pages with every number pre-computed from BigQuery, and no Ask analyst.
 

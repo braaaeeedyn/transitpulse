@@ -15,7 +15,7 @@
 
 | Part | State | How to run |
 |---|---|---|
-| Website (static, `web/`) | **Working**: live train map, ridership tiles + charts, forecast explorer, Ask card UI | `uv run python tasks.py api` → http://localhost:8000 |
+| Website (static, `web/`) | **Working**: live train map, ridership tiles + charts, forecast explorer, Ask card UI, Findings band | `uv run python tasks.py api` → http://localhost:8000 |
 | API (`api/`) | **Working**: serves the site; data endpoints read the local DuckDB or BigQuery marts when a warehouse is configured; `POST /api/ask` streams the agent's answer when `TP_AGENT_ENABLED=true`, 503 otherwise (the default) | same as above |
 | Ask TransitPulse agent (`api/agent/`) | **Working** locally: LangGraph text-to-SQL with guardrails, fake / Ollama / Gemini LLM, optional Langfuse | `TP_AGENT_ENABLED=true TP_AGENT_LLM=ollama uv run --group agent python tasks.py api` |
 | Agent eval (`eval/`) | **Working**: 66 in-scope questions with gold SQL + 10 out-of-scope | `uv run python tasks.py eval [--llm ollama]` |
@@ -33,7 +33,8 @@
 | Pages at braedynthompson.com/transitpulse/ | **Live**: the portfolio repo publishes `static/transitpulse/`; re-export only when the website code changes | [`CLOUD_RUN.md`](CLOUD_RUN.md) §5 |
 | Load test (`load/`) | **Working** locally: Locust at 1/10/25 users on a fixture warehouse with the fake LLM | `uv run python tasks.py load` |
 | CI (`.github/workflows/ci.yml`) | **Runs on GitHub** (python, spark, web, container, terraform jobs) | — |
-| Causal analysis, fine-tuning, BI reports | **Not implemented** | — |
+| eBART causal study (`analysis/causal/`) | **Done** (pre-registered + Amendment 1; one real run): verdict **new**, served by `GET /api/findings` and the Findings band; write-up in [`FINDINGS.md`](FINDINGS.md) | `uv run python tasks.py causal` (see §5 "Causal study") |
+| Fine-tuning, BI reports | **Not implemented** | — |
 
 ---
 
@@ -96,9 +97,37 @@ S3 baywheels-data ──► data/raw/baywheels/*.zip ─► DuckDB clean ─► 
 3. **Live map** (see below).
 4. **Trends** (`web/js/trends.js`, see below).
 5. **Forecast** explorer (`web/js/forecast.js`, see below).
-6. **Findings** (black band): heading + "analysis is in progress".
+6. **Findings** (black band, `web/js/findings.js`, see below).
 7. **About**: three FAQ rows (`<details>`).
 8. **Footer**: data sources with licences (Bay Wheels links its Data License Agreement), GitHub link, credits.
+
+### Findings band
+`web/js/findings.js` reads `GET /api/findings` (through `apiUrl`, so the exported pages call Cloud Run). Every
+number comes from the JSON:
+- **Verdict sentence:** one per pre-registered code (new / moved / fewer / inconclusive), hedged: each says what the
+  data are "consistent with" and none says eBART "brought" or "caused" anything. For **new** (the committed result):
+  "The whole line from Concord to Antioch carried a few percent more riders than the comparison stations would
+  predict: consistent with eBART bringing a modest number of new riders, on top of the many it moved from the old
+  stations to the new ones."
+- **Two figures:**
+  - "Whole line, Concord → Antioch (incl. new stations)": the corridor % with its 95% interval and "about N more
+    entries a day" (rounded to tens);
+  - "Pittsburg/Bay Point, North Concord, Concord": the legacy % with its interval.
+
+  Signed percentages use a true minus sign.
+- **Hedge note** (`VERDICTS_HEDGE_NOTE`, muted `findings__note` at the caption size): shown under the figures only
+  when the verdict is `new`. It is fixed copy, not from the JSON, because the run is final: the effect is largest in
+  the first months and the monthly data show the line already rising before the opening, so part of it may be trend.
+- **Caution sentence:** shown only when `caution` is true (separate from the hedge note).
+- **Method line:** "Difference-in-differences against 34 BART stations far from the line, pre-registered on Oct 9,
+  2026. 95% intervals from placebo tests." The count and the date come from the JSON. It ends with a link to
+  `docs/FINDINGS.md` on GitHub.
+- **Event-study charts:** two white `card`s (legacy, corridor), side by side from 768 px and stacked below.
+  - Each draws, in %, the `interval-fill` placebo band, gridlines with a `color-mute` zero line, a dashed "Opening"
+    marker, and the 2 px ink line with a dot per 4-week bin.
+  - The x axis is "weeks since opening". Each card has a visually hidden table of the bins.
+- **States:** skeletons of the loaded size while loading; 404 → "The analysis is in progress."; any other error →
+  an error message with Retry.
 
 ### Trends band
 - Loads `/api/kpis`, `/api/trends/ridership` and (in parallel, optional) `/api/trends/bikes-vs-trains`.
@@ -207,6 +236,7 @@ marks; Inter 400/500/700; pills for controls, 16 px cards. Chart, trends and for
 | GET | `/api/trends/bikes-vs-trains` | `{rows:[{month_start, bart_entries, bike_trips, bart_avg_daily_entries, bike_avg_daily_trips, bart_index_2019, bike_index_2019, bikes_per_1000_bart_entries}], source}`; 404 `data_not_available` if the mart doesn't exist |
 | GET | `/api/stations/{code}/summary` | `{code, name, data_through, entries, recovery_ratio, avg_weekday_entries_28d, peak_hour, peak_hour_share}` for the station's latest day |
 | GET | `/api/forecast/{code}` | `{code, name, data_through, forecast_start, forecast_end, generated_at, forecast:[{date,p10,p50,p90,lo,hi}] ×14, actuals:[{date,entries}] ×28, model:{mae, baseline_mae, mae_diff_ci, interval_coverage, interval:{method, nominal, coverage, coverage_ci, calibrated}}}`; 404 `forecast_not_available` if there's no forecast for a known station. Reads both forecast-table schemas (see Forecast below); every run-log column is optional (missing → `null`, `mae_diff_ci` is `null` unless both bounds exist) |
+| GET | `/api/findings` | the eBART study's `api/data/findings.json` (path: `TP_FINDINGS_PATH`), read once per process and returned unchanged, `Cache-Control: public, max-age=86400`. Never touches the warehouse (works with `TP_WAREHOUSE=none`); a missing or invalid file → **404** `findings_not_available`. Included in the static export (`pipeline/webexport.py`) |
 | POST | `/api/ask` | body `{"question": str (1–300)}`. Agent off (default): **503** `agent_unavailable`. On: `text/event-stream` (below); **429** `rate_limited` (with `Retry-After: 60`) or `agent_busy` before the stream starts; 422 for an empty/too-long question |
 | GET | `/api/docs` | OpenAPI UI |
 
@@ -375,6 +405,90 @@ at 20 GB billed in `dev` / 500 MB in `ci` (`maximum_bytes_billed`). The forecast
 - **CLI:** `python -m ml.forecast.run [--warehouse duckdb|bigquery] [--duckdb-path] [--horizon 14] [--folds 6]
   [--calib-folds 6] [--seed 0] [--train-days 730] [--bootstrap 1000]`. The Dagster asset runs 6 + 6 folds.
 
+### Causal study (`analysis/causal/`)
+The question: did the eBART extension to Pittsburg Center and Antioch (opened Sat 2018-05-26) change ridership at
+the nearby legacy stations, and did it bring new riders or only move them? The write-up is
+[`FINDINGS.md`](FINDINGS.md).
+
+- **Pre-registration.**
+  - `analysis/causal/preregistration.json`: fixed 2026-10-09, sha256 `a05df985…40f4`, committed in `4c80c9b`.
+  - `analysis/causal/preregistration-amendment-1.json`: fixed 2026-10-10, sha256 `96395c97…6061`, committed in
+    `39b1a70`.
+  - Neither file is ever edited. `design.load()` reads the original and applies the amendment, which is required. It
+    checks `amends_sha256` and that each changed value equals its `was`. `Design.sha256` is the original's, and
+    `Design.amendments` lists (file, sha256, fixed_on).
+  - Every station set, window, bin, draw count, interval quantile, threshold and the seed is read from these files;
+    no station list is written in code.
+  - The sets:
+    - treated legacy: PITT, NCON, CONC;
+    - new: ANTC, PCTR;
+    - corridor: the five summed into one unit;
+    - buffer (its own spillover estimate): ORIN, LAFY, WCRK, PHIL;
+    - excluded: WARM, FRMT, SFIA, OAKL, COLS, MLPT, BERY;
+    - controls: the other 34 stations (16 suburban park-and-ride as a secondary set).
+  - Weekly bins: pre [−21,−18] … [−5,−2] (reference [−5,−2]), post [0,3] … [88,90]. Monthly bins: [−29,−26], then
+    3-month bins to the reference [−4,−2], post [0,2] … [18,20].
+- **Data (committed, LF).**
+  - `data/station_week.csv` (`panel.py`, from `marts.fct_station_daily`, read-only).
+    - Columns `station_code, week_start, days, entries, exits`; ISO weeks 2018-01-01 → 2020-02-17; 5,412 rows.
+    - All 50 stations. ANTC/PCTR have a row for every week (missing days = 0).
+    - Two weeks (2020-01-20 and 2020-02-17) have 6 days system-wide, so the analysis panel has 109 weeks (20 pre,
+      89 post).
+  - `data/station_month_weekday.csv` (`monthly.py`).
+    - Columns `station_code, month, avg_weekday_entries`; 2016-01 → 2020-02; 2,388 rows.
+    - From BART's monthly workbooks (`ridership_YYYY.zip`, cached in `data/raw/bart_monthly/`): the "Weekday OD" /
+      "Avg Weekday OD" sheet, found by header text.
+    - Entries are column sums, each checked against the sheet's "Entries" row (±1).
+  - `data/station_codes_2letter.csv`: the workbooks' 2-letter codes → our 4-letter codes (50 stations).
+  - Cross-check with the daily warehouse (non-holiday Mon–Fri means, 25 months):
+    - median |% diff| over controls + treated **0.78%**;
+    - corridor stations at most 3.5% (ANTC).
+
+    Command: `python -m analysis.causal.monthly --crosscheck --json`.
+- **Estimators (`did.py`).**
+  - `twfe`: statsmodels OLS, CR1 by station. `event_study`: bins, CR1 CIs and the pre-bin F test.
+  - `dd` / `dd_bins`: exact double differences, equal to statsmodels to 1e-8.
+  - `aggregate_unit`: sums levels before the log.
+  - `placebo`: the placebo interval [b − q.975, b − q.025], the two-sided RI p, per-bin bands and the pre-trend RI p.
+    Treatment goes to control stations only:
+    - legacy: all 5,984 sets of 3;
+    - corridor: all 5,984 sets of 3, each summed (Amendment 1);
+    - buffer: 10,000 random sets of 4 (seed 20180526);
+    - per station: the 34 single controls;
+    - 16 suburban controls: every combination.
+  - `verdict` and `caution`: the pre-registered rules.
+- **Synthetic validation (`synthetic.py`).**
+  - The data: station FE + a shared seasonal week effect + AR(1) station noise (σ = 0.04, ρ = 0.5), on the
+    pre-registered stations and weeks.
+  - Scenarios: null, moved (PITT −20% to ANTC) and new (corridor +15%).
+  - Command: `python -m analysis.causal.synthetic --sims 200 --seed 0 --json` (about 2.2 min). The output includes
+    `placebo_n_draws` per estimand and the amendment hashes.
+  - Current results (the design as amended):
+
+    | | legacy placebo cov. | legacy CR1 cov. | corridor placebo cov. | RI reject @5% (null) |
+    |---|---|---|---|---|
+    | null | 0.935 | 0.79 | 0.925 | legacy 0.065, corridor 0.075 |
+    | moved | 0.965 | 1.00 | 0.96 | — |
+    | new | 0.95 | 0.825 | 0.935 | — |
+- **The run (`run.py`, `tasks.py causal`).**
+  - It reads only the committed CSVs and the pre-registration, and computes the primary weekly estimates plus four
+    robustness analyses: exits, suburban controls, monthly 2016–2020, and the in-time placebo.
+  - It writes `api/data/findings.json`. That file has sorted keys and 6-decimal floats, and `generated_at` =
+    `data_through` = 2020-02-16, taken from the data. `--plots` writes `docs/img/findings-event-study-weekly.png`
+    and `-monthly.png`.
+  - `--check` recomputes and exits 1 if the committed file differs. `--summary` prints the headline numbers. A run
+    takes about 4 s.
+  - The JSON's top-level keys: `question`, `generated_at`, `data_through`, `preregistration {sha256, fixed_on,
+    amendments}`, `design`, `estimates {legacy, corridor, buffer, per_station}`, `pretrend`, `robustness`,
+    `verdict`, `caution`, `event_study`, `source`.
+- **Results (committed `findings.json`).**
+  - **Verdict: new; caution: off.**
+  - Corridor **+4.2%** [+1.6%, +7.1%], about 505 extra entries a day [199, 824].
+  - Legacy **−23.9%** [−25.8%, −21.8%]: PITT −40.1%, NCON −23.1%, CONC −4.3%.
+  - Buffer +0.5% [−1.7%, +3.0%].
+  - Weekly pre-trend RI p: legacy 0.43, corridor 0.66. Legacy CR1 Wald p = 0.027.
+  - Monthly: corridor +6.4% [+2.2%, +12.3%], with pre-trend RI p 0.11 (legacy 0.069).
+
 ### Dagster (`pipeline/definitions.py`)
 - **Assets:**
   - `bart_gtfs`, `bart_stations_raw`, `web_map_data`.
@@ -471,15 +585,15 @@ at 20 GB billed in `dev` / 500 MB in `ci` (`maximum_bytes_billed`). The forecast
 
 | Suite | Command | Count | Status |
 |---|---|---|---|
-| Python unit (map data, API data endpoints, Bay Wheels cleaning, dbt build on a generated fixture, dbt regressions (backfill, ISO year, rolling window), forecast + calibration, Dagster definitions and schedules, VM files, agent guardrails / graph / `/api/ask` / eval, Cloud Run Terraform + deploy workflow) | `uv run --group dbt --group ml --group pipeline --group agent pytest -m "not spark and not gcp and not localdata and not docker"` | 93 | pass (~40 s) |
-| Local warehouse (real data, incl. every gold SQL of the agent eval) | `uv run --group dbt --group ml --group agent pytest -m localdata tests/local` | 8 | pass (needs `data/transitpulse.duckdb` with Bay Wheels + forecast) |
+| Python unit (map data, API data endpoints, Bay Wheels cleaning, dbt build on a generated fixture, dbt regressions (backfill, ISO year, rolling window), forecast + calibration, Dagster definitions and schedules, VM files, agent guardrails / graph / `/api/ask` / eval, Cloud Run Terraform + deploy workflow, cross-origin, causal study (prereg + amendment, synthetic data, inference, monthly parser, FINDINGS.md vs findings.json), `/api/findings`) | `uv run --group dbt --group ml --group pipeline --group agent pytest -m "not spark and not gcp and not localdata and not docker"` | 143 (33 in `tests/test_causal.py`, 10 in `tests/test_api_findings.py`) | pass (~70 s) |
+| Local warehouse (real data, incl. every gold SQL of the agent eval) | `uv run --group dbt --group ml --group agent pytest -m localdata tests/local` | 12 (4 in `test_causal_local.py`: the committed weekly CSV equals a fresh build, the opening date, the monthly cross-check, new-station trips recorded through) | pass (needs `data/transitpulse.duckdb` with Bay Wheels + forecast) |
 | Spark job | in Docker: `docker run --rm -v "$PWD:/app" transitpulse-spark python -m pytest tests/spark -m spark` | 1 | pass (auto-skipped on Windows outside Docker) |
-| Browser maths (schedule, timetable range, chart helpers, station search, forecast wording, SSE parser) | `node --test tests/web/` | 24 | pass |
-| Browser (Playwright, Chromium; API mocked for data and Ask tests) | `npx playwright test` | 35 | pass |
+| Browser maths (schedule, timetable range, chart helpers, station search, forecast wording, SSE parser, findings wording) | `node --test tests/web/` | 37 | pass |
+| Browser (Playwright, Chromium; API mocked for data, Ask and Findings tests) | `npx playwright test` | 43 | pass |
 | dbt data tests | `uv run python tasks.py dbt` | 73 (+15 models/snapshot) | pass (incremental ~2.3 min) |
 | Shellcheck (VM bootstrap) | `docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:stable deploy/oracle/bootstrap.sh` | — | clean |
 | ARM wheels (pipeline, dbt, ml groups) | `uv pip compile pyproject.toml --group pipeline --group dbt --group ml --python-platform aarch64-manylinux_2_28 --python-version 3.12 --only-binary :all:` | — | resolves |
-| Container (marker `docker`; needs the built image `transitpulse-api:loop`) | `docker build -t transitpulse-api:loop . && uv run pytest -m docker tests/deploy` | 5 | pass |
+| Container (marker `docker`; needs the built image `transitpulse-api:loop`) | `docker build -t transitpulse-api:loop . && uv run pytest -m docker tests/deploy` | 6 (incl. `/api/findings` served from the image) | pass |
 | Load test (Locust, fixture warehouse, fake LLM) | `uv run --group load --group agent python load/run_local.py [--users N --seconds S]` | — | 0 failures |
 | Workflows | `docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:latest` | — | clean (`ci.yml`, `deploy.yml`) |
 | Lint/format | `uv run ruff check . && uv run ruff format --check .` | — | clean |
@@ -501,6 +615,11 @@ at 20 GB billed in `dev` / 500 MB in `ci` (`maximum_bytes_billed`). The forecast
 - The forecast covers the 14 days after the latest published data (currently 2026-01-01 → 14), not the next two
   weeks from today; the site says "forecast from data through".
 - On Windows, Spark runs only through Docker.
+- The eBART study has 3 treated stations and 1 corridor unit, and 20 weekly pre-periods. In the monthly series the
+  corridor already drifts up against the controls before the opening, which the pre-registered caution rule doesn't
+  test, so part of the +4.2% may be trend (see `FINDINGS.md` §Limitations).
+- The live Cloud Run image predates `/api/findings`, so the live Findings band shows "The analysis is in progress."
+  until a new image is deployed and the pages are re-exported (`CLOUD_RUN.md` §5).
 - The running Cloud Run image (`manual-2dd730f`) predates `/api/health`; the next deploy adds it. On `*.run.app`,
   `/healthz` is answered by Google's front end (404), so outside checks use `/api/health`.
 - The first API request after the service scales to zero takes ~5 s (cold start + first BigQuery queries); later

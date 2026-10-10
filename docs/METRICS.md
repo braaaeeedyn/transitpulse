@@ -99,5 +99,44 @@ schema has no bike type) and dockless (no start station).
 numbers are in `eval/results/summary-*.json`, written only with `--save-summary`; first run (llama3.1:8b, local DuckDB, 2026-10-09): execution accuracy
 **0.27** (18/66), refusal accuracy 1.0, 0 guardrail rejections, p50 2.4 s / p95 6.4 s.
 
+## Causal estimates (eBART study, `api/data/findings.json`, `GET /api/findings`)
+
+Defined by the pre-registration (`analysis/causal/preregistration.json` + Amendment 1); the write-up is
+[`FINDINGS.md`](FINDINGS.md).
+
+| Estimand | Definition |
+|---|---|
+| b | The difference-in-differences coefficient on ln(weekly entries): (treated − controls) mean log entries after the opening minus the same gap before, with station and week fixed effects (34 control stations; e = −1, the transition week, dropped) |
+| % | 100 × (e^b − 1) |
+| Legacy | PITT, NCON and CONC pooled with equal weight against the 34 controls |
+| Corridor | ANTC + PCTR + PITT + NCON + CONC **summed into one unit before the log**, so moved riders cancel and new riders show |
+| Buffer | ORIN, LAFY, WCRK and PHIL pooled (a spillover check) |
+| Per station | PITT, NCON and CONC each against the controls |
+| Implied daily entries | Post-period mean weekly corridor entries × (1 − e^−b) / 7, averaged over all days; the same transform is applied to the interval bounds |
+
+**Intervals.**
+- **Placebo interval (headline, "95% interval" on the site).** Treatment is reassigned to sets of control stations,
+  and the estimate is recomputed with the rest of the controls. The interval is [b − q97.5, b − q2.5] of those
+  placebo estimates (numpy linear quantiles). The sets:
+  - legacy: all C(34,3) = 5,984 sets of 3;
+  - corridor: all 5,984 sets of 3, **each summed into one unit**, because the real corridor is 3 stations before
+    the opening (Amendment 1);
+  - buffer: 10,000 random sets of 4 (seed 20180526);
+  - per station: the 34 single controls;
+  - with the 16 suburban controls: every combination (560 for sets of 3, 1,820 for sets of 4).
+- **RI p:** (1 + #{|b_placebo| ≥ |b|}) / (1 + N), two-sided. Per station its floor is 1/35.
+- **CR1 interval:** statsmodels cluster-robust by station, t with G − 1 degrees of freedom. It is reported but not
+  the headline: on synthetic data it covers 0.79–0.83, against 0.925–0.965 for the placebo intervals.
+- **Pre-trend tests:**
+  - RI p of the sum of squared pre-period event-study bin coefficients (legacy and corridor);
+  - the CR1 joint Wald test (legacy).
+- **Verdict:**
+  - new if the corridor interval is above 0;
+  - moved if it contains 0 and the legacy interval is below 0;
+  - fewer if it is below 0;
+  - otherwise inconclusive.
+- **Caution flag:** a weekly pre-trend RI p < 0.10, or a monthly corridor interval that excludes 0 with the opposite
+  sign.
+
 ## Cross-tool check (M2, to do)
 Once the Power BI report exists, pick 3 KPIs for one week and confirm that DAX = dbt mart value; record it here.
