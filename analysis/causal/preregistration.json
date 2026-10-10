@@ -1,0 +1,109 @@
+{
+  "title": "eBART (Antioch extension) difference-in-differences: pre-registered design",
+  "fixed_on": "2026-10-09",
+  "fixed_by": "build-loop Architect, before any treated-vs-control comparison was computed",
+  "seen_before_fixing": [
+    "first date with any entries per station (ANTC 2018-03-23 and PCTR 2018-04-17: pre-opening test trickles; MLPT/BERY 2019-07: test trips)",
+    "daily ANTC+PCTR entries 2018-05-20..2018-05-28 only, to confirm the opening date (single digits before, 918 on 2018-05-26)",
+    "which dates are missing in 2018-01-01..2020-02-29 (2020-01-21, 2020-02-19) and that the 46 legacy stations have every other day",
+    "that BART publishes daily OD files only from 2018 and monthly average-weekday OD workbooks back to 2001"
+  ],
+  "question": "Did the eBART extension to Pittsburg Center and Antioch change ridership at the nearby legacy stations, and did it bring new riders to the corridor or only move them between stations?",
+  "event": {
+    "name": "eBART revenue service start (Pittsburg Center, Antioch)",
+    "date": "2018-05-26",
+    "sources": [
+      "https://en.wikipedia.org/wiki/Antioch_station_(BART) (opened 2018-05-26)",
+      "BART OD data: first day with ANTC+PCTR entries >= 100 must be 2018-05-26 (checked by tests/local/test_causal_local.py)"
+    ]
+  },
+  "stations": {
+    "treated_legacy": ["PITT", "NCON", "CONC"],
+    "new": ["ANTC", "PCTR"],
+    "corridor": ["ANTC", "PCTR", "PITT", "NCON", "CONC"],
+    "buffer": ["ORIN", "LAFY", "WCRK", "PHIL"],
+    "excluded": {
+      "WARM": "opened 2017-03-25, still ramping up",
+      "FRMT": "riders shifting to Warm Springs",
+      "SFIA": "airport seasonality",
+      "OAKL": "airport seasonality",
+      "COLS": "Warriors left Oracle Arena for Chase Center in Sept 2019 (control-specific shock)",
+      "MLPT": "not open until 2020 (test trips only)",
+      "BERY": "not open until 2020 (test trips only)"
+    },
+    "controls": ["12TH", "16TH", "19TH", "24TH", "ASHB", "BALB", "BAYF", "CAST", "CIVC", "COLM", "DALY", "DBRK",
+                 "DELN", "DUBL", "EMBR", "FTVL", "GLEN", "HAYW", "LAKE", "MCAR", "MLBR", "MONT", "NBRK", "PLZA",
+                 "POWL", "RICH", "ROCK", "SANL", "SBRN", "SHAY", "SSAN", "UCTY", "WDUB", "WOAK"],
+    "controls_suburban": ["RICH", "DELN", "PLZA", "DALY", "COLM", "SSAN", "SBRN", "MLBR", "SANL", "BAYF", "HAYW",
+                          "SHAY", "UCTY", "CAST", "WDUB", "DUBL"]
+  },
+  "primary": {
+    "source": "marts.fct_station_daily (BART daily OD, local DuckDB) -> analysis/causal/data/station_week.csv",
+    "unit": "station x ISO week (Monday start)",
+    "window": {"first_week_start": "2018-01-01", "last_week_start": "2020-02-17"},
+    "event_week_zero_start": "2018-05-28",
+    "event_time": "e = (week_start - 2018-05-28) / 7",
+    "transition_weeks_dropped": [-1],
+    "drop_incomplete_weeks": "drop every week (for all units) in which any day has no data",
+    "outcome": "ln(sum of entries over the 7 days)",
+    "secondary_outcome": "ln(sum of exits over the 7 days)",
+    "corridor_unit": "sum of entries (exits) over the corridor stations; a missing station-day counts as 0",
+    "model": "y_it = a_i + l_t + b * D_it + u_it, OLS (statsmodels), D = treated x (e >= 0)",
+    "event_study_bins_weeks": 4,
+    "event_study_pre_bins": [[-21, -18], [-17, -14], [-13, -10], [-9, -6], [-5, -2]],
+    "event_study_reference_bin": [-5, -2],
+    "event_study_post_bins": "[0,3], [4,7], ... , [88,90] (the last bin is cut at the window end)"
+  },
+  "robustness_monthly": {
+    "source": "BART monthly ridership workbooks (ridership_YYYY.zip, sheet 'Weekday OD') -> analysis/causal/data/station_month_weekday.csv",
+    "unit": "station x calendar month",
+    "window": {"first_month": "2016-01", "last_month": "2020-02"},
+    "event_month_zero": "2018-06",
+    "transition_months_dropped": ["2018-05"],
+    "outcome": "ln(average weekday entries)",
+    "model": "station + month fixed effects, same station sets and inference as the primary",
+    "event_study_bins_months": 3,
+    "event_study_reference_bin": [-4, -2],
+    "event_study_earliest_bin": [-29, -26]
+  },
+  "estimands": {
+    "legacy": "ATT on ln weekly entries, treated_legacy pooled (equal weight per station) vs controls; post = all e >= 0",
+    "corridor": "ATT on ln weekly entries of the corridor aggregate (one unit) vs controls",
+    "buffer": "ATT on ln weekly entries, buffer stations pooled vs controls (spillover check)",
+    "per_station": "ATT for each of PITT, NCON, CONC separately vs controls",
+    "implied_daily_entries": "corridor: (post-period actual mean weekly entries) * (1 - exp(-b)) / 7, with the same transformation applied to the CI bounds"
+  },
+  "inference": {
+    "cluster": "CR1 cluster-robust SEs by station (statsmodels cov_type='cluster', use_t=True); reported, but not the headline, because there are only 1-4 treated clusters",
+    "headline_ci": "placebo (Conley-Taber style) interval: [b - q(0.975), b - q(0.025)] of the placebo estimates (numpy.quantile, linear)",
+    "randomization_p": "two-sided: (1 + #{|b_p| >= |b|}) / (1 + N)",
+    "placebo_pool": "controls only (the real treated, new, buffer and excluded stations are never placebo-treated)",
+    "placebo_draws": {
+      "legacy": "all C(34,3) = 5984 sets of 3 controls",
+      "corridor": "10000 distinct random sets of 5 controls, summed into one placebo corridor",
+      "buffer": "10000 distinct random sets of 4 controls",
+      "per_station": "all 34 single controls"
+    },
+    "seed": 20180526,
+    "pretrend_test": "randomization p of S = sum of squared pre-bin coefficients (reference bin excluded), for legacy and corridor; the CR1 joint Wald test is reported for legacy",
+    "wild_cluster_bootstrap": "not used: unreliable with 1-4 treated clusters (MacKinnon and Webb 2017, 2018); randomization inference needs no new package",
+    "falsification": [
+      "in-time placebo: only weeks e <= -2, fake event at week starting 2018-03-12 (e = -11), same estimands",
+      "pre-trend test above",
+      "in-space placebo distribution above"
+    ]
+  },
+  "decision_rules": {
+    "verdict_uses": "primary weekly estimates, 95% placebo intervals",
+    "new": "corridor interval entirely above 0",
+    "moved": "corridor interval contains 0 and legacy interval entirely below 0",
+    "fewer": "corridor interval entirely below 0",
+    "inconclusive": "anything else",
+    "caution_flag": "true if the legacy or corridor pre-trend randomization p < 0.10, or the monthly corridor interval excludes 0 with the opposite sign to the weekly corridor estimate",
+    "no_changes_after_results": "station sets, windows, bins, outcomes, draws, seed and rules are fixed by this file; any code bug fix after the first real-data run is logged in docs/DEVLOG.md with the numbers before and after"
+  },
+  "site": {
+    "chart": "primary weekly event study, legacy and corridor as two small panels, 95% placebo bands",
+    "headline": "corridor and legacy effects in % (100 * (exp(b) - 1)) with 95% placebo intervals, plus the verdict sentence"
+  }
+}
