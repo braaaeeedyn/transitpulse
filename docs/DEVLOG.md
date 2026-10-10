@@ -825,3 +825,15 @@ serves. So: pages from the portfolio, API on Cloud Run, the browser calling acro
 - Tests: `tests/test_cross_origin.py` (6: allowed origin incl. trailing slash, POST preflight, other origin and the
   default get no CORS, live export, https required, Terraform origin) and `tests/web/api-base.test.mjs` (4).
   pytest 99 passed, node 28, Playwright 35, terraform fmt/validate clean.
+
+## 2026-10-09 · deploy · Cloud Run live
+- `terraform apply`: 10 added, 0 changed, 0 destroyed (Cloud Run service, public invoker, WIF pool + provider pinned
+  to braaaeeedyn/transitpulse @ main, sa-deploy bindings, Gemini secret without a version, Secret Manager API).
+- First image `api:manual-2dd730f` pushed and deployed: revision `transitpulse-api-00002-jvl`, URL
+  https://transitpulse-api-etumz4pfva-uw.a.run.app (alias https://transitpulse-api-245326382421.us-west1.run.app).
+  `/`, `/api/kpis` (5.2 s cold incl. first BigQuery queries, then ~0.15 s), `/api/forecast/EMBR`, `/data/...` all
+  200; `access-control-allow-origin: https://braedynthompson.com` on API responses.
+- **Found**: `/healthz` returns Google's own 404 on `*.run.app` (the front end answers paths ending in "z"); the
+  startup probe still works because it reaches the container directly. deploy.yml's post-deploy curl would always
+  fail. **Fixed**: added `/api/health` (same handler); deploy.yml and docs/CLOUD_RUN.md use it; test added.
+  pytest 100 passed, actionlint clean.

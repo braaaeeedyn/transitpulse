@@ -90,3 +90,17 @@ def test_cloud_run_terraform_allows_the_portfolio_origin():
     root = Path(__file__).resolve().parents[1] / "infra" / "terraform"
     assert 'TP_CORS_ORIGINS  = join(",", var.site_origins)' in (root / "cloudrun.tf").read_text()
     assert '"https://braedynthompson.com"' in (root / "variables.tf").read_text()
+
+
+def test_health_route_reachable_on_run_app():
+    """Google's front end answers *.run.app paths ending in "z" (e.g. /healthz) itself, so outside checks use
+    /api/health; /healthz stays for probes that reach the container directly."""
+    from pathlib import Path
+
+    import api.main
+
+    client = TestClient(api.main.app)
+    assert client.get("/api/health").json() == {"ok": True}
+    assert client.get("/healthz").json() == {"ok": True}
+    deploy = (Path(__file__).resolve().parents[1] / ".github" / "workflows" / "deploy.yml").read_text()
+    assert '"$url/api/health"' in deploy and '"$url/healthz"' not in deploy

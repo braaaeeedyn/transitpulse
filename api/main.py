@@ -29,7 +29,10 @@ if origins := get_settings().cors_origin_list:
     )
 
 
+# /healthz is for probes that reach the container directly (Cloud Run's startup probe, the smoke tests). On the public
+# *.run.app URL, Google's front end answers paths ending in "z" itself (404), so checks from outside use /api/health.
 @app.get("/healthz", include_in_schema=False)
+@app.get("/api/health", include_in_schema=False)
 def healthz() -> dict:
     return {"ok": True}
 

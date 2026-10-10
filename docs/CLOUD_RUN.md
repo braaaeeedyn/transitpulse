@@ -93,7 +93,8 @@ IMAGE=$REGION-docker.pkg.dev/$PROJECT/transitpulse/api:manual-$(git rev-parse --
 gcloud auth configure-docker $REGION-docker.pkg.dev
 docker build -t $IMAGE . && docker push $IMAGE
 gcloud run deploy transitpulse-api --project $PROJECT --region $REGION --image $IMAGE
-curl -s "$(terraform -chdir=infra/terraform output -raw api_url)/healthz"     # {"ok":true}
+curl -s "$(terraform -chdir=infra/terraform output -raw api_url)/api/health"   # {"ok":true}
+# (not /healthz: on *.run.app Google's front end answers paths ending in "z" itself, with a 404)
 ```
 
 Open the URL on a phone and a desktop. The map, KPI tiles, trends and forecast should load from BigQuery. The Ask card
@@ -114,7 +115,7 @@ Each push to `main` (or a manual *Run workflow*) then runs `deploy.yml`:
 1. builds the image, tagged with the commit SHA
 2. runs the container smoke tests on it (`uv run pytest -m docker tests/deploy`, `TP_TEST_IMAGE` = that image)
 3. gets a token through WIF (no JSON key) and pushes the image
-4. runs `gcloud run deploy --image` and curls `/healthz` and `/`
+4. runs `gcloud run deploy --image` and curls `/api/health` and `/`
 
 `deploy.yml` does **not** wait for `ci.yml`: both start on the same push, so a commit whose unit tests fail can
 still deploy. Only the container smoke tests gate the push. Check the CI run before (or soon after) pushing to
@@ -241,4 +242,4 @@ you delete them (`gcloud artifacts docker images delete`).
   read with `TP_TRUST_PROXY=true`) is the real client IP. If every request shows the same address (a Google
   front-end or load balancer IP), the per-IP rate limit becomes one global limit for all visitors.
 - Local load-test numbers (`load/run_local.py`) are this PC's, not Cloud Run's. After the first deploy, measure the
-  cold start: the time to the first `/healthz` after 15+ idle minutes.
+  cold start: the time to the first `/api/health` after 15+ idle minutes.
