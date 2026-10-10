@@ -19,6 +19,8 @@ credentials/
 # Data (raw data lives in GCS, never in git)
 data/
 !web/data/
+!analysis/causal/data/
+!api/data/
 spark-warehouse/
 metastore_db/
 derby.log

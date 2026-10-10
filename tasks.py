@@ -117,6 +117,11 @@ def forecast(*args: str) -> None:
     run("uv", "run", "--group", "ml", "python", "-m", "ml.forecast.run", *args)
 
 
+def causal(*args: str) -> None:
+    """The eBART study: every pre-registered estimate into api/data/findings.json, plus the event-study PNGs."""
+    run("uv", "run", "--group", "ml", "python", "-m", "analysis.causal.run", "--plots", *args)
+
+
 def eval_agent(*args: str) -> None:
     """Score Ask TransitPulse on eval/questions.yaml (default: fake LLM on the local DuckDB; --llm ollama for real)."""
     run("uv", "run", "--group", "agent", "python", "-m", "eval.run_eval", *args)
@@ -152,6 +157,7 @@ TASKS = {
     "dagster": dagster,
     "export": export,
     "forecast": forecast,
+    "causal": causal,
     "eval": eval_agent,
     "load": load,
     "image": image,

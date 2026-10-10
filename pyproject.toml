@@ -51,6 +51,7 @@ ml = [
     "lightgbm>=4.5",
     "statsmodels>=0.14",
     "matplotlib>=3.9",
+    "openpyxl>=3.1", # analysis/causal/monthly.py reads BART's monthly ridership workbooks
     "holidays>=0.56",
 ]
 agent = [
