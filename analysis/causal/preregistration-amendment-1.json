@@ -1,0 +1,34 @@
+{
+  "title": "Amendment 1 to the eBART difference-in-differences pre-registration: corridor placebo sets of 3 controls",
+  "amends": "analysis/causal/preregistration.json",
+  "amends_sha256": "a05df98504818ffd4ea5fb69c720cea37eff76dd55859941acc3ce23d56e40f4",
+  "fixed_on": "2026-10-10",
+  "fixed_by": "build-loop Architect, after the synthetic validation (loop iteration 1) and before any real-data treatment estimate was computed or viewed by anyone",
+  "seen_before_fixing": [
+    "everything listed in the original pre-registration's seen_before_fixing",
+    "the synthetic coverage study (python -m analysis.causal.synthetic --sims 200 --seed 0): placebo 95% coverage legacy 0.935 / 0.965 / 0.95 and corridor 0.84 / 0.91 / 0.87 (null / moved / new); RI rejection at 5% under the null legacy 0.065, corridor 0.175",
+    "a builder diagnostic on the same synthetic design (300 null sims): 5-station placebo corridors cover 0.85, 3-station placebo corridors cover 0.93",
+    "the monthly-vs-daily data cross-check (median |% diff| 0.78%), a data-quality comparison per station, not a treated-vs-control comparison"
+  ],
+  "problem": "The original corridor inference drew 5-control placebo corridors. Before the opening the real corridor is effectively the 3 legacy stations (ANTC and PCTR are 0), and the pre-period mean dominates the variance of the double difference (about 20 pre vs 89 post weeks). A sum of 5 stations is smoother in log terms than a sum of 3, so the placebo distribution was too narrow: the corridor placebo interval under-covered (0.84 under the null) and RI over-rejected (0.175 at 5%), failing the pre-registered plan's 0.90 coverage bar. The legacy (3 vs 3), buffer (4 vs 4) and per-station (1 vs 1) placebos already match their treated sets and are not changed.",
+  "changes": {
+    "inference.placebo_draws.corridor": {
+      "was": "10000 distinct random sets of 5 controls, summed into one placebo corridor",
+      "now": "all C(34,3) = 5984 sets of 3 controls, each summed into one placebo corridor"
+    }
+  },
+  "applies_to": [
+    "the corridor placebo interval, RI p-value, per-bin event-study bands and pre-trend RI p in the primary weekly analysis",
+    "every robustness analysis that has a corridor estimate (exits, suburban controls: all C(16,3) = 560 sets, monthly, in-time placebo)",
+    "the implied daily entries interval, which is derived from the corridor placebo interval"
+  ],
+  "rationale": "Placebo corridors should have the same composition as the real corridor in the period that drives the variance. Summing 3 controls matches the real corridor's 3 pre-opening stations exactly. After the opening the real corridor sums 5 stations, so if anything its post-period noise is lower than a 3-station placebo's and the amended interval errs on the wide side. Using every combination removes the random draw (the seed no longer affects the corridor) and reuses the legacy estimand's exact enumeration.",
+  "rejected": {
+    "pre 3 / post 5 placebo corridors": "adding 2 control stations to a placebo corridor at the fake opening creates a level jump that is not a null effect; removing that jump would need an estimate taken from the post period",
+    "studentized or variance-matched placebo (Ferman-Pinto style)": "needs a model of how the residual variance depends on unit size; more machinery and more choices than the composition match, which already reaches the bar on the synthetic study",
+    "demoting the corridor to a secondary estimand": "the corridor is the estimand that answers the question (new riders vs moved riders); the verdict rule needs it"
+  },
+  "validation_required": "before any real-data run, python -m analysis.causal.synthetic --sims 200 --seed 0 (same DGP, unchanged) must give placebo coverage >= 0.90 for legacy and corridor in each of null, moved and new, and RI rejection at 5% under the null <= 0.10 for both. If it does not, no real-data estimate is run and the method goes back for a human decision; the seed and the simulation count are not changed to pass.",
+  "unchanged": "station sets, windows, transition weeks and months, bins, outcomes, estimands, models, the seed, the interval and RI formulas, the legacy, buffer and per-station draws, the verdict rule and the caution rule all stay as in the original file",
+  "decision_rules": "unchanged: the corridor stays a primary estimand and the verdict is derived exactly as in the original decision_rules, using the amended corridor placebo interval"
+}
