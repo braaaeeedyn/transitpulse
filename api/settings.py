@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="TP_", env_file=".env", extra="ignore")
 
     web_dir: Path = ROOT / "web"
+    # The eBART study's results (GET /api/findings), written by `python -m analysis.causal.run`; no warehouse needed.
+    findings_path: Path = ROOT / "api" / "data" / "findings.json"
     # Where the data endpoints read the dbt marts from. Explicit opt-in: with `none` (the default) every data
     # endpoint answers 503, whatever files exist on disk. Unset + TP_GCP_PROJECT set means `bigquery`.
     warehouse: WarehouseKind | None = None

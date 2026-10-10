@@ -130,6 +130,16 @@ def test_container_api_answers_503_without_warehouse(server):
     assert ask.json()["detail"]["code"] == "agent_unavailable"
 
 
+def test_findings_served_from_image(server):
+    # the eBART study's committed results ship in the image and need no warehouse
+    res = httpx.get(f"{server}/api/findings")
+    assert res.status_code == 200
+    assert res.headers["cache-control"] == "public, max-age=86400"
+    body = res.json()
+    assert body["verdict"] in {"new", "moved", "fewer", "inconclusive"}
+    assert body["preregistration"]["sha256"].startswith("a05df985")
+
+
 def test_container_agent_streams_with_fake_llm(image):
     name, base = start({"TP_AGENT_ENABLED": "true", "TP_AGENT_LLM": "fake"})
     try:

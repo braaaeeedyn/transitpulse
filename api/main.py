@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.types import Receive, Scope, Send
 
-from api.routes import ask, data
+from api.routes import ask, data, findings
 from api.settings import get_settings
 
 app = FastAPI(
@@ -16,6 +16,7 @@ app = FastAPI(
 )
 app.include_router(data.router)
 app.include_router(ask.router)
+app.include_router(findings.router)
 
 if origins := get_settings().cors_origin_list:
     # pages on another domain (braedynthompson.com/transitpulse/) read the API on Cloud Run; GET for the data,

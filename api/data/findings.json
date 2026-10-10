@@ -1,0 +1,1152 @@
+{
+  "caution": false,
+  "data_through": "2020-02-16",
+  "design": {
+    "buffer": [
+      "ORIN",
+      "LAFY",
+      "WCRK",
+      "PHIL"
+    ],
+    "controls": [
+      "12TH",
+      "16TH",
+      "19TH",
+      "24TH",
+      "ASHB",
+      "BALB",
+      "BAYF",
+      "CAST",
+      "CIVC",
+      "COLM",
+      "DALY",
+      "DBRK",
+      "DELN",
+      "DUBL",
+      "EMBR",
+      "FTVL",
+      "GLEN",
+      "HAYW",
+      "LAKE",
+      "MCAR",
+      "MLBR",
+      "MONT",
+      "NBRK",
+      "PLZA",
+      "POWL",
+      "RICH",
+      "ROCK",
+      "SANL",
+      "SBRN",
+      "SHAY",
+      "SSAN",
+      "UCTY",
+      "WDUB",
+      "WOAK"
+    ],
+    "controls_suburban": [
+      "RICH",
+      "DELN",
+      "PLZA",
+      "DALY",
+      "COLM",
+      "SSAN",
+      "SBRN",
+      "MLBR",
+      "SANL",
+      "BAYF",
+      "HAYW",
+      "SHAY",
+      "UCTY",
+      "CAST",
+      "WDUB",
+      "DUBL"
+    ],
+    "corridor": [
+      "ANTC",
+      "PCTR",
+      "PITT",
+      "NCON",
+      "CONC"
+    ],
+    "event_date": "2018-05-26",
+    "excluded": {
+      "BERY": "not open until 2020 (test trips only)",
+      "COLS": "Warriors left Oracle Arena for Chase Center in Sept 2019 (control-specific shock)",
+      "FRMT": "riders shifting to Warm Springs",
+      "MLPT": "not open until 2020 (test trips only)",
+      "OAKL": "airport seasonality",
+      "SFIA": "airport seasonality",
+      "WARM": "opened 2017-03-25, still ramping up"
+    },
+    "new": [
+      "ANTC",
+      "PCTR"
+    ],
+    "outcome": "ln(sum of entries over the 7 days)",
+    "treated": [
+      "PITT",
+      "NCON",
+      "CONC"
+    ],
+    "window": {
+      "monthly": {
+        "first_month": "2016-01",
+        "last_month": "2020-02",
+        "n_months": 49,
+        "transition_months_dropped": [
+          "2018-05"
+        ]
+      },
+      "weekly": {
+        "first_week_start": "2018-01-01",
+        "last_week_start": "2020-02-10",
+        "n_post_weeks": 89,
+        "n_pre_weeks": 20,
+        "n_weeks": 109,
+        "transition_weeks_dropped": [
+          -1
+        ]
+      }
+    }
+  },
+  "estimates": {
+    "buffer": {
+      "b": 0.005042,
+      "cluster_ci": [
+        -0.023027,
+        0.033111
+      ],
+      "n_controls": 34,
+      "n_draws": 10000,
+      "n_periods": 109,
+      "n_treated": 4,
+      "pct": 0.505459,
+      "placebo_ci": [
+        -0.017492,
+        0.029126
+      ],
+      "placebo_ci_pct": [
+        -1.733971,
+        2.955474
+      ],
+      "ri_p": 0.689131
+    },
+    "corridor": {
+      "b": 0.041479,
+      "implied_daily_entries": {
+        "hi": 824.307911,
+        "lo": 198.502837,
+        "point": 504.715673
+      },
+      "n_controls": 34,
+      "n_draws": 5984,
+      "n_periods": 109,
+      "n_treated": 1,
+      "pct": 4.235082,
+      "placebo_ci": [
+        0.016109,
+        0.068662
+      ],
+      "placebo_ci_pct": [
+        1.623917,
+        7.107388
+      ],
+      "ri_p": 0.000668
+    },
+    "legacy": {
+      "b": -0.272982,
+      "cluster_ci": [
+        -0.504477,
+        -0.041486
+      ],
+      "n_controls": 34,
+      "n_draws": 5984,
+      "n_periods": 109,
+      "n_treated": 3,
+      "pct": -23.889341,
+      "placebo_ci": [
+        -0.297928,
+        -0.245712
+      ],
+      "placebo_ci_pct": [
+        -25.764536,
+        -21.785222
+      ],
+      "ri_p": 0.000167
+    },
+    "per_station": {
+      "CONC": {
+        "b": -0.044267,
+        "cluster_ci": [
+          -0.052229,
+          -0.036305
+        ],
+        "n_controls": 34,
+        "n_draws": 34,
+        "n_periods": 109,
+        "n_treated": 1,
+        "pct": -4.330144,
+        "placebo_ci": [
+          -0.077092,
+          -0.000106
+        ],
+        "placebo_ci_pct": [
+          -7.419507,
+          -0.010588
+        ],
+        "ri_p": 0.085714
+      },
+      "NCON": {
+        "b": -0.262053,
+        "cluster_ci": [
+          -0.270015,
+          -0.254092
+        ],
+        "n_controls": 34,
+        "n_draws": 34,
+        "n_periods": 109,
+        "n_treated": 1,
+        "pct": -23.052993,
+        "placebo_ci": [
+          -0.294878,
+          -0.217892
+        ],
+        "placebo_ci_pct": [
+          -25.53776,
+          -19.578786
+        ],
+        "ri_p": 0.028571
+      },
+      "PITT": {
+        "b": -0.512625,
+        "cluster_ci": [
+          -0.520587,
+          -0.504664
+        ],
+        "n_controls": 34,
+        "n_draws": 34,
+        "n_periods": 109,
+        "n_treated": 1,
+        "pct": -40.107893,
+        "placebo_ci": [
+          -0.54545,
+          -0.468464
+        ],
+        "placebo_ci_pct": [
+          -42.041924,
+          -37.403726
+        ],
+        "ri_p": 0.028571
+      }
+    }
+  },
+  "event_study": {
+    "reference_bin": [
+      -5,
+      -2
+    ],
+    "series": {
+      "corridor": [
+        {
+          "bin_end": -18,
+          "bin_start": -21,
+          "coef": -0.016335,
+          "hi": 0.036145,
+          "lo": -0.063965
+        },
+        {
+          "bin_end": -14,
+          "bin_start": -17,
+          "coef": -0.014249,
+          "hi": 0.023801,
+          "lo": -0.042576
+        },
+        {
+          "bin_end": -10,
+          "bin_start": -13,
+          "coef": -0.00555,
+          "hi": 0.023551,
+          "lo": -0.035347
+        },
+        {
+          "bin_end": -6,
+          "bin_start": -9,
+          "coef": 0.004888,
+          "hi": 0.022687,
+          "lo": -0.017328
+        },
+        {
+          "bin_end": -2,
+          "bin_start": -5,
+          "coef": 0.0,
+          "hi": 0.0,
+          "lo": 0.0
+        },
+        {
+          "bin_end": 3,
+          "bin_start": 0,
+          "coef": 0.038977,
+          "hi": 0.09589,
+          "lo": 0.001672
+        },
+        {
+          "bin_end": 7,
+          "bin_start": 4,
+          "coef": 0.037731,
+          "hi": 0.084859,
+          "lo": -0.011414
+        },
+        {
+          "bin_end": 11,
+          "bin_start": 8,
+          "coef": 0.035303,
+          "hi": 0.087205,
+          "lo": -0.01292
+        },
+        {
+          "bin_end": 15,
+          "bin_start": 12,
+          "coef": 0.048812,
+          "hi": 0.083102,
+          "lo": -0.00651
+        },
+        {
+          "bin_end": 19,
+          "bin_start": 16,
+          "coef": 0.048265,
+          "hi": 0.077169,
+          "lo": 0.011723
+        },
+        {
+          "bin_end": 23,
+          "bin_start": 20,
+          "coef": 0.053574,
+          "hi": 0.079587,
+          "lo": 0.025599
+        },
+        {
+          "bin_end": 27,
+          "bin_start": 24,
+          "coef": 0.068997,
+          "hi": 0.112619,
+          "lo": -0.023638
+        },
+        {
+          "bin_end": 31,
+          "bin_start": 28,
+          "coef": 0.091426,
+          "hi": 0.20464,
+          "lo": -0.105223
+        },
+        {
+          "bin_end": 35,
+          "bin_start": 32,
+          "coef": 0.038917,
+          "hi": 0.091719,
+          "lo": -0.006085
+        },
+        {
+          "bin_end": 39,
+          "bin_start": 36,
+          "coef": 0.026035,
+          "hi": 0.064081,
+          "lo": -0.014792
+        },
+        {
+          "bin_end": 43,
+          "bin_start": 40,
+          "coef": 0.028132,
+          "hi": 0.060754,
+          "lo": -0.007901
+        },
+        {
+          "bin_end": 47,
+          "bin_start": 44,
+          "coef": 0.021398,
+          "hi": 0.054057,
+          "lo": -0.015173
+        },
+        {
+          "bin_end": 51,
+          "bin_start": 48,
+          "coef": 0.012382,
+          "hi": 0.044243,
+          "lo": -0.023218
+        },
+        {
+          "bin_end": 55,
+          "bin_start": 52,
+          "coef": -0.000711,
+          "hi": 0.051558,
+          "lo": -0.048776
+        },
+        {
+          "bin_end": 59,
+          "bin_start": 56,
+          "coef": 0.021601,
+          "hi": 0.070212,
+          "lo": -0.035447
+        },
+        {
+          "bin_end": 63,
+          "bin_start": 60,
+          "coef": 0.012893,
+          "hi": 0.072577,
+          "lo": -0.040428
+        },
+        {
+          "bin_end": 67,
+          "bin_start": 64,
+          "coef": 0.019507,
+          "hi": 0.052131,
+          "lo": -0.022551
+        },
+        {
+          "bin_end": 71,
+          "bin_start": 68,
+          "coef": 0.025256,
+          "hi": 0.071419,
+          "lo": -0.015968
+        },
+        {
+          "bin_end": 75,
+          "bin_start": 72,
+          "coef": 0.030089,
+          "hi": 0.070817,
+          "lo": -0.017182
+        },
+        {
+          "bin_end": 79,
+          "bin_start": 76,
+          "coef": 0.029367,
+          "hi": 0.078729,
+          "lo": -0.033718
+        },
+        {
+          "bin_end": 83,
+          "bin_start": 80,
+          "coef": 0.064492,
+          "hi": 0.178602,
+          "lo": -0.113679
+        },
+        {
+          "bin_end": 87,
+          "bin_start": 84,
+          "coef": 0.02715,
+          "hi": 0.102304,
+          "lo": -0.043557
+        },
+        {
+          "bin_end": 90,
+          "bin_start": 88,
+          "coef": 0.02209,
+          "hi": 0.072171,
+          "lo": -0.039072
+        }
+      ],
+      "legacy": [
+        {
+          "bin_end": -18,
+          "bin_start": -21,
+          "coef": -0.019893,
+          "hi": 0.025612,
+          "lo": -0.054498
+        },
+        {
+          "bin_end": -14,
+          "bin_start": -17,
+          "coef": -0.015706,
+          "hi": 0.010182,
+          "lo": -0.041705
+        },
+        {
+          "bin_end": -10,
+          "bin_start": -13,
+          "coef": -0.004243,
+          "hi": 0.023218,
+          "lo": -0.032751
+        },
+        {
+          "bin_end": -6,
+          "bin_start": -9,
+          "coef": 0.006297,
+          "hi": 0.022141,
+          "lo": -0.010922
+        },
+        {
+          "bin_end": -2,
+          "bin_start": -5,
+          "coef": 0.0,
+          "hi": 0.0,
+          "lo": 0.0
+        },
+        {
+          "bin_end": 3,
+          "bin_start": 0,
+          "coef": -0.229194,
+          "hi": -0.181665,
+          "lo": -0.261005
+        },
+        {
+          "bin_end": 7,
+          "bin_start": 4,
+          "coef": -0.246522,
+          "hi": -0.202004,
+          "lo": -0.29079
+        },
+        {
+          "bin_end": 11,
+          "bin_start": 8,
+          "coef": -0.2495,
+          "hi": -0.200925,
+          "lo": -0.292363
+        },
+        {
+          "bin_end": 15,
+          "bin_start": 12,
+          "coef": -0.245503,
+          "hi": -0.211062,
+          "lo": -0.288254
+        },
+        {
+          "bin_end": 19,
+          "bin_start": 16,
+          "coef": -0.25195,
+          "hi": -0.225022,
+          "lo": -0.286397
+        },
+        {
+          "bin_end": 23,
+          "bin_start": 20,
+          "coef": -0.251499,
+          "hi": -0.227306,
+          "lo": -0.28007
+        },
+        {
+          "bin_end": 27,
+          "bin_start": 24,
+          "coef": -0.238261,
+          "hi": -0.198821,
+          "lo": -0.289328
+        },
+        {
+          "bin_end": 31,
+          "bin_start": 28,
+          "coef": -0.218737,
+          "hi": -0.123509,
+          "lo": -0.321401
+        },
+        {
+          "bin_end": 35,
+          "bin_start": 32,
+          "coef": -0.256296,
+          "hi": -0.211369,
+          "lo": -0.296674
+        },
+        {
+          "bin_end": 39,
+          "bin_start": 36,
+          "coef": -0.277662,
+          "hi": -0.240193,
+          "lo": -0.314887
+        },
+        {
+          "bin_end": 43,
+          "bin_start": 40,
+          "coef": -0.281646,
+          "hi": -0.249959,
+          "lo": -0.31357
+        },
+        {
+          "bin_end": 47,
+          "bin_start": 44,
+          "coef": -0.29102,
+          "hi": -0.259873,
+          "lo": -0.324879
+        },
+        {
+          "bin_end": 51,
+          "bin_start": 48,
+          "coef": -0.30633,
+          "hi": -0.277396,
+          "lo": -0.341428
+        },
+        {
+          "bin_end": 55,
+          "bin_start": 52,
+          "coef": -0.323473,
+          "hi": -0.275875,
+          "lo": -0.368929
+        },
+        {
+          "bin_end": 59,
+          "bin_start": 56,
+          "coef": -0.302408,
+          "hi": -0.255837,
+          "lo": -0.354244
+        },
+        {
+          "bin_end": 63,
+          "bin_start": 60,
+          "coef": -0.317189,
+          "hi": -0.263098,
+          "lo": -0.368797
+        },
+        {
+          "bin_end": 67,
+          "bin_start": 64,
+          "coef": -0.32138,
+          "hi": -0.287689,
+          "lo": -0.372705
+        },
+        {
+          "bin_end": 71,
+          "bin_start": 68,
+          "coef": -0.315569,
+          "hi": -0.280508,
+          "lo": -0.364502
+        },
+        {
+          "bin_end": 75,
+          "bin_start": 72,
+          "coef": -0.317893,
+          "hi": -0.282341,
+          "lo": -0.368224
+        },
+        {
+          "bin_end": 79,
+          "bin_start": 76,
+          "coef": -0.307865,
+          "hi": -0.269323,
+          "lo": -0.367659
+        },
+        {
+          "bin_end": 83,
+          "bin_start": 80,
+          "coef": -0.285368,
+          "hi": -0.195923,
+          "lo": -0.385528
+        },
+        {
+          "bin_end": 87,
+          "bin_start": 84,
+          "coef": -0.306243,
+          "hi": -0.245697,
+          "lo": -0.368007
+        },
+        {
+          "bin_end": 90,
+          "bin_start": 88,
+          "coef": -0.316354,
+          "hi": -0.26914,
+          "lo": -0.369604
+        }
+      ]
+    },
+    "unit": "log points"
+  },
+  "generated_at": "2020-02-16",
+  "preregistration": {
+    "amendments": [
+      {
+        "file": "preregistration-amendment-1.json",
+        "fixed_on": "2026-10-10",
+        "sha256": "96395c97868f556d756415bef915f4fde13d971b5fb7b7cdb95505f876f36061",
+        "summary": "Amendment 1 to the eBART difference-in-differences pre-registration: corridor placebo sets of 3 controls"
+      }
+    ],
+    "fixed_on": "2026-10-09",
+    "sha256": "a05df98504818ffd4ea5fb69c720cea37eff76dd55859941acc3ce23d56e40f4"
+  },
+  "pretrend": {
+    "corridor_ri_p": 0.656307,
+    "legacy_ri_p": 0.433751,
+    "legacy_wald_p": 0.026988
+  },
+  "question": "Did the eBART extension to Pittsburg Center and Antioch change ridership at the nearby legacy stations, and did it bring new riders to the corridor or only move them between stations?",
+  "robustness": {
+    "exits": {
+      "buffer": {
+        "b": 0.005651,
+        "cluster_ci": [
+          -0.017729,
+          0.029032
+        ],
+        "n_controls": 34,
+        "n_draws": 10000,
+        "n_periods": 109,
+        "n_treated": 4,
+        "pct": 0.566746,
+        "placebo_ci": [
+          -0.018896,
+          0.033301
+        ],
+        "placebo_ci_pct": [
+          -1.871857,
+          3.386201
+        ],
+        "ri_p": 0.689931
+      },
+      "corridor": {
+        "b": 0.036866,
+        "n_controls": 34,
+        "n_draws": 5984,
+        "n_periods": 109,
+        "n_treated": 1,
+        "pct": 3.755359,
+        "placebo_ci": [
+          0.006601,
+          0.069184
+        ],
+        "placebo_ci_pct": [
+          0.662248,
+          7.163341
+        ],
+        "ri_p": 0.014202
+      },
+      "legacy": {
+        "b": -0.275236,
+        "cluster_ci": [
+          -0.512834,
+          -0.037637
+        ],
+        "n_controls": 34,
+        "n_draws": 5984,
+        "n_periods": 109,
+        "n_treated": 3,
+        "pct": -24.060693,
+        "placebo_ci": [
+          -0.302359,
+          -0.24395
+        ],
+        "placebo_ci_pct": [
+          -26.09271,
+          -21.647306
+        ],
+        "ri_p": 0.000167
+      }
+    },
+    "in_time_placebo": {
+      "buffer": {
+        "b": 0.003002,
+        "cluster_ci": [
+          -0.014146,
+          0.02015
+        ],
+        "n_controls": 34,
+        "n_draws": 10000,
+        "n_periods": 20,
+        "n_treated": 4,
+        "pct": 0.300674,
+        "placebo_ci": [
+          -0.014933,
+          0.017973
+        ],
+        "placebo_ci_pct": [
+          -1.482212,
+          1.813587
+        ],
+        "ri_p": 0.717128
+      },
+      "corridor": {
+        "b": 0.01154,
+        "n_controls": 34,
+        "n_draws": 5984,
+        "n_periods": 20,
+        "n_treated": 1,
+        "pct": 1.160712,
+        "placebo_ci": [
+          -0.010449,
+          0.027329
+        ],
+        "placebo_ci_pct": [
+          -1.039475,
+          2.770592
+        ],
+        "ri_p": 0.255973
+      },
+      "fake_event_week": "2018-03-12",
+      "last_week_e": -2,
+      "legacy": {
+        "b": 0.0142,
+        "cluster_ci": [
+          0.002751,
+          0.02565
+        ],
+        "n_controls": 34,
+        "n_draws": 5984,
+        "n_periods": 20,
+        "n_treated": 3,
+        "pct": 1.430137,
+        "placebo_ci": [
+          -0.006284,
+          0.030646
+        ],
+        "placebo_ci_pct": [
+          -0.626382,
+          3.112008
+        ],
+        "ri_p": 0.12949
+      }
+    },
+    "monthly": {
+      "buffer": {
+        "b": 0.010611,
+        "cluster_ci": [
+          -0.017015,
+          0.038237
+        ],
+        "n_controls": 34,
+        "n_draws": 10000,
+        "n_periods": 49,
+        "n_treated": 4,
+        "pct": 1.066755,
+        "placebo_ci": [
+          -0.023592,
+          0.049464
+        ],
+        "placebo_ci_pct": [
+          -2.331618,
+          5.07074
+        ],
+        "ri_p": 0.590041
+      },
+      "corridor": {
+        "b": 0.061967,
+        "n_controls": 34,
+        "n_draws": 5984,
+        "n_periods": 49,
+        "n_treated": 1,
+        "pct": 6.39275,
+        "placebo_ci": [
+          0.02148,
+          0.116204
+        ],
+        "placebo_ci_pct": [
+          2.171267,
+          12.322554
+        ],
+        "ri_p": 0.014703
+      },
+      "event_study": {
+        "corridor": [
+          {
+            "bin_end": -26,
+            "bin_start": -29,
+            "coef": -0.067659,
+            "hi": -0.01138,
+            "lo": -0.119107
+          },
+          {
+            "bin_end": -23,
+            "bin_start": -25,
+            "coef": -0.048233,
+            "hi": 0.005066,
+            "lo": -0.106751
+          },
+          {
+            "bin_end": -20,
+            "bin_start": -22,
+            "coef": -0.023262,
+            "hi": 0.014646,
+            "lo": -0.076714
+          },
+          {
+            "bin_end": -17,
+            "bin_start": -19,
+            "coef": -0.008189,
+            "hi": 0.029693,
+            "lo": -0.0728
+          },
+          {
+            "bin_end": -14,
+            "bin_start": -16,
+            "coef": -0.023004,
+            "hi": 0.003432,
+            "lo": -0.058688
+          },
+          {
+            "bin_end": -11,
+            "bin_start": -13,
+            "coef": -0.026229,
+            "hi": 0.019223,
+            "lo": -0.057223
+          },
+          {
+            "bin_end": -8,
+            "bin_start": -10,
+            "coef": -0.003847,
+            "hi": 0.015566,
+            "lo": -0.028155
+          },
+          {
+            "bin_end": -5,
+            "bin_start": -7,
+            "coef": 0.001368,
+            "hi": 0.029338,
+            "lo": -0.048921
+          },
+          {
+            "bin_end": -2,
+            "bin_start": -4,
+            "coef": 0.0,
+            "hi": 0.0,
+            "lo": 0.0
+          },
+          {
+            "bin_end": 2,
+            "bin_start": 0,
+            "coef": 0.038296,
+            "hi": 0.082928,
+            "lo": -0.003047
+          },
+          {
+            "bin_end": 5,
+            "bin_start": 3,
+            "coef": 0.057463,
+            "hi": 0.086464,
+            "lo": 0.027554
+          },
+          {
+            "bin_end": 8,
+            "bin_start": 6,
+            "coef": 0.04948,
+            "hi": 0.112003,
+            "lo": 0.012106
+          },
+          {
+            "bin_end": 11,
+            "bin_start": 9,
+            "coef": 0.027916,
+            "hi": 0.065235,
+            "lo": -0.003216
+          },
+          {
+            "bin_end": 14,
+            "bin_start": 12,
+            "coef": 0.022416,
+            "hi": 0.069577,
+            "lo": -0.028209
+          },
+          {
+            "bin_end": 17,
+            "bin_start": 15,
+            "coef": 0.040345,
+            "hi": 0.077806,
+            "lo": 0.002788
+          },
+          {
+            "bin_end": 20,
+            "bin_start": 18,
+            "coef": 0.031649,
+            "hi": 0.0908,
+            "lo": -0.01707
+          }
+        ],
+        "legacy": [
+          {
+            "bin_end": -26,
+            "bin_start": -29,
+            "coef": -0.055354,
+            "hi": -0.001439,
+            "lo": -0.100855
+          },
+          {
+            "bin_end": -23,
+            "bin_start": -25,
+            "coef": -0.047275,
+            "hi": 0.002268,
+            "lo": -0.095954
+          },
+          {
+            "bin_end": -20,
+            "bin_start": -22,
+            "coef": -0.024753,
+            "hi": 0.011696,
+            "lo": -0.064716
+          },
+          {
+            "bin_end": -17,
+            "bin_start": -19,
+            "coef": -0.008748,
+            "hi": 0.029286,
+            "lo": -0.04594
+          },
+          {
+            "bin_end": -14,
+            "bin_start": -16,
+            "coef": -0.022388,
+            "hi": 0.004371,
+            "lo": -0.050869
+          },
+          {
+            "bin_end": -11,
+            "bin_start": -13,
+            "coef": -0.028616,
+            "hi": 0.009825,
+            "lo": -0.056223
+          },
+          {
+            "bin_end": -8,
+            "bin_start": -10,
+            "coef": -0.007077,
+            "hi": 0.010563,
+            "lo": -0.026074
+          },
+          {
+            "bin_end": -5,
+            "bin_start": -7,
+            "coef": -0.001212,
+            "hi": 0.024421,
+            "lo": -0.029155
+          },
+          {
+            "bin_end": -2,
+            "bin_start": -4,
+            "coef": 0.0,
+            "hi": 0.0,
+            "lo": 0.0
+          },
+          {
+            "bin_end": 2,
+            "bin_start": 0,
+            "coef": -0.242731,
+            "hi": -0.203722,
+            "lo": -0.276151
+          },
+          {
+            "bin_end": 5,
+            "bin_start": 3,
+            "coef": -0.24498,
+            "hi": -0.218948,
+            "lo": -0.270052
+          },
+          {
+            "bin_end": 8,
+            "bin_start": 6,
+            "coef": -0.252282,
+            "hi": -0.204361,
+            "lo": -0.284146
+          },
+          {
+            "bin_end": 11,
+            "bin_start": 9,
+            "coef": -0.286253,
+            "hi": -0.254865,
+            "lo": -0.312959
+          },
+          {
+            "bin_end": 14,
+            "bin_start": 12,
+            "coef": -0.304204,
+            "hi": -0.260029,
+            "lo": -0.34432
+          },
+          {
+            "bin_end": 17,
+            "bin_start": 15,
+            "coef": -0.303214,
+            "hi": -0.270046,
+            "lo": -0.339165
+          },
+          {
+            "bin_end": 20,
+            "bin_start": 18,
+            "coef": -0.309035,
+            "hi": -0.261518,
+            "lo": -0.351053
+          }
+        ]
+      },
+      "legacy": {
+        "b": -0.254613,
+        "cluster_ci": [
+          -0.459215,
+          -0.050011
+        ],
+        "n_controls": 34,
+        "n_draws": 5984,
+        "n_periods": 49,
+        "n_treated": 3,
+        "pct": -22.478365,
+        "placebo_ci": [
+          -0.293267,
+          -0.209806
+        ],
+        "placebo_ci_pct": [
+          -25.417668,
+          -18.925811
+        ],
+        "ri_p": 0.000167
+      },
+      "pretrend": {
+        "corridor_ri_p": 0.109607,
+        "legacy_ri_p": 0.06934
+      }
+    },
+    "suburban_controls": {
+      "buffer": {
+        "b": 0.001155,
+        "cluster_ci": [
+          -0.029755,
+          0.032065
+        ],
+        "n_controls": 16,
+        "n_draws": 1820,
+        "n_periods": 109,
+        "n_treated": 4,
+        "pct": 0.115587,
+        "placebo_ci": [
+          -0.023176,
+          0.026474
+        ],
+        "placebo_ci_pct": [
+          -2.290961,
+          2.682769
+        ],
+        "ri_p": 0.929709
+      },
+      "corridor": {
+        "b": 0.037592,
+        "n_controls": 16,
+        "n_draws": 560,
+        "n_periods": 109,
+        "n_treated": 1,
+        "pct": 3.830742,
+        "placebo_ci": [
+          0.010557,
+          0.070607
+        ],
+        "placebo_ci_pct": [
+          1.061335,
+          7.315941
+        ],
+        "ri_p": 0.012478
+      },
+      "legacy": {
+        "b": -0.276869,
+        "cluster_ci": [
+          -0.523309,
+          -0.030428
+        ],
+        "n_controls": 16,
+        "n_draws": 560,
+        "n_periods": 109,
+        "n_treated": 3,
+        "pct": -24.184584,
+        "placebo_ci": [
+          -0.304101,
+          -0.2488
+        ],
+        "placebo_ci_pct": [
+          -26.221348,
+          -22.026438
+        ],
+        "ri_p": 0.001783
+      }
+    }
+  },
+  "source": "BART origin-destination data: daily OD files (afcweb.bart.gov, 2018 onward) summed to station x ISO week, and BART monthly ridership reports (bart.gov, 'Weekday OD' sheets) for 2016-2020. Analysis: github.com/braaaeeedyn/transitpulse analysis/causal, pre-registered in analysis/causal/preregistration.json.",
+  "verdict": "new"
+}
