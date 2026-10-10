@@ -4,9 +4,10 @@
 > It is rewritten whenever behaviour changes. History lives in [`DEVLOG.md`](DEVLOG.md); the task list in
 > [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
 >
-> **Last verified:** 2026-10-09, on Windows 11. Cloud resources exist (the M0 Terraform is applied). The Dagster
-> pipeline runs on the Oracle VM against BigQuery. The website/API is not deployed: its container, Cloud Run
-> Terraform and deploy workflow exist as code only.
+> **Last verified:** 2026-10-10, on Windows 11. **Live at https://braedynthompson.com/transitpulse/**: the pages are
+> published by the portfolio's GitHub Pages (`portfolio/static/transitpulse/`, exported with `tasks.py export
+> --api-base`) and call the API on Cloud Run (https://transitpulse-api-etumz4pfva-uw.a.run.app) across origins
+> (CORS allows `https://braedynthompson.com`). The Dagster pipeline runs on the Oracle VM against BigQuery.
 
 ---
 
@@ -27,7 +28,9 @@
 | Oracle VM deployment (`deploy/oracle/`) | **Running**: Dagster daemon + UI on the VM (2 OCPU / 12 GB), schedules on, `gcp` mode | [`ORACLE_VM.md`](ORACLE_VM.md) |
 | Terraform (`infra/terraform/`) | M0 **applied** to GCP project `transitpulse-511002` (33 resources). `cloudrun.tf` + `wif.tf` (10 more resources) are **validated, not applied** | see `infra/README.md` |
 | Container image (`Dockerfile`) | **Builds and passes its smoke tests locally** (non-root, 119 MB compressed); never pushed | `uv run python tasks.py image` |
-| Cloud Run deploy (`.github/workflows/deploy.yml`) | **Written, off**: runs only once the `DEPLOY_ENABLED` repo variable is `true` | [`CLOUD_RUN.md`](CLOUD_RUN.md) |
+| Cloud Run service `transitpulse-api` (us-west1) | **Live** (Terraform applied; image `api:manual-2dd730f`, deployed by hand). Ask agent off (`/api/ask` → 503) | [`CLOUD_RUN.md`](CLOUD_RUN.md) |
+| Cloud Run deploy (`.github/workflows/deploy.yml`) | **Off** until the `DEPLOY_ENABLED` repo variable is `true` (the WIF pool/provider exist) | [`CLOUD_RUN.md`](CLOUD_RUN.md) |
+| Pages at braedynthompson.com/transitpulse/ | **Live**: the portfolio repo publishes `static/transitpulse/`; re-export only when the website code changes | [`CLOUD_RUN.md`](CLOUD_RUN.md) §5 |
 | Load test (`load/`) | **Working** locally: Locust at 1/10/25 users on a fixture warehouse with the fake LLM | `uv run python tasks.py load` |
 | CI (`.github/workflows/ci.yml`) | **Runs on GitHub** (python, spark, web, container, terraform jobs) | — |
 | Causal analysis, fine-tuning, BI reports | **Not implemented** | — |
@@ -407,7 +410,7 @@ at 20 GB billed in `dev` / 500 MB in `ci` (`maximum_bytes_billed`). The forecast
 - `bootstrap.sh` installs and updates everything (apt or dnf, Java 17, uv, `uv sync --frozen`, `dbt parse`). It
   starts the services only once the key is in place. Steps are in [`ORACLE_VM.md`](ORACLE_VM.md).
 
-### Cloud Run (`Dockerfile`, `infra/terraform/cloudrun.tf` + `wif.tf`, `deploy.yml`; code only, not deployed)
+### Cloud Run (`Dockerfile`, `infra/terraform/cloudrun.tf` + `wif.tf`, `deploy.yml`; live, deploys from GitHub off)
 - **Image.**
   - Build stage: `python:3.12-slim-bookworm` + the uv binary. It runs
     `uv sync --frozen --no-dev --no-default-groups --group agent --no-install-project` into `/app/.venv` (main
@@ -498,9 +501,10 @@ at 20 GB billed in `dev` / 500 MB in `ci` (`maximum_bytes_billed`). The forecast
 - The forecast covers the 14 days after the latest published data (currently 2026-01-01 → 14), not the next two
   weeks from today; the site says "forecast from data through".
 - On Windows, Spark runs only through Docker.
-- The website/API is not deployed. GCP has the warehouse (raw → marts → ml), bucket, registry, service accounts and
-  $1/$5 budget alerts, and the Oracle VM runs the scheduled pipeline. The Cloud Run service, WIF and the deploy
-  workflow are code only until the steps in [`CLOUD_RUN.md`](CLOUD_RUN.md) are done.
+- The running Cloud Run image (`manual-2dd730f`) predates `/api/health`; the next deploy adds it. On `*.run.app`,
+  `/healthz` is answered by Google's front end (404), so outside checks use `/api/health`.
+- The first API request after the service scales to zero takes ~5 s (cold start + first BigQuery queries); later
+  ones ~0.15 s. The map needs no API and shows immediately.
 - The load-test numbers are from this PC on a tiny fixture warehouse, not from Cloud Run or BigQuery. Cloud Run's
   cold start has not been measured.
 - Static assets have no hashed names: JS/CSS are served `no-cache` (revalidated), fonts are cached a year, and map
