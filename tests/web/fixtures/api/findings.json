@@ -1,0 +1,332 @@
+{
+  "caution": true,
+  "data_through": "2019-01-06",
+  "design": {
+    "buffer": [
+      "ORIN",
+      "LAFY",
+      "WCRK",
+      "PHIL"
+    ],
+    "controls": [
+      "C000",
+      "C001",
+      "C002",
+      "C003",
+      "C004",
+      "C005",
+      "C006",
+      "C007",
+      "C008",
+      "C009",
+      "C010",
+      "C011",
+      "C012",
+      "C013",
+      "C014",
+      "C015",
+      "C016",
+      "C017",
+      "C018",
+      "C019",
+      "C020",
+      "C021",
+      "C022",
+      "C023",
+      "C024",
+      "C025",
+      "C026",
+      "C027",
+      "C028",
+      "C029",
+      "C030",
+      "C031",
+      "C032",
+      "C033"
+    ],
+    "corridor": [
+      "ANTC",
+      "PCTR",
+      "PITT",
+      "NCON",
+      "CONC"
+    ],
+    "event_date": "2018-05-26",
+    "excluded": {},
+    "new": [
+      "ANTC",
+      "PCTR"
+    ],
+    "outcome": "ln(weekly entries)",
+    "treated": [
+      "PITT",
+      "NCON",
+      "CONC"
+    ],
+    "window": {}
+  },
+  "estimates": {
+    "buffer": {
+      "b": 0.01,
+      "cluster_ci": [
+        -0.03,
+        0.05
+      ],
+      "n_controls": 34,
+      "n_draws": 5984,
+      "n_periods": 30,
+      "n_treated": 4,
+      "pct": 1.005017,
+      "placebo_ci": [
+        -0.02,
+        0.04
+      ],
+      "placebo_ci_pct": [
+        -1.980133,
+        4.081077
+      ],
+      "ri_p": 0.01
+    },
+    "corridor": {
+      "b": 0.0,
+      "implied_daily_entries": {
+        "hi": 1650.0,
+        "lo": -1234.5,
+        "point": 0.0
+      },
+      "n_controls": 34,
+      "n_draws": 5984,
+      "n_periods": 30,
+      "n_treated": 1,
+      "pct": 0.0,
+      "placebo_ci": [
+        -0.030459,
+        0.039221
+      ],
+      "placebo_ci_pct": [
+        -2.99998,
+        4.00003
+      ],
+      "ri_p": 0.01
+    },
+    "legacy": {
+      "b": -0.105361,
+      "cluster_ci": [
+        -0.2,
+        -0.01
+      ],
+      "n_controls": 34,
+      "n_draws": 5984,
+      "n_periods": 30,
+      "n_treated": 3,
+      "pct": -10.000044,
+      "placebo_ci": [
+        -0.162519,
+        -0.051293
+      ],
+      "placebo_ci_pct": [
+        -15.000006,
+        -4.999972
+      ],
+      "ri_p": 0.01
+    },
+    "per_station": {
+      "CONC": {
+        "b": -0.1,
+        "cluster_ci": [
+          -0.12,
+          -0.08
+        ],
+        "n_controls": 34,
+        "n_draws": 34,
+        "n_periods": 30,
+        "n_treated": 1,
+        "pct": -9.516258,
+        "placebo_ci": [
+          -0.2,
+          -0.01
+        ],
+        "placebo_ci_pct": [
+          -18.126925,
+          -0.995017
+        ],
+        "ri_p": 0.01
+      },
+      "NCON": {
+        "b": -0.1,
+        "cluster_ci": [
+          -0.12,
+          -0.08
+        ],
+        "n_controls": 34,
+        "n_draws": 34,
+        "n_periods": 30,
+        "n_treated": 1,
+        "pct": -9.516258,
+        "placebo_ci": [
+          -0.2,
+          -0.01
+        ],
+        "placebo_ci_pct": [
+          -18.126925,
+          -0.995017
+        ],
+        "ri_p": 0.01
+      },
+      "PITT": {
+        "b": -0.1,
+        "cluster_ci": [
+          -0.12,
+          -0.08
+        ],
+        "n_controls": 34,
+        "n_draws": 34,
+        "n_periods": 30,
+        "n_treated": 1,
+        "pct": -9.516258,
+        "placebo_ci": [
+          -0.2,
+          -0.01
+        ],
+        "placebo_ci_pct": [
+          -18.126925,
+          -0.995017
+        ],
+        "ri_p": 0.01
+      }
+    }
+  },
+  "event_study": {
+    "reference_bin": [
+      -5,
+      -2
+    ],
+    "series": {
+      "corridor": [
+        {
+          "bin_end": -6,
+          "bin_start": -9,
+          "coef": -0.004,
+          "hi": 0.026,
+          "lo": -0.034
+        },
+        {
+          "bin_end": -2,
+          "bin_start": -5,
+          "coef": 0.0,
+          "hi": 0.0,
+          "lo": 0.0
+        },
+        {
+          "bin_end": 3,
+          "bin_start": 0,
+          "coef": 0.0,
+          "hi": 0.03,
+          "lo": -0.03
+        },
+        {
+          "bin_end": 7,
+          "bin_start": 4,
+          "coef": 0.0,
+          "hi": 0.03,
+          "lo": -0.03
+        },
+        {
+          "bin_end": 11,
+          "bin_start": 8,
+          "coef": 0.0,
+          "hi": 0.03,
+          "lo": -0.03
+        },
+        {
+          "bin_end": 15,
+          "bin_start": 12,
+          "coef": 0.0,
+          "hi": 0.03,
+          "lo": -0.03
+        },
+        {
+          "bin_end": 18,
+          "bin_start": 16,
+          "coef": 0.0,
+          "hi": 0.03,
+          "lo": -0.03
+        }
+      ],
+      "legacy": [
+        {
+          "bin_end": -6,
+          "bin_start": -9,
+          "coef": -0.004,
+          "hi": 0.026,
+          "lo": -0.034
+        },
+        {
+          "bin_end": -2,
+          "bin_start": -5,
+          "coef": 0.0,
+          "hi": 0.0,
+          "lo": 0.0
+        },
+        {
+          "bin_end": 3,
+          "bin_start": 0,
+          "coef": -0.105361,
+          "hi": -0.075361,
+          "lo": -0.135361
+        },
+        {
+          "bin_end": 7,
+          "bin_start": 4,
+          "coef": -0.105361,
+          "hi": -0.075361,
+          "lo": -0.135361
+        },
+        {
+          "bin_end": 11,
+          "bin_start": 8,
+          "coef": -0.105361,
+          "hi": -0.075361,
+          "lo": -0.135361
+        },
+        {
+          "bin_end": 15,
+          "bin_start": 12,
+          "coef": -0.105361,
+          "hi": -0.075361,
+          "lo": -0.135361
+        },
+        {
+          "bin_end": 18,
+          "bin_start": 16,
+          "coef": -0.105361,
+          "hi": -0.075361,
+          "lo": -0.135361
+        }
+      ]
+    },
+    "unit": "log points"
+  },
+  "generated_at": "2019-01-06",
+  "preregistration": {
+    "amendments": [
+      {
+        "file": "preregistration-amendment-1.json",
+        "fixed_on": "2026-10-10",
+        "sha256": "96395c97868f556d756415bef915f4fde13d971b5fb7b7cdb95505f876f36061",
+        "summary": "Amendment 1 (fixture)"
+      }
+    ],
+    "fixed_on": "2026-10-09",
+    "sha256": "a05df98504818ffd4ea5fb69c720cea37eff76dd55859941acc3ce23d56e40f4"
+  },
+  "pretrend": {
+    "corridor_ri_p": 0.05,
+    "legacy_ri_p": 0.5,
+    "legacy_wald_p": 0.4
+  },
+  "question": "SYNTHETIC TEST FIXTURE: did eBART change ridership?",
+  "robustness": {},
+  "source": "Synthetic test fixture, not real results.",
+  "verdict": "moved"
+}

@@ -278,8 +278,20 @@
             <p class="eyebrow" style="color: var(--color-mute-on-ink)">Findings</p>
             <h2 id="findings-title">Did eBART bring new riders, or just move them?</h2>
             <p style="color: var(--color-mute-on-ink)">
-              A difference-in-differences study of the 2018 Antioch extension. The analysis is in progress.
+              A difference-in-differences study of the 2018 eBART extension to Pittsburg Center and Antioch.
             </p>
+          </div>
+          <!-- web/js/findings.js fills this from GET /api/findings; the skeletons have the loaded content's size -->
+          <div class="findings" data-findings aria-busy="true" aria-live="polite">
+            <p class="findings__verdict"><span class="skeleton skeleton--body"></span><span class="skeleton skeleton--body"></span></p>
+            <div class="findings__figures">
+              <div class="findings__figure" aria-hidden="true"><span class="skeleton skeleton--label"></span><span class="skeleton skeleton--stat"></span><span class="skeleton skeleton--label"></span></div>
+              <div class="findings__figure" aria-hidden="true"><span class="skeleton skeleton--label"></span><span class="skeleton skeleton--stat"></span><span class="skeleton skeleton--label"></span></div>
+            </div>
+            <div class="findings__charts">
+              <div class="card findings-chart" aria-hidden="true"><span class="skeleton skeleton--label"></span><div class="chart findings-chart__plot"><div class="skeleton chart__skeleton"></div></div></div>
+              <div class="card findings-chart" aria-hidden="true"><span class="skeleton skeleton--label"></span><div class="chart findings-chart__plot"><div class="skeleton chart__skeleton"></div></div></div>
+            </div>
           </div>
         </div>
       </section>

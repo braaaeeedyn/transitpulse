@@ -307,3 +307,123 @@
   fill: var(--interval-fill);
   stroke: none;
 }
+
+/* --- findings ink band (IMPLEMENTATION_PLAN M4; DESIGN.md §7 ink band, chart card) ---
+   Text on the ink band; the event-study charts sit in white cards, side by side from 768 px. */
+.findings {
+  display: grid;
+  gap: var(--space-2xl);
+}
+
+.findings__verdict {
+  display: grid;
+  gap: var(--space-xs);
+  min-height: calc(2 * var(--type-body-md) * var(--lh-body));
+  font-size: var(--type-body-md);
+  line-height: var(--lh-body);
+}
+
+.findings__figures,
+.findings__charts {
+  display: grid;
+  gap: var(--space-grid);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 768px) {
+  .findings__figures,
+  .findings__charts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.findings__figure {
+  display: grid;
+  gap: var(--space-xs);
+  align-content: start;
+  min-width: 0;
+}
+
+.findings__figure-label,
+.findings__figure-detail,
+.findings__method,
+.findings__caution,
+.findings__note {
+  color: var(--color-mute-on-ink);
+}
+
+/* the "new" verdict's hedge note: secondary text at the caption size */
+.findings__note {
+  font-size: var(--type-body-sm);
+  line-height: var(--lh-body-sm);
+}
+
+.findings__figure-label,
+.findings__figure-detail {
+  min-height: calc(var(--type-body-sm) * var(--lh-body-sm));
+  font-size: var(--type-body-sm);
+  line-height: var(--lh-body-sm);
+}
+
+.findings__figure-value {
+  font-size: var(--type-stat);
+  line-height: var(--lh-stat);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.findings__figure .skeleton,
+.findings__verdict .skeleton,
+.findings-chart > .skeleton {
+  background-color: var(--color-ink-elevated);
+}
+
+.findings-chart > .skeleton {
+  margin-bottom: var(--space-md);
+}
+
+.findings-chart {
+  color: var(--color-ink); /* a white card inside the ink band */
+  min-width: 0;
+}
+
+.findings-chart__title {
+  margin-bottom: var(--space-md);
+  font-size: var(--type-body-md);
+  line-height: var(--lh-body);
+  font-weight: 500;
+}
+
+.findings-chart .chart {
+  aspect-ratio: 4 / 3;
+}
+
+/* the same box as .chart__svg; its own class so page-wide chart counts elsewhere stay the Trends band's */
+.findings-chart__svg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.findings-chart__zero {
+  stroke: var(--color-mute);
+}
+
+/* the opening: no event-marker token yet (DESIGN_BACKLOG 2026-10-10) */
+.findings-chart__event {
+  stroke: var(--color-mute);
+  stroke-width: 1px;
+  stroke-dasharray: 2 3;
+}
+
+.findings-chart__point {
+  fill: var(--series-primary);
+}
+
+.findings .message {
+  color: var(--color-ink); /* the light message box keeps ink text on the ink band */
+}
+
+.findings__method a {
+  color: var(--color-on-ink);
+}

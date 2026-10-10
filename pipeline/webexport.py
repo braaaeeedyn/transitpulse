@@ -81,6 +81,7 @@ def _paths(network: dict) -> list[str]:
         "api/trends/bikes-vs-trains",
         *(f"api/stations/{c}/summary" for c in codes),
         *(f"api/forecast/{c}" for c in codes),
+        "api/findings",
     ]
 
 

@@ -1,6 +1,7 @@
-// Page bootstrap: nav behaviour, the Ask card, the live map, the Trends band and the Forecast explorer.
+// Page bootstrap: nav behaviour, the Ask card, the live map, the Trends band, the Forecast explorer and Findings.
 
 import { initAsk } from "./ask.js";
+import { initFindings } from "./findings.js";
 import { initForecast } from "./forecast.js";
 import { initMap } from "./map/map.js";
 import { initTrends } from "./trends.js";
@@ -83,3 +84,4 @@ initAsk(document.querySelector("[data-ask]"), document.querySelector("[data-ask-
 initMap(document.querySelector("[data-map]"));
 initTrends(document.querySelector("[data-trends]"));
 initForecast(document.querySelector("[data-forecast]"));
+initFindings(document.querySelector("[data-findings]"));
