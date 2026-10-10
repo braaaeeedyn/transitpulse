@@ -12,6 +12,7 @@ locals {
       TP_GCP_PROJECT   = var.project_id
       TP_TRUST_PROXY   = "true" # Cloud Run's front end appends the caller's IP to X-Forwarded-For
       TP_AGENT_ENABLED = tostring(var.agent_enabled)
+      TP_CORS_ORIGINS  = join(",", var.site_origins) # pages on braedynthompson.com call this API
     },
     var.agent_enabled ? { TP_AGENT_LLM = "gemini", TP_GEMINI_MODEL = var.gemini_model } : {},
   )

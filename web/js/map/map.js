@@ -3,6 +3,7 @@
 // screen-reader summary. Rendering lives in network.js (SVG) and trains.js (canvas).
 
 import { formatDate, formatNumber, formatPercent } from "../chart.js";
+import { apiUrl } from "../util/api.js";
 import { formatClock, formatDay, pacificParts, shiftDay } from "../util/time.js";
 import { makeView } from "./geometry.js";
 import { renderNetwork, setActiveStation } from "./network.js";
@@ -337,7 +338,7 @@ export async function initMap(root) {
     if (have !== undefined) return have === "pending" ? null : have;
     if (summariesOff) return null;
     summaries.set(code, "pending");
-    fetch(`api/stations/${encodeURIComponent(code)}/summary`, { headers: { Accept: "application/json" } })
+    fetch(apiUrl(`api/stations/${encodeURIComponent(code)}/summary`), { headers: { Accept: "application/json" } })
       .then(async (res) => {
         if (res.status === 503) summariesOff = true;
         const body = res.ok ? await res.json() : null;

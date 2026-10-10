@@ -39,6 +39,13 @@ class Settings(BaseSettings):
     # Behind Cloud Run's front end the client IP is the right-most X-Forwarded-For entry; elsewhere the header is
     # client-controlled, so it is only read when this is set.
     trust_proxy: bool = False
+    # Origins allowed to call the API from a browser on another domain (comma-separated), e.g. the pages served at
+    # https://braedynthompson.com/transitpulse/ calling the API on Cloud Run. Empty = same-origin only.
+    cors_origins: str = ""
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [o.strip().rstrip("/") for o in self.cors_origins.split(",") if o.strip()]
 
     @property
     def warehouse_kind(self) -> WarehouseKind:

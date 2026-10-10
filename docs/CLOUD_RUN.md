@@ -154,6 +154,28 @@ The agent costs money per question once it is public: BigQuery bytes and Gemini 
 To turn the agent off, set `agent_enabled = false` and apply. The site's Ask card then says the analyst isn't
 connected. The secret version can stay; disabled or not, it costs nothing at this size.
 
+## 5. The pages at braedynthompson.com/transitpulse/
+
+braedynthompson.com is GitHub Pages, built by the `portfolio` repo: its `build.py` copies `static/` as-is into the
+published `site/`. So the pages live in `portfolio/static/transitpulse/`, and the API stays on Cloud Run:
+
+```sh
+API_URL=$(terraform -chdir=infra/terraform output -raw api_url)
+uv run python tasks.py export --api-base "$API_URL" --to ../portfolio/static/transitpulse
+cd ../portfolio && git add static/transitpulse && git commit -m "TransitPulse at /transitpulse (live API)" && git push
+```
+
+The export adds `<meta name="tp-api-base" content="$API_URL/">`, so every `api/...` request (data and Ask) goes to
+Cloud Run. The API allows only `https://braedynthompson.com` through CORS (`var.site_origins` →
+`TP_CORS_ORIGINS`); add another origin there (and apply) if the pages are ever hosted elsewhere. Re-run the export
+only when the website code changes. The data is live, so new months appear without re-exporting.
+
+Without Cloud Run, `uv run python tasks.py export --to ../portfolio/static/transitpulse` (no `--api-base`) publishes
+a static snapshot instead: the same pages with every number pre-computed from BigQuery, and no Ask analyst.
+
+The first request after the service has scaled to zero takes a few seconds (cold start); the map shows immediately
+because it needs no API.
+
 ## Rollback
 
 ```sh

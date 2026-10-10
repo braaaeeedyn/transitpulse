@@ -133,6 +133,11 @@ def image() -> None:
     run("uv", "run", "pytest", "-m", "docker", "tests/deploy")
 
 
+def export(*args: str) -> None:
+    """Static copy of the site + every read-only API response (from BigQuery by default) for static hosting."""
+    run("uv", "run", "python", "-m", "pipeline.webexport", *args)
+
+
 TASKS = {
     "lint": lint,
     "fmt": fmt,
@@ -145,6 +150,7 @@ TASKS = {
     "baywheels": baywheels,
     "dbt": dbt,
     "dagster": dagster,
+    "export": export,
     "forecast": forecast,
     "eval": eval_agent,
     "load": load,

@@ -47,3 +47,9 @@ variable "github_repository" {
   type        = string
   default     = "braaaeeedyn/transitpulse"
 }
+
+variable "site_origins" {
+  description = "Browser origins allowed to call the API (CORS): where the pages are hosted."
+  type        = list(string)
+  default     = ["https://braedynthompson.com"]
+}

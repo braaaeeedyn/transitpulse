@@ -779,3 +779,49 @@ The Architect's final review rejected iteration 3 for six small defects. This en
   treats a failing `apt-get update` as a warning; `apt-get install` still fails if our own packages can't be fetched.
   Verified in an Ubuntu 22.04 container with the broken Caddy source: all-installed → apt skipped; git missing →
   warning, git installed. Shellcheck clean; VM file tests pass.
+
+## 2026-10-09 · deploy · production on the calibrated forecast
+- VM updated to `025f80a` (bootstrap fetched from GitHub; apt skipped). VM `warehouse` run rebuilt BigQuery with the
+  ISO-year baseline (`dim_date.iso_year`), calendar-day rolling window (112 of 2,918 days have < 28 days in their
+  window) and the backfill-safe `fct_trips_hourly`.
+- VM `weekly_forecast` run `fc-20261009T215231Z-bd85f0` (40 min): MAE 283.1 vs baseline 548.5 (unchanged);
+  raw p10–p90 coverage 0.705; **calibrated 0.730 [0.717, 0.744]**, conformal q 0.023, 6 calibration folds,
+  width +4%. Identical to the local run. BigQuery's `ml.forecast_runs` gained the 6 new columns via
+  `ALLOW_FIELD_ADDITION` (older run rows are NULL there) — the B5 fix working on BigQuery.
+- The site labels it "calibrated model range" (calibrated but > 5 pts from 80%).
+
+## 2026-10-09 · web · static export for braedynthompson.com/transitpulse
+**Why**: the site only ran on the dev PC (the VM runs the pipeline, Cloud Run isn't deployed). braedynthompson.com
+is GitHub Pages built by the `portfolio` repo (`build.py` copies `static/` as-is into `site/`), so a path on that
+domain must be published by the portfolio, as static files.
+
+**Did**
+- `pipeline/webexport.py` (`tasks.py export`): copies `web/` and saves every read-only GET response the page uses
+  (KPIs, ridership trend, bikes vs trains, 50 station summaries, 50 forecasts) through the real FastAPI app at the
+  same relative paths without extensions, so `fetch("api/...")` works unchanged on a static host; 404s are left
+  out (the host 404s too). Adds `<meta name="tp-mode" content="static">` and `snapshot.json`.
+- `web/js/ask.js`: in static mode the Ask box explains the analyst needs the live server instead of POSTing.
+- First export from BigQuery (2018–2025): 103 responses, 0.5 MB. Previewed on a plain static server under
+  `/transitpulse/` at 1440 and 390 px: no console errors or failed requests, no horizontal scroll, KPI tiles
+  (incl. −5.3% YoY, which needs BigQuery's history), charts, calibrated forecast, live map, static Ask message.
+- Copied to `portfolio/static/transitpulse/`; the portfolio's `build.py` publishes it at `site/transitpulse/`.
+
+**Decided**: static snapshot on GitHub Pages ($0, no server, no cold starts) instead of Cloud Run for now; refresh by
+re-running the export after new monthly data. The Ask analyst stays for a later Cloud Run deploy.
+
+## 2026-10-09 · web · pages on braedynthompson.com, API on Cloud Run
+**Why**: the user wants braedynthompson.com/transitpulse/ with both the frontend and the backend working. GitHub
+Pages (the portfolio) can't run the API, and a Cloud Run domain mapping can't take a path on a domain GitHub Pages
+serves. So: pages from the portfolio, API on Cloud Run, the browser calling across origins.
+
+**Did**
+- `api/settings.py` `cors_origins` (`TP_CORS_ORIGINS`) + `CORSMiddleware` in `api/main.py` (GET/POST, Content-Type
+  and Accept headers, 1 h preflight cache); empty by default = same-origin only.
+- Terraform: `var.site_origins` (default `["https://braedynthompson.com"]`) → `TP_CORS_ORIGINS` on the service.
+- `web/js/util/api.js` `apiUrl()`: `api/...` goes to `<meta name="tp-api-base">` when present, else same origin;
+  used by the data fetches (trends/forecast), station tooltips and Ask.
+- `pipeline/webexport.py --api-base URL`: pages only, pointed at the live API (no snapshot, Ask enabled).
+- `docs/CLOUD_RUN.md` §5: publishing the pages to `portfolio/static/transitpulse/`.
+- Tests: `tests/test_cross_origin.py` (6: allowed origin incl. trailing slash, POST preflight, other origin and the
+  default get no CORS, live export, https required, Terraform origin) and `tests/web/api-base.test.mjs` (4).
+  pytest 99 passed, node 28, Playwright 35, terraform fmt/validate clean.

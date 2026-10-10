@@ -2,6 +2,8 @@
 // progress events (thinking → sql → rows → answer, or a refusal/error). While the agent is off the API answers 503
 // and this shows a friendly "not connected yet" message.
 
+import { apiUrl } from "./util/api.js";
+
 const STEPS = { thinking: "Understanding the question", sql: "Writing SQL", rows: "Running query", answer: "Writing the answer" };
 
 function esc(s) {
@@ -85,6 +87,10 @@ async function* readEvents(res) {
   }
 }
 
+// The static export (pipeline/webexport.py) marks its index.html with <meta name="tp-mode" content="static">:
+// it's served without the API, so there is nothing to POST a question to.
+export const isStaticSite = () => document.querySelector('meta[name="tp-mode"]')?.content === "static";
+
 export function initAsk(card, result) {
   const form = card.querySelector("[data-ask-form]");
   const input = form.querySelector("input");
@@ -93,6 +99,13 @@ export function initAsk(card, result) {
 
   async function ask(q) {
     if (busy || !q.trim()) return;
+    if (isStaticSite()) {
+      result.innerHTML = message(
+        "The analyst needs TransitPulse's live server, which this public snapshot doesn't run. " +
+          "Every number on this page is real warehouse data, as of the date shown in each section.",
+      );
+      return;
+    }
     busy = true;
     submit.disabled = true;
     result.innerHTML = `<div style="margin-top: var(--space-2xl)"><p class="text-body">Asking: <strong>${esc(q)}</strong></p>
@@ -104,7 +117,7 @@ export function initAsk(card, result) {
     try {
       let res;
       try {
-        res = await fetch("api/ask", {
+        res = await fetch(apiUrl("api/ask"), {
           method: "POST",
           headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
           body: JSON.stringify({ question: q }),

@@ -18,6 +18,7 @@ import {
   tickCount,
   yearTicks,
 } from "./chart.js";
+import { apiUrl } from "./util/api.js";
 
 export function esc(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -35,7 +36,7 @@ export class NotFound extends Error {
 }
 
 export async function getJSON(url) {
-  const res = await fetch(url, { headers: { Accept: "application/json" } });
+  const res = await fetch(url.startsWith("api/") ? apiUrl(url) : url, { headers: { Accept: "application/json" } });
   if (res.status === 503) throw new NotConnected(url);
   if (res.status === 404) {
     const body = await res.json().catch(() => ({}));
