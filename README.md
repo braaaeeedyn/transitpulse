@@ -69,8 +69,8 @@ uv run python tasks.py causal            # recompute api/data/findings.json + do
 The site and API ship as one container ([`Dockerfile`](Dockerfile): multi-stage, non-root, **119 MB compressed**, so
 the 3 images Artifact Registry keeps fit its 0.5 GB free tier). Terraform for the service and for GitHub's keyless
 Workload Identity Federation is in [`infra/terraform/`](infra/terraform/). [`deploy.yml`](.github/workflows/deploy.yml)
-builds, pushes and deploys on `main`. **None of it is applied or switched on yet.** The workflow is off until the
-`DEPLOY_ENABLED` repository variable is set, and the steps are in [`docs/CLOUD_RUN.md`](docs/CLOUD_RUN.md).
+builds, pushes and deploys on every push to `main`. All of it is applied and switched on (`DEPLOY_ENABLED=true`);
+the steps are in [`docs/CLOUD_RUN.md`](docs/CLOUD_RUN.md).
 
 ```sh
 uv run python tasks.py image             # docker build + container smoke tests (tests/deploy)
@@ -117,9 +117,8 @@ starts in about 1.5 s locally and uses about 76 MiB of its 512 MiB.
 ## Left to do (M4 eBART study)
 1. ~~Check the data licence.~~ Done: BART's terms allow the derived CSVs with attribution ("Data provided by BART"
    in `analysis/causal/data/README.md`, `docs/FINDINGS.md`, the Findings band and the site footer).
-2. **Redeploy the API to Cloud Run** so `GET /api/findings` is live ([`docs/CLOUD_RUN.md`](docs/CLOUD_RUN.md)).
-3. **Re-export the static pages** (`pipeline/webexport.py`, which includes the findings path) and publish them to
-   braedynthompson.com/transitpulse.
+2. ~~Redeploy the API to Cloud Run.~~ Done 2026-10-14 by `deploy.yml` (image `api:ab55544…`); `GET /api/findings` is live.
+3. ~~Re-export the static pages.~~ Done 2026-10-14 (portfolio commit `d093732`).
 4. **Optional:** add a trend-adjusted estimate that extrapolates the monthly pre-period trend (about 0.27 pts/month),
    which could absorb most of the +4.2%. It was not pre-registered, so label it that way, and report it alongside
    the pre-registered result rather than replacing it.

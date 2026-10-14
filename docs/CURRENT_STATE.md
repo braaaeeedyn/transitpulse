@@ -26,10 +26,10 @@
 | Forecast (`ml/forecast/`) | **Working** locally and on BigQuery (LightGBM, 14 days, every station, split-conformal calibrated band) | `uv run python tasks.py forecast` |
 | Dagster orchestration (`pipeline/definitions.py`) | **Working** in `local` and `gcp` mode, run from this PC | `uv run python tasks.py dagster` → http://localhost:3000 |
 | Oracle VM deployment (`deploy/oracle/`) | **Running**: Dagster daemon + UI on the VM (2 OCPU / 12 GB), schedules on, `gcp` mode | [`ORACLE_VM.md`](ORACLE_VM.md) |
-| Terraform (`infra/terraform/`) | M0 **applied** to GCP project `transitpulse-511002` (33 resources). `cloudrun.tf` + `wif.tf` (10 more resources) are **validated, not applied** | see `infra/README.md` |
-| Container image (`Dockerfile`) | **Builds and passes its smoke tests locally** (non-root, 119 MB compressed); never pushed | `uv run python tasks.py image` |
-| Cloud Run service `transitpulse-api` (us-west1) | **Live** (Terraform applied; image `api:manual-2dd730f`, deployed by hand). Ask agent off (`/api/ask` → 503) | [`CLOUD_RUN.md`](CLOUD_RUN.md) |
-| Cloud Run deploy (`.github/workflows/deploy.yml`) | **Off** until the `DEPLOY_ENABLED` repo variable is `true` (the WIF pool/provider exist) | [`CLOUD_RUN.md`](CLOUD_RUN.md) |
+| Terraform (`infra/terraform/`) | M0 **applied** to GCP project `transitpulse-511002` (33 resources). `cloudrun.tf` + `wif.tf` (10 more resources) are **applied** | see `infra/README.md` |
+| Container image (`Dockerfile`) | **Built, tested and pushed by `deploy.yml`** on every push to `main` (non-root, 119 MB compressed) | `uv run python tasks.py image` |
+| Cloud Run service `transitpulse-api` (us-west1) | **Live** (Terraform applied; image `api:<commit sha>`, deployed by `deploy.yml`). Ask agent off (`/api/ask` → 503) | [`CLOUD_RUN.md`](CLOUD_RUN.md) |
+| Cloud Run deploy (`.github/workflows/deploy.yml`) | **On** (`DEPLOY_ENABLED=true`): every push to `main` builds, smoke-tests, pushes and deploys (first seen for `ab55544`, 2026-10-14) | [`CLOUD_RUN.md`](CLOUD_RUN.md) |
 | Pages at braedynthompson.com/transitpulse/ | **Live**: the portfolio repo publishes `static/transitpulse/`; re-export only when the website code changes | [`CLOUD_RUN.md`](CLOUD_RUN.md) §5 |
 | Load test (`load/`) | **Working** locally: Locust at 1/10/25 users on a fixture warehouse with the fake LLM | `uv run python tasks.py load` |
 | CI (`.github/workflows/ci.yml`) | **Runs on GitHub** (python, spark, web, container, terraform jobs) | — |
