@@ -25,7 +25,7 @@
 | dbt warehouse models (`dbt/transitpulse/`) | **Working**: `local` (DuckDB) has BART + Bay Wheels; `dev` (BigQuery) has BART 2018–2025 and Bay Wheels 2018 → 2026-09 | `uv run python tasks.py stations` then `uv run python tasks.py dbt` (`DBT_TARGET=dev` for BigQuery) |
 | Forecast (`ml/forecast/`) | **Working** locally and on BigQuery (LightGBM, 14 days, every station, split-conformal calibrated band) | `uv run python tasks.py forecast` |
 | Dagster orchestration (`pipeline/definitions.py`) | **Working** in `local` and `gcp` mode, run from this PC | `uv run python tasks.py dagster` → http://localhost:3000 |
-| Oracle VM deployment (`deploy/oracle/`) | **Running**: Dagster daemon + UI on the VM (2 OCPU / 12 GB), schedules on, `gcp` mode | [`ORACLE_VM.md`](ORACLE_VM.md) |
+| Oracle VM deployment (`deploy/oracle/`) | **Running**: Dagster daemon + UI on the VM (2 OCPU / 12 GB), on `1fd224a`+, `gcp` mode. Sensors and schedules start as RUNNING (until 2026-10-14 the schedules had never been switched on, so nothing scheduled had run) | [`ORACLE_VM.md`](ORACLE_VM.md) |
 | Terraform (`infra/terraform/`) | M0 **applied** to GCP project `transitpulse-511002` (33 resources). `cloudrun.tf` + `wif.tf` (10 more resources) are **applied** | see `infra/README.md` |
 | Container image (`Dockerfile`) | **Built, tested and pushed by `deploy.yml`** on every push to `main` (non-root, 119 MB compressed) | `uv run python tasks.py image` |
 | Cloud Run service `transitpulse-api` (us-west1) | **Live** (Terraform applied; image `api:<commit sha>`, deployed by `deploy.yml`). Ask agent off (`/api/ask` → 503) | [`CLOUD_RUN.md`](CLOUD_RUN.md) |

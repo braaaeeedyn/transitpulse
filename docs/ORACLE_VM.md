@@ -115,8 +115,10 @@ In the UI: **Jobs → yearly_ingest → Partitions → Launch backfill** for 201
 `transitpulse/spark` tag and `pipeline/dagster.yaml` limits them to one at a time, so years run in sequence
 (each Spark run uses a 4 GB driver). Then **baywheels_ingest** for the years you want (in-process DuckDB, no Spark),
 then materialize the `warehouse` group (`dbt build` on BigQuery), then **weekly_forecast** once.
-After that the schedules take over (Pacific time): BART on the 6th at 06:00, models at 08:00, Bay Wheels on the
-7th at 06:30, forecast every Monday at 09:00. Turn schedules on in **Overview → Schedules**.
+After that the automations take over, all on by default (`default_status=RUNNING`; a toggle in the UI overrides it):
+the `bart_od_updates` sensor checks BART every 6 hours, `models_after_ingest` rebuilds dbt after each ingest, and
+the schedules (Pacific time) run Bay Wheels on the 7th at 06:30, models on the 6th at 08:00 and the forecast every
+Monday at 09:00.
 
 ## 7. Verify
 

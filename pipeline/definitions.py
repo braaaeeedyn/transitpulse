@@ -19,6 +19,7 @@ from datetime import timedelta
 from dagster import (
     AssetSelection,
     DagsterRunStatus,
+    DefaultScheduleStatus,
     DefaultSensorStatus,
     Definitions,
     RunRequest,
@@ -109,19 +110,34 @@ def models_after_ingest(context: RunStatusSensorContext):
     return RunRequest(run_key=f"models-after-{context.dagster_run.run_id}")
 
 
-@schedule(job=baywheels_ingest, cron_schedule="30 6 7 * *", execution_timezone="America/Los_Angeles")
+@schedule(
+    job=baywheels_ingest,
+    cron_schedule="30 6 7 * *",
+    execution_timezone="America/Los_Angeles",
+    default_status=DefaultScheduleStatus.RUNNING,
+)
 def baywheels_monthly(context: ScheduleEvaluationContext):
     year = _previous_months_year(context)
     return RunRequest(run_key=f"baywheels-{context.scheduled_execution_time:%Y-%m}", partition_key=year)
 
 
-@schedule(job=refresh_reference, cron_schedule="0 8 6 * *", execution_timezone="America/Los_Angeles")
+@schedule(
+    job=refresh_reference,
+    cron_schedule="0 8 6 * *",
+    execution_timezone="America/Los_Angeles",
+    default_status=DefaultScheduleStatus.RUNNING,
+)
 def monthly_models(context: ScheduleEvaluationContext):
     # monthly GTFS/stations refresh and a full rebuild, even in a month with no new ridership
     return RunRequest(run_key=f"models-{context.scheduled_execution_time:%Y-%m}")
 
 
-@schedule(job=weekly_forecast_job, cron_schedule="0 9 * * 1", execution_timezone="America/Los_Angeles")
+@schedule(
+    job=weekly_forecast_job,
+    cron_schedule="0 9 * * 1",
+    execution_timezone="America/Los_Angeles",
+    default_status=DefaultScheduleStatus.RUNNING,
+)
 def weekly_forecast(context: ScheduleEvaluationContext):
     return RunRequest(run_key=f"forecast-{context.scheduled_execution_time:%Y-%m-%d}")
 
