@@ -1,8 +1,7 @@
 # Runbook: the website + API on Cloud Run
 
-How to put the site and API on Cloud Run with the code in this repo. **None of this has been run yet.** The service,
-Workload Identity Federation and the deploy workflow exist only as code until you do the steps below. Nothing deploys
-by itself: `deploy.yml` is off until you set the `DEPLOY_ENABLED` repository variable.
+How to put the site and API on Cloud Run with the code in this repo. **All of it has been run:** the service and
+Workload Identity Federation are applied, and `deploy.yml` deploys every push to `main` (`DEPLOY_ENABLED=true`).
 
 | Piece | File |
 |---|---|
