@@ -1105,3 +1105,12 @@ pre-registration.
 
 **Checks:** `tests/test_dagster_defs.py` 4 (sensor change detection with a faked HEAD, sensor wiring; the
 `monthly_ridership` cases removed); the sensor evaluated once against BART's live server.
+
+## 2026-10-14 · M1 · VM updated; schedules on by default
+
+The VM was on `025f80a` (Oct 9). `bootstrap.sh` brought it to `1fd224a`. Its first `bart_od_updates` tick requested
+`yearly_ingest` for 2025 and 2026, as designed. The Dagster API also showed `baywheels_monthly`, `monthly_models` and
+`weekly_forecast` as **STOPPED**, and the run history has no scheduled run at all: the weekly forecast of Monday
+2026-10-12 never ran. The schedules had never been switched on in the UI. All three now set
+`default_status=DefaultScheduleStatus.RUNNING`, like the sensors (a UI toggle still overrides it), and
+`test_every_schedule_and_sensor_starts_running` keeps it that way.

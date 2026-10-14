@@ -71,6 +71,16 @@ def test_models_rebuild_after_ingest():
     assert sensors["models_after_ingest"].job_name == "refresh_reference_and_models"
 
 
+def test_every_schedule_and_sensor_starts_running():
+    # nothing on the VM ran until a person clicked "on" in the UI, and nobody did
+    from dagster import DefaultScheduleStatus, DefaultSensorStatus
+
+    from pipeline.definitions import defs
+
+    assert all(s.default_status == DefaultScheduleStatus.RUNNING for s in defs.schedules)
+    assert all(s.default_status == DefaultSensorStatus.RUNNING for s in defs.sensors)
+
+
 def test_monthly_schedules_ingest_previous_months_year():
     # Lyft publishes a month's data early in the next month, so the January run must reload last year's
     # partition (to pick up December), not the new year's (which has nothing yet)

@@ -109,7 +109,7 @@ this section is the checklist.
 - [x] dbt: `stg_*` → `dim_station` (SCD2 snapshot), `dim_date` → `fct_trips_hourly`, `fct_station_daily` →
       `mart_recovery`, `mart_peak_load`, `mart_od_flows`. Set `maximum_bytes_billed` in `profiles.yml`.
 - [x] dbt tests (generic + custom "no negative ridership"); `dbt build` green.
-- [x] Deploy Dagster on the Oracle VM as `transitpulse-dagster.service` (systemd), key file gitignored. *(`deploy/oracle/` daemon + web units, `bootstrap.sh`, `docs/ORACLE_VM.md`; running since 2026-10-08, schedules on)*
+- [x] Deploy Dagster on the Oracle VM as `transitpulse-dagster.service` (systemd), key file gitignored. *(`deploy/oracle/` daemon + web units, `bootstrap.sh`, `docs/ORACLE_VM.md`; running since 2026-10-08; schedules and sensors on by default since 2026-10-14; before that no schedule had been switched on)*
 - **Done when:** a scheduled Dagster run goes raw → marts end to end on the VM, and every dbt test passes.
 
 ### M2: KPIs + BI (weeks 4–5) · #8 #9
