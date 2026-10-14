@@ -3,7 +3,8 @@
 A pre-registered difference-in-differences study of the eBART extension to Pittsburg Center and Antioch, which
 opened on Saturday 26 May 2018. Every number on this page comes from `api/data/findings.json`, written by
 `python -m analysis.causal.run` from the committed data in `analysis/causal/data/`. The site's Findings band and
-`GET /api/findings` serve the same file.
+`GET /api/findings` serve the same file. Data provided by BART: the inputs are BART's public origin-destination
+ridership data and monthly ridership reports (see `analysis/causal/data/README.md`).
 
 **Short answer.** Under the pre-registered rule the verdict is **new**. The whole line from Concord to Antioch
 (including the two new stations) gained **+4.2%** weekly entries against 34 control stations (95% placebo interval

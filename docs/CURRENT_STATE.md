@@ -498,16 +498,17 @@ the nearby legacy stations, and did it bring new riders or only move them? The w
   - `forecast_station_daily` (group `ml`, downstream of `marts/fct_station_daily`).
 - **Jobs and schedules** (Pacific time):
 
-  | Job | Schedule | What it does |
+  | Job | Schedule / sensor | What it does |
   |---|---|---|
-  | `yearly_ingest` | 6th of each month, 06:00 | the BART partition of the previous month's year (January reloads last year, to pick up December) |
+  | `yearly_ingest` | sensor `bart_od_updates`, every 6 hours | HEADs BART's files for the last two `years` partitions and reloads a year when its `Last-Modified` changes (cursor = last stamp per year). BART posts on no fixed day; the 2025 file last changed 2026-01-03 and the 2026 file is still empty |
   | `baywheels_ingest` | 7th of each month, 06:30 | the Bay Wheels partition of the previous month's year |
-  | `refresh_reference_and_models` | 6th of each month, 08:00 | GTFS, stations, map data, `dbt build` |
+  | `refresh_reference_and_models` | 6th of each month, 08:00, **and** sensor `models_after_ingest` after every successful BART or Bay Wheels ingest run (backfill runs skipped) | GTFS, stations, map data, `dbt build` |
   | `weekly_forecast` | Mondays, 09:00 | retrain and publish the forecast |
 - **Resources:** `Storage` (`local` | `gcp`), `SparkRunner` (`python` | `docker`), `DbtCliResource`.
 - Runs locally against `.dagster_home/` (gitignored), started by `tasks.py dagster`, which includes the `ml` group.
 - The static `years` partitions are computed when the code location loads, so a daemon started in 2026 has no
-  "2027" partition until it is restarted; the monthly schedules only ask for the previous month's year.
+  "2027" partition until it is restarted; the BART sensor checks the last two loaded partitions and the Bay Wheels
+  schedule only asks for the previous month's year. Both sensors start as RUNNING (`default_status`).
 
 ### Oracle VM (`deploy/oracle/`, running)
 - Two systemd units: `transitpulse-dagster-daemon` (schedules) and `transitpulse-dagster-web` (UI on 127.0.0.1,

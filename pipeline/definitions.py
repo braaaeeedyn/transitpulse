@@ -1,24 +1,35 @@
 """Dagster entry point: `dagster dev -m pipeline.definitions` (or `uv run python tasks.py dagster`).
 
-Schedules (TRANSITPULSE_PLAN §5 Phase 1):
-  * monthly_refresh - 6th of each month, 06:00 Pacific: re-download the ridership file of the previous month's year
-    (BART appends a month at a time, so January reloads last year to pick up December), re-clean it, reload it,
-    rebuild the dbt models, refresh the map data.
+Schedules and sensors (TRANSITPULSE_PLAN §5 Phase 1):
+  * bart_od_updates (sensor) - every 6 hours: HEAD the BART ridership files of the last two years and reload a year
+    as soon as its Last-Modified changes (BART posts on no fixed day; last year's file still changes in January).
+  * models_after_ingest (sensor) - after every successful BART or Bay Wheels ingest run (not backfills): rebuild the
+    dbt models and the map data, so new rows reach the marts and the site the same day.
   * baywheels_monthly - 7th of each month, 06:30 Pacific: the Bay Wheels files of the previous month's year (Lyft
     publishes each month's trips early in the next month), cleaned and reloaded.
+  * monthly_models - 6th of each month, 08:00 Pacific: GTFS, stations, map data and every dbt model.
   * weekly_forecast - Mondays 09:00 Pacific: retrain and publish the 14-day station forecast (group `ml`).
   * Historical years are loaded once with a backfill of the `years` partitions from the Dagster UI.
 """
 
+import json
+import urllib.request
 from datetime import timedelta
 
 from dagster import (
     AssetSelection,
+    DagsterRunStatus,
+    DefaultSensorStatus,
     Definitions,
     RunRequest,
+    RunStatusSensorContext,
     ScheduleEvaluationContext,
+    SensorEvaluationContext,
+    SkipReason,
     define_asset_job,
+    run_status_sensor,
     schedule,
+    sensor,
 )
 
 from pipeline.assets import baywheels, forecast, ingest
@@ -69,10 +80,33 @@ def _previous_months_year(context: ScheduleEvaluationContext) -> str:
     return str((t.replace(day=1) - timedelta(days=1)).year)
 
 
-@schedule(job=yearly_ingest, cron_schedule="0 6 6 * *", execution_timezone="America/Los_Angeles")
-def monthly_ridership(context: ScheduleEvaluationContext):
-    year = _previous_months_year(context)
-    return RunRequest(run_key=f"ridership-{context.scheduled_execution_time:%Y-%m}", partition_key=year)
+@sensor(job=yearly_ingest, minimum_interval_seconds=6 * 3600, default_status=DefaultSensorStatus.RUNNING)
+def bart_od_updates(context: SensorEvaluationContext):
+    # the last two partitions, not the clock: a daemon started in December has no partition for the new year yet
+    seen = json.loads(context.cursor or "{}")
+    for year in ingest.years.get_partition_keys()[-2:]:
+        req = urllib.request.Request(
+            ingest.OD_URL.format(year=year), method="HEAD", headers={"User-Agent": ingest.USER_AGENT}
+        )
+        with urllib.request.urlopen(req, timeout=30) as res:
+            stamp = res.headers.get("Last-Modified")
+        if stamp and stamp != seen.get(year):
+            seen[year] = stamp
+            yield RunRequest(run_key=f"ridership-{year}-{stamp}", partition_key=year)
+    context.update_cursor(json.dumps(seen))
+
+
+@run_status_sensor(
+    run_status=DagsterRunStatus.SUCCESS,
+    monitored_jobs=[yearly_ingest, baywheels_ingest],
+    request_job=refresh_reference,
+    default_status=DefaultSensorStatus.RUNNING,
+)
+def models_after_ingest(context: RunStatusSensorContext):
+    # a backfill of every year would otherwise rebuild dbt once per year
+    if "dagster/backfill" in context.dagster_run.tags:
+        return SkipReason("backfill run; rebuild the models once by hand when it finishes")
+    return RunRequest(run_key=f"models-after-{context.dagster_run.run_id}")
 
 
 @schedule(job=baywheels_ingest, cron_schedule="30 6 7 * *", execution_timezone="America/Los_Angeles")
@@ -83,7 +117,7 @@ def baywheels_monthly(context: ScheduleEvaluationContext):
 
 @schedule(job=refresh_reference, cron_schedule="0 8 6 * *", execution_timezone="America/Los_Angeles")
 def monthly_models(context: ScheduleEvaluationContext):
-    # two hours after the ingest run, rebuild stations, the map data and every dbt model
+    # monthly GTFS/stations refresh and a full rebuild, even in a month with no new ridership
     return RunRequest(run_key=f"models-{context.scheduled_execution_time:%Y-%m}")
 
 
@@ -101,6 +135,7 @@ def _resources() -> dict:
 defs = Definitions(
     assets=[*ingest_assets, dbt_assets_mod.transitpulse_dbt, forecast.forecast_station_daily],
     jobs=[yearly_ingest, baywheels_ingest, refresh_reference, weekly_forecast_job],
-    schedules=[monthly_ridership, baywheels_monthly, monthly_models, weekly_forecast],
+    schedules=[baywheels_monthly, monthly_models, weekly_forecast],
+    sensors=[bart_od_updates, models_after_ingest],
     resources=_resources(),
 )
