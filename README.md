@@ -115,8 +115,8 @@ starts in about 1.5 s locally and uses about 76 MiB of its 512 MiB.
 *(Verify each licence before publishing; see `docs/IMPLEMENTATION_PLAN.md` M0.)*
 
 ## Left to do (M4 eBART study)
-1. **Check the data licence.** Confirm that BART's data terms allow committing the derived
-   `analysis/causal/data/*.csv` files to a public repo. Do this before pushing.
+1. ~~Check the data licence.~~ Done: BART's terms allow the derived CSVs with attribution ("Data provided by BART"
+   in `analysis/causal/data/README.md`, `docs/FINDINGS.md`, the Findings band and the site footer).
 2. **Redeploy the API to Cloud Run** so `GET /api/findings` is live ([`docs/CLOUD_RUN.md`](docs/CLOUD_RUN.md)).
 3. **Re-export the static pages** (`pipeline/webexport.py`, which includes the findings path) and publish them to
    braedynthompson.com/transitpulse.

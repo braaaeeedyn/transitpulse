@@ -1086,3 +1086,22 @@ byte-identical.
 - ruff clean.
 
 The container image was not rebuilt. Its findings test reads only the unchanged JSON.
+
+## 2026-10-14 · M4 + M1 · BART attribution; BART ingest on a change sensor
+
+**Attribution.** BART's terms allow the derived `analysis/causal/data/*.csv` in the public repo with attribution.
+"Data provided by BART" is now in `analysis/causal/data/README.md` (new: what each file is derived from), the intro of
+`docs/FINDINGS.md`, a source caption under the Findings band and the footer's ridership line.
+
+**BART refresh.** The monthly `monthly_ridership` schedule (6th, 06:00) is replaced by the sensor `bart_od_updates`:
+every 6 hours it sends a HEAD for the last two `years` partitions and requests a `yearly_ingest` run when a file's
+`Last-Modified` changes (cursor = last stamp per year, run key = year + stamp). BART posts on no fixed day (the 2025
+file last changed 2026-01-03; the 2026 file is still 20 bytes), so a fixed day of the month could lag by weeks. The
+new run-status sensor `models_after_ingest` runs `refresh_reference_and_models` after every successful BART or Bay
+Wheels ingest (backfills skipped), so new rows reach the marts the same day instead of on the next 6th; before
+this, Bay Wheels (7th) waited almost a month for its dbt rebuild. Both sensors default to RUNNING. The first
+evaluation reloads 2025 once (no cursor yet). The eBART CSVs don't refresh: their 2016–2020 window is fixed by the
+pre-registration.
+
+**Checks:** `tests/test_dagster_defs.py` 4 (sensor change detection with a faked HEAD, sensor wiring; the
+`monthly_ridership` cases removed); the sensor evaluated once against BART's live server.
