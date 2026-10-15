@@ -4,7 +4,32 @@ A Bay Area transit analytics platform: BART and Bay Wheels ridership pipelines (
 station forecasts, a causal study of the eBART extension, an AI analyst agent that answers questions with SQL, and a
 responsive website with a live map of scheduled BART trains.
 
-> **Status:** in development. See [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) for what works today.
+> **Status (2026-10-14):** live. The site is at **[braedynthompson.com/transitpulse](https://braedynthompson.com/transitpulse/)**,
+> the API on Cloud Run, and the pipeline runs itself on an Oracle VM. What's left is under [Left to do](#left-to-do).
+> How each part works today: [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
+
+## Progress
+| Milestone | Status |
+|---|---|
+| M0 setup (GCP, Terraform, repo) | ✅ Done |
+| M1 data platform (Dagster, PySpark, dbt, BigQuery) | ✅ Done. Runs itself on the VM: BART is checked every 6 hours and reloaded when it changes, then dbt rebuilds |
+| M2 KPIs + BI | 🟡 KPIs done (`mart_kpis_daily`, on the site). Looker Studio and Power BI not started |
+| M3 forecasting (LightGBM) | ✅ Done. Beats the baseline; retrains every Monday |
+| M4 eBART causal study | ✅ Done. Live in the site's Findings band |
+| M5 AI analyst agent + eval | 🟡 Agent and eval set built (27% execution accuracy locally). A/B test not started; the agent is off on the live site |
+| M6 QLoRA fine-tune | ⬜ Not started |
+| M7 ship | 🟡 Live, and every push to `main` deploys itself. Architecture diagram, screenshots, `make up` and dbt/Terraform checks in CI left |
+| F1–F7 website | 🟡 Built and live (map, trends, forecast explorer, Findings, Ask). Style guide, Lighthouse/axe audits, Open Graph image and real-device checks left |
+
+## Results
+| What | Number |
+|---|---|
+| BART ridership in BigQuery | 67,770,440 hourly origin-destination rows, 2018–2025, 4.2 GB |
+| Bay Wheels trips | 25,989,969 trips, 2018 → Sep 2026 |
+| Forecast (14-day, per station, 6 walk-forward folds) | MAE **283.1** vs **548.5** for the seasonal-naive baseline; improvement 265.4 entries/day, 95% CI [199.6, 339.9]. The p10–p90 band holds 73% of days (nominal 80%), so the site calls it the "model range" |
+| Ask agent (llama3.1:8b, local) | Execution accuracy **0.27** (18/66 gold-SQL questions), refusal accuracy 1.0 (10 off-topic questions), p50 2.4 s |
+| eBART study | See [Findings](#findings-the-ebart-causal-study) below |
+| Cloud Run | Cold start about **4.4 s** to the first byte; warm requests 0.09–0.17 s (measured 2026-10-15) |
 
 ## Run locally
 
@@ -40,7 +65,15 @@ With `data/transitpulse.duckdb` built, `uv run python tasks.py api` serves real 
 (it sets `TP_WAREHOUSE=duckdb`; set `TP_WAREHOUSE=bigquery` + `TP_GCP_PROJECT` to read BigQuery instead).
 Checks on the real local data: `uv run --group dbt --group ml --group agent pytest -m localdata tests/local`.
 
-Running the scheduled pipeline on the Oracle VM: [`docs/ORACLE_VM.md`](docs/ORACLE_VM.md).
+The production pipeline runs on the Oracle VM ([`docs/ORACLE_VM.md`](docs/ORACLE_VM.md)), and every automation
+starts on by default:
+- BART is checked every 6 hours and reloaded when its file changes; dbt rebuilds after every ingest.
+- Bay Wheels reloads on the 7th of each month.
+- A full model rebuild runs on the 6th.
+- The forecast retrains every Monday.
+
+After changing pipeline code, update the VM with `sudo bash /opt/transitpulse/deploy/oracle/bootstrap.sh`. Wait for
+running jobs to finish first: the restart kills them.
 
 ## Findings: the eBART causal study
 
@@ -87,7 +120,8 @@ numbers:
 | 25 | 29.7 | 5 / 14 / 30 ms | 4 / 22 / 29 ms | 37 / 140 / 140 ms |
 
 The slow 1-user p95s are the first requests, before the API's cache and the agent graph are warm. The container
-starts in about 1.5 s locally and uses about 76 MiB of its 512 MiB.
+starts in about 1.5 s locally and uses about 76 MiB of its 512 MiB. On Cloud Run, the first request after scaling to
+zero takes about 4.4 s; warm requests take 0.09–0.17 s. A Locust run against Cloud Run hasn't been done yet.
 
 ## Docs
 | File | What it is |
@@ -112,13 +146,39 @@ starts in about 1.5 s locally and uses about 76 MiB of its 512 MiB.
 | Bay Wheels trip data | [Lyft Bay Wheels System Data](https://www.lyft.com/bikes/bay-wheels/system-data) (bucket `s3.amazonaws.com/baywheels-data`) | [Bay Wheels Data License Agreement](https://baywheels-assets.s3.amazonaws.com/data-license-agreement.html) (verified 2026-10-08) |
 | Bay Area coastline | Natural Earth | Public domain |
 
-*(Verify each licence before publishing; see `docs/IMPLEMENTATION_PLAN.md` M0.)*
+BART's terms were checked on 2026-10-14. They allow the derived data with attribution, and "Data provided by BART"
+appears in `analysis/causal/data/README.md`, `docs/FINDINGS.md`, the Findings band and the site footer.
 
-## Left to do (M4 eBART study)
-1. ~~Check the data licence.~~ Done: BART's terms allow the derived CSVs with attribution ("Data provided by BART"
-   in `analysis/causal/data/README.md`, `docs/FINDINGS.md`, the Findings band and the site footer).
-2. ~~Redeploy the API to Cloud Run.~~ Done 2026-10-14 by `deploy.yml` (image `api:ab55544…`); `GET /api/findings` is live.
-3. ~~Re-export the static pages.~~ Done 2026-10-14 (portfolio commit `d093732`).
-4. **Optional:** add a trend-adjusted estimate that extrapolates the monthly pre-period trend (about 0.27 pts/month),
-   which could absorb most of the +4.2%. It was not pre-registered, so label it that way, and report it alongside
-   the pre-registered result rather than replacing it.
+## Left to do
+Ordered by what finishes the project soonest (see [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) §6,
+"Definition of done").
+
+**Code (no accounts needed)**
+1. **M5 A/B test.** Power analysis, then arm A (schema card) vs arm B (schema card + 5 retrieved example queries),
+   with McNemar and a bootstrap CI, written up in `docs/AB_TEST.md`. At 27% accuracy, the few-shot arm is the
+   obvious next try.
+2. **Website gaps.**
+   - Keep the last 5 Q&As across a refresh (`sessionStorage`) and add a copy button for answers.
+   - Clicking a station on the map selects it in the forecast explorer.
+   - Name the busiest station in the map's text alternative.
+3. **Polish (F1/F7).**
+   - `web/styleguide.html` and a design review against `DESIGN.md`.
+   - A Lighthouse mobile audit (≥ 90 / 95 / 95) and an axe contrast check in Playwright.
+   - An Open Graph image.
+4. **README.** An architecture diagram and screenshots at phone and desktop width.
+5. **`make up`.** One command that starts API + web + Ollama from a fresh clone.
+6. **M6 QLoRA fine-tune.** 1–3K question→SQL pairs, QLoRA of Qwen2.5-Coder-1.5B on the RTX 4060, GGUF → Ollama, then
+   scored as arm C in `docs/AB_TEST.md`.
+7. **Optional eBART trend-adjusted estimate.** Extrapolate the monthly pre-period trend (about 0.27 pts/month), which
+   could absorb most of the +4.2%. It wasn't pre-registered, so label it that way and report it next to the
+   pre-registered result.
+
+**Needs you (accounts, GUI tools or devices)**
+1. **Turn on the live agent.** Add a Gemini API key to Secret Manager and apply Terraform with `agent_enabled=true`
+   ([`docs/CLOUD_RUN.md`](docs/CLOUD_RUN.md) §4). Then the 10 sample questions on the live site need checking on a phone.
+2. **M2 BI.** A public Looker Studio dashboard on the marts, then a Power BI report (`.pbix`, PDF, screenshots) whose
+   KPIs match dbt for one chosen week. After that, embed the dashboard on the site.
+3. **dbt build + `terraform plan` in CI.** These need a read-only GCP identity for CI, an IAM change that needs
+   owner rights.
+4. **Real-device check.** iPhone Safari, Android Chrome, a tablet in both orientations, desktop at 125% and 200% zoom.
+5. **Month-end GCP bill.** Confirm it is $0 in the billing console.

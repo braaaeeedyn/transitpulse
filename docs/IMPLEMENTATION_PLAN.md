@@ -95,7 +95,7 @@ this section is the checklist.
 - [x] `infra/terraform/`: provider + backend; BigQuery datasets `raw`, `staging`, `marts`, `ml`, `ci`; *(applied to `transitpulse-511002`; `plan` shows no changes)*
       raw bucket; Artifact Registry repo with a cleanup policy (keep last 3); service accounts
       `sa-pipeline` (write raw/staging/marts), `sa-agent` (read-only on `marts`), `sa-deploy`.
-- [~] Verify the data source links and licences in `TRANSITPULSE_PLAN.md §4`; record them in `README.md`. *(listed in README; Bay Wheels licence link verified 2026-10-08; the BART terms still to verify)*
+- [x] Verify the data source links and licences in `TRANSITPULSE_PLAN.md §4`; record them in `README.md`. *(Bay Wheels verified 2026-10-08; BART verified 2026-10-14: derived data allowed with \"Data provided by BART\" attribution)*
 - **Done when:** `terraform apply` is clean, `make lint test` passes on an empty project, budget alerts are visible in the console.
 
 ### M1: data platform (weeks 1–3) · #4 #10 #11 #17 #2
@@ -111,6 +111,7 @@ this section is the checklist.
 - [x] dbt tests (generic + custom "no negative ridership"); `dbt build` green.
 - [x] Deploy Dagster on the Oracle VM as `transitpulse-dagster.service` (systemd), key file gitignored. *(`deploy/oracle/` daemon + web units, `bootstrap.sh`, `docs/ORACLE_VM.md`; running since 2026-10-08; schedules and sensors on by default since 2026-10-14; before that no schedule had been switched on)*
 - **Done when:** a scheduled Dagster run goes raw → marts end to end on the VM, and every dbt test passes.
+  *Met 2026-10-14: `bart_od_updates` → `yearly_ingest` → `models_after_ingest` → `dbt build` (all tests) succeeded on the VM.*
 
 ### M2: KPIs + BI (weeks 4–5) · #8 #9
 - [x] `docs/METRICS.md`: 5–6 KPIs, each with definition, formula, owner question.
@@ -151,10 +152,10 @@ this section is the checklist.
 
 ### M7: ship (weeks 11–12) · #1 #13 #3 #18
 - [~] Dockerfile (multi-stage, non-root); serves `api/` **and** `web/` (static mount with long cache headers on hashed assets). *(`Dockerfile` + `.dockerignore`: uv build stage, `python:3.12-slim-bookworm` runtime as uid 10001, 119 MB compressed; smoke-tested locally in `tests/deploy/`. Asset names aren't hashed: fonts are cached a year, map data a day, JS/CSS revalidated)*
-- [~] Terraform: Cloud Run (`min=0`, `max=2`), Workload Identity Federation for GitHub. *(`cloudrun.tf`, `wif.tf`: validated and statically tested, **not applied**; runbook `docs/CLOUD_RUN.md`)*
+- [x] Terraform: Cloud Run (`min=0`, `max=2`), Workload Identity Federation for GitHub. *(`cloudrun.tf`, `wif.tf`: applied; runbook `docs/CLOUD_RUN.md`)*
 - [~] `ci.yml` on PR: ruff, pytest, Playwright (F7), `dbt build --target ci`, `terraform plan`. *(`.github/workflows/ci.yml`: ruff, `dbt parse`, pytest (incl. a DuckDB `dbt build` on a generated fixture), shellcheck, Spark, node tests, Playwright, terraform validate, and a `container` job that builds the image and runs `tests/deploy`; `dbt build --target ci` + `terraform plan` not yet: they need GCP credentials in CI)*
 - [x] `deploy.yml` on `main`: build → push → `terraform apply` → deploy. *(on since `DEPLOY_ENABLED=true`; deployed `ab55544` on 2026-10-14; keyless WIF auth. **Changed:** no `terraform apply` in CI (it would need owner rights), Terraform stays manual; to confirm with the user)*
-- [~] Locust: forecast + agent (LLM mocked) at 1/10/25 users; p50/p95/p99 + cold start → README. *(`load/locustfile.py`, `load/run_local.py`: local numbers in README; Cloud Run cold start not measured, nothing is deployed)*
+- [~] Locust: forecast + agent (LLM mocked) at 1/10/25 users; p50/p95/p99 + cold start → README. *(`load/locustfile.py`, `load/run_local.py`: local numbers in README; Cloud Run cold start measured 2026-10-15: about 4.4 s to the first byte, warm 0.09–0.17 s; no Locust run against Cloud Run yet)*
 - [ ] README: architecture diagram, `make up`, results, cost, limitations, screenshots of the site at phone + desktop width.
 - **Done when:** a merge to `main` deploys with no manual steps and the public URL loads on a phone.
 
@@ -308,12 +309,12 @@ All BigQuery reads go through `sa-agent` (read-only) with `maximum_bytes_billed`
 ---
 
 ## 6. Definition of done for the whole project
-- [ ] Public URL on Cloud Run; trains running on the map on a phone and a desktop.
+- [~] Public URL on Cloud Run; trains running on the map on a phone and a desktop. *(public at braedynthompson.com/transitpulse + Cloud Run; the real-device check is still to do)*
 - [ ] `make up` brings up the whole thing locally (API + web + Ollama) from a fresh clone.
-- [ ] CI green: ruff, pytest, Playwright, dbt CI build, terraform plan.
+- [~] CI green: ruff, pytest, Playwright, dbt CI build, terraform plan. *(ruff, pytest, Playwright, terraform validate and the container job are green on every push; dbt CI build and terraform plan aren't in CI yet)*
 - [ ] README has real numbers: raw data size, forecast MAE vs. baseline, agent accuracy (A/B/C), McNemar p-values, DiD estimate with CI *(✅ M4: in the README)*, Locust p95, monthly cost.
 - [ ] GCP bill for the month: $0.
-- [ ] Portfolio entry added (see `TRANSITPULSE_PLAN.md §9`).
+- [x] Portfolio entry added (see `TRANSITPULSE_PLAN.md §9`). *(braedynthompson.com/transitpulse, from the `portfolio` repo's `static/transitpulse/`)*
 
 ---
 
