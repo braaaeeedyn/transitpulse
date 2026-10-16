@@ -5,6 +5,7 @@ uv run uvicorn api.main:app --reload
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.types import Receive, Scope, Send
 
@@ -17,6 +18,9 @@ app = FastAPI(
 app.include_router(data.router)
 app.include_router(ask.router)
 app.include_router(findings.router)
+# text compression for the site and the JSON (Cloud Run sends what the app sends). Starlette leaves
+# text/event-stream alone, so Ask's progress events still stream one by one.
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 if origins := get_settings().cors_origin_list:
     # pages on another domain (braedynthompson.com/transitpulse/) read the API on Cloud Run; GET for the data,

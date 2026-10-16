@@ -142,3 +142,26 @@ test("respects reduced motion", async ({ page }) => {
   await open(page);
   await expect(page.locator("[data-map-summary]")).toContainText("trains running");
 });
+
+test("meta: open graph tags and a 1200x630 image", async ({ page, request }) => {
+  await page.goto("/");
+  const og = (p) => page.locator(`meta[property="og:${p}"]`);
+  await expect(og("title")).toHaveAttribute("content", /TransitPulse/);
+  await expect(og("description")).toHaveAttribute("content", /BART/);
+  await expect(og("type")).toHaveAttribute("content", "website");
+  await expect(og("url")).toHaveAttribute("content", "https://braedynthompson.com/transitpulse/");
+  // absolute, as crawlers need: the public copy of the file checked below
+  await expect(og("image")).toHaveAttribute("content", "https://braedynthompson.com/transitpulse/img/og.png");
+  await expect(og("image:width")).toHaveAttribute("content", "1200");
+  await expect(og("image:height")).toHaveAttribute("content", "630");
+  await expect(og("image:alt")).toHaveAttribute("content", /map/);
+  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary_large_image");
+
+  const res = await request.get("/img/og.png");
+  expect(res.ok()).toBe(true);
+  const png = await res.body();
+  expect(png.subarray(1, 4).toString()).toBe("PNG");
+  expect(png.subarray(12, 16).toString()).toBe("IHDR");
+  expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1200, 630]);
+  expect(png.length).toBeLessThan(400 * 1024);
+});

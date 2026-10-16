@@ -304,3 +304,102 @@ test("forecast: fits a phone in portrait", async ({ page }) => {
   const chip = await page.locator("[data-fc-chip=MCAR]").boundingBox();
   expect(chip.x + chip.width).toBeLessThanOrEqual(390);
 });
+
+// --- map → forecast, the map's text alternative, the dashboard slot (F5, F3, F7) ---------------------
+
+test("map: clicking a station selects it in the forecast explorer", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await mockForecast(page);
+  await page.clock.install({ time: NIGHT });
+  await page.goto("/");
+  await expect(page.locator(".map-loading")).toHaveCount(0);
+  await expect(page.locator("[data-fc-title]")).toHaveText("Embarcadero");
+
+  const index = NETWORK.stations.findIndex((s) => s.code === "MCAR");
+  await page.locator(".map-stage").scrollIntoViewIfNeeded();
+  const box = await page.locator(`.map-station[data-station="${index}"]`).boundingBox();
+  const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+  await page.mouse.move(x, y); // a hover only shows the tooltip
+  await expect(page.locator(".tooltip")).toContainText("MacArthur");
+  await expect(page.locator("[data-fc-title]")).toHaveText("Embarcadero");
+
+  const before = await page.evaluate(() => window.scrollY);
+  await page.mouse.click(x, y);
+  await expect(page.locator("[data-fc-title]")).toHaveText("MacArthur");
+  await expect(page.locator("[data-fc-input]")).toHaveValue("MacArthur");
+  await expect(page.locator("[data-fc-chip=MCAR]")).toHaveAttribute("aria-pressed", "true");
+  expect(await page.evaluate(() => window.scrollY)).toBe(before); // no automatic scroll
+
+  const link = page.locator(".tooltip").getByRole("link", { name: "See its forecast" });
+  await expect(link).toHaveAttribute("href", "#forecast");
+  await link.click();
+  await expect(page).toHaveURL(/#forecast$/);
+});
+
+test("map: text alternative names the busiest station", async ({ page }) => {
+  await mockTrends(page);
+  await page.clock.install({ time: NIGHT });
+  await page.goto("/");
+  const summary = page.locator("[data-map-summary]");
+  await expect(summary).toContainText("Busiest station in the latest data: Powell Street.");
+  await expect(summary).not.toContainText("right now");
+
+  // without KPIs the sentence is left out
+  await page.route("**/api/kpis", (route) => json(route, NOT_CONNECTED, 503));
+  await page.reload();
+  await expect(page.locator("[data-trends] .message")).toContainText("once the data pipeline is connected");
+  await expect(summary).toContainText("No trains running");
+  await expect(summary).not.toContainText("Busiest");
+});
+
+test("trends: dashboard embed appears only when configured", async ({ page }) => {
+  const EMBED = "https://lookerstudio.google.com/embed/reporting/test-report/page/p_1";
+  let looker = "";
+  await page.route(
+    (url) => url.pathname === "/",
+    async (route) => {
+      const res = await route.fetch();
+      const html = (await res.text()).replace(
+        '<meta name="tp-looker-url" content="" />',
+        `<meta name="tp-looker-url" content="${looker}" />`,
+      );
+      await route.fulfill({ response: res, body: html });
+    },
+  );
+  await page.route("https://lookerstudio.google.com/**", (route) =>
+    route.fulfill({ contentType: "text/html", body: "<p>dashboard</p>" }),
+  );
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await mockTrends(page);
+  const slot = page.locator("[data-dashboard]");
+
+  await page.goto("/"); // the shipped page: empty meta, nothing rendered
+  await expect(tiles(page)).toHaveCount(4);
+  await expect(slot).toBeEmpty();
+
+  looker = "http://lookerstudio.google.com/embed/reporting/test-report"; // not https: ignored
+  await page.reload();
+  await expect(tiles(page)).toHaveCount(4);
+  await expect(slot).toBeEmpty();
+
+  looker = EMBED;
+  await page.reload();
+  const frame = slot.locator("iframe");
+  await expect(slot.locator("h3")).toHaveText("Dashboard");
+  await expect(frame).toHaveAttribute("src", EMBED);
+  await expect(frame).toHaveAttribute("loading", "lazy");
+  await expect(frame).toHaveAttribute("title", /dashboard/i);
+  await frame.scrollIntoViewIfNeeded();
+  await expect(frame).toBeVisible();
+  const ratio = await frame.evaluate((el) => el.parentElement.getBoundingClientRect());
+  expect(Math.abs(ratio.width / ratio.height - 4 / 3)).toBeLessThan(0.01); // space reserved before it loads
+  const open = slot.getByRole("link", { name: "Open dashboard" });
+  await expect(open).toBeHidden();
+
+  await page.setViewportSize({ width: 390, height: 844 }); // a narrow card gets the pill instead
+  await expect(open).toBeVisible();
+  await expect(open).toHaveAttribute("href", EMBED);
+  await expect(frame).toBeHidden();
+  const [scrollW, innerW] = await page.evaluate(() => [document.documentElement.scrollWidth, innerWidth]);
+  expect(scrollW).toBeLessThanOrEqual(innerW);
+});

@@ -303,6 +303,20 @@
   color: var(--color-mute-on-ink);
 }
 
+/* the station tooltip's "See its forecast" link is the only part of a tooltip that takes clicks */
+.tooltip a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  pointer-events: auto;
+}
+
+@media (pointer: coarse) {
+  .tooltip a {
+    min-height: var(--touch-target);
+  }
+}
+
 .swatch {
   display: inline-block;
   width: 14px;

@@ -1,10 +1,12 @@
-// Page bootstrap: nav behaviour, the Ask card, the live map, the Trends band, the Forecast explorer and Findings.
+// Page bootstrap: nav behaviour, the Ask card, the live map, the Trends band (and its optional dashboard), the
+// Forecast explorer and Findings.
 
 import { initAsk } from "./ask.js";
+import { formatDate } from "./chart.js";
 import { initFindings } from "./findings.js";
 import { initForecast } from "./forecast.js";
 import { initMap } from "./map/map.js";
-import { initTrends } from "./trends.js";
+import { getKpis, initDashboard, initTrends } from "./trends.js";
 
 // --- nav: hairline once scrolled -------------------------------------------------------------------
 const nav = document.querySelector("[data-nav]");
@@ -70,18 +72,21 @@ for (const a of document.querySelectorAll("[data-focus-ask]")) {
   });
 }
 
-// --- toast -----------------------------------------------------------------------------------------
-const toastEl = document.querySelector("[data-toast]");
-let toastTimer = 0;
-export function toast(text) {
-  toastEl.textContent = text;
-  toastEl.classList.add("is-visible");
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.remove("is-visible"), 4000);
-}
-
-initAsk(document.querySelector("[data-ask]"), document.querySelector("[data-ask-result]"));
+initAsk(
+  document.querySelector("[data-ask]"),
+  document.querySelector("[data-ask-result]"),
+  document.querySelector("[data-ask-history]"),
+);
 initMap(document.querySelector("[data-map]"));
 initTrends(document.querySelector("[data-trends]"));
+initDashboard(document.querySelector("[data-dashboard]"));
 initForecast(document.querySelector("[data-forecast]"));
 initFindings(document.querySelector("[data-findings]"));
+
+// footer "Data through <date>" (DESIGN.md §7), from the KPIs the Trends band loaded; left out without them
+getKpis().then(
+  ({ data_through: through }) => {
+    if (through) document.querySelector("[data-footer-through]").textContent = `Data through ${formatDate(through)}.`;
+  },
+  () => {},
+);

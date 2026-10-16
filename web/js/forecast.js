@@ -1,5 +1,5 @@
-// Forecast explorer (IMPLEMENTATION_PLAN F5): pick a station (ARIA combobox or a chip) and see its last 28 days
-// of entries and the model's 14-day forecast with a shaded band, from GET /api/forecast/{code}.
+// Forecast explorer (IMPLEMENTATION_PLAN F5): pick a station (ARIA combobox, a chip or a click on the map) and see
+// its last 28 days of entries and the model's 14-day forecast with a shaded band, from GET /api/forecast/{code}.
 // The forecast starts the day after the latest published data, so the card says "forecast from data through".
 // What the band is called comes from the API's back-test numbers, never from a fixed claim: it is an "80% range"
 // only when it was calibrated and held the actual value within 5 points of 80% of the time; a calibrated band that
@@ -272,6 +272,9 @@ export async function initForecast(root) {
     const opt = e.target.closest("[role=option]");
     if (opt) choose(opt.dataset.code);
   });
+
+  // a station clicked or tapped on the live map (map.js) is picked here too; the page doesn't scroll
+  document.addEventListener("tp:station", (e) => choose(e.detail.code));
 
   root.querySelectorAll("[data-fc-chip]").forEach((chip) =>
     chip.addEventListener("click", () => {

@@ -427,3 +427,39 @@
 .findings__method a {
   color: var(--color-on-ink);
 }
+
+/* --- dashboard card (F7): the Looker Studio embed, only when <meta name="tp-looker-url"> is set ---
+   The embed on cards at least 768 px wide (space reserved with aspect-ratio), an "Open dashboard" pill below that. */
+.dashboard {
+  margin-top: var(--space-grid);
+}
+
+.dashboard__frame {
+  aspect-ratio: 4 / 3;
+  margin-bottom: var(--space-md);
+}
+
+.dashboard__frame iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: var(--radius-md);
+}
+
+.dashboard__open {
+  justify-self: start;
+  margin-bottom: var(--space-md);
+}
+
+@container (max-width: 767px) {
+  .dashboard__frame {
+    display: none;
+  }
+}
+
+@container (min-width: 768px) {
+  .dashboard__open {
+    display: none;
+  }
+}

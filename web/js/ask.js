@@ -1,10 +1,52 @@
 // Ask TransitPulse (IMPLEMENTATION_PLAN F6). Sends the question to POST /api/ask and renders the streamed
 // progress events (thinking → sql → rows → answer, or a refusal/error). While the agent is off the API answers 503
-// and this shows a friendly "not connected yet" message.
+// and this shows a friendly "not connected yet" message. The last 5 answers and refusals (never errors) are kept in
+// sessionStorage and shown under the Ask card after a reload; "Show SQL" has a copy button.
 
 import { apiUrl } from "./util/api.js";
+import { toast } from "./util/toast.js";
 
 const STEPS = { thinking: "Understanding the question", sql: "Writing SQL", rows: "Running query", answer: "Writing the answer" };
+
+const HISTORY_KEY = "tp-ask-history";
+const HISTORY_MAX = 5;
+const HISTORY_ROWS = 20;
+
+/** One stored Q&A in a fixed shape. Also used on read: storage is untrusted, so nothing is taken on trust. */
+function historyEntry(e) {
+  return {
+    question: String(e.question),
+    text: String(e.text),
+    columns: Array.isArray(e.columns) ? e.columns.map(String) : [],
+    rows: Array.isArray(e.rows) ? e.rows.filter(Array.isArray).slice(0, HISTORY_ROWS) : [],
+    sql: typeof e.sql === "string" ? e.sql : "",
+  };
+}
+
+/** The stored Q&As, newest first. Bad or missing storage reads as no history. */
+export function readHistory(storage = globalThis.sessionStorage) {
+  try {
+    const list = JSON.parse(storage?.getItem(HISTORY_KEY) ?? "[]");
+    if (!Array.isArray(list)) return [];
+    return list
+      .filter((e) => typeof e?.question === "string" && typeof e?.text === "string")
+      .slice(0, HISTORY_MAX)
+      .map(historyEntry);
+  } catch {
+    return [];
+  }
+}
+
+/** Puts a Q&A first in the stored list (at most 5) and returns the new list. */
+export function remember(entry, storage = globalThis.sessionStorage) {
+  const list = [historyEntry(entry), ...readHistory(storage)].slice(0, HISTORY_MAX);
+  try {
+    storage?.setItem(HISTORY_KEY, JSON.stringify(list));
+  } catch {
+    // storage full or switched off: the history is a convenience, the answer on screen still stands
+  }
+  return list;
+}
 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -91,11 +133,22 @@ async function* readEvents(res) {
 // it's served without the API, so there is nothing to POST a question to.
 export const isStaticSite = () => document.querySelector('meta[name="tp-mode"]')?.content === "static";
 
-export function initAsk(card, result) {
+export function initAsk(card, result, history) {
   const form = card.querySelector("[data-ask-form]");
   const input = form.querySelector("input");
   const submit = form.querySelector("[type=submit]");
   let busy = false;
+
+  // stored answers render through the same escaping path as a live answer
+  function showHistory(list) {
+    if (!history) return;
+    history.innerHTML = list.length
+      ? `<h2 class="eyebrow" style="margin-top: var(--space-2xl)">Earlier answers</h2>${list.map((e) => renderAnswer(e.question, e)).join("")}`
+      : "";
+  }
+
+  // the newest stored entry is the one on screen, so the list below it starts at the second
+  const keep = (entry) => showHistory(remember(entry).slice(1));
 
   async function ask(q) {
     if (busy || !q.trim()) return;
@@ -154,11 +207,13 @@ export function initAsk(card, result) {
           }
           if (event === "refusal" || event === "error") {
             result.innerHTML = message(data.message, { error: event === "error", chips: data.suggestions ?? [] });
+            if (event === "refusal") keep({ question: q, text: data.message });
             return;
           }
           if (event === "answer") {
             result.innerHTML = renderAnswer(q, data);
             result.querySelector("h3")?.focus();
+            keep({ ...data, question: q });
             return;
           }
         }
@@ -180,26 +235,42 @@ export function initAsk(card, result) {
     ask(input.value);
   });
 
-  // suggestion chips (in the card and in any message) fill the field and submit
   document.addEventListener("click", (e) => {
+    // "Copy SQL" in any answer, current or earlier; the toast is the aria-live confirmation
+    const copy = e.target.closest("[data-copy-sql]");
+    if (copy) {
+      const sql = copy.closest("details").querySelector("code").textContent;
+      Promise.resolve()
+        .then(() => navigator.clipboard.writeText(sql))
+        .then(
+          () => toast("Copied"),
+          () => toast("Couldn't copy. Select the SQL to copy it."),
+        );
+      return;
+    }
+    // suggestion chips (in the card and in any message) fill the field and submit
     const chip = e.target.closest("[data-suggest]");
     if (!chip) return;
     input.value = chip.textContent.trim();
     ask(input.value);
   });
+
+  if (!isStaticSite()) showHistory(readHistory());
 }
 
 function renderAnswer(q, data) {
   const cols = data.columns ?? [];
   const rows = data.rows ?? [];
   const table = cols.length
-    ? `<div class="table-wrap"><table class="data-table"><thead><tr>${cols.map((c) => `<th scope="col">${esc(c)}</th>`).join("")}</tr></thead>
+    ? `<div class="table-wrap"><table class="data-table"><thead><tr>${cols.map((c, i) => `<th scope="col"${typeof rows[0]?.[i] === "number" ? ' class="is-num"' : ""}>${esc(c)}</th>`).join("")}</tr></thead>
        <tbody>${rows.map((r) => `<tr>${r.map((v) => `<td${typeof v === "number" ? ' class="is-num"' : ""}>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`
     : "";
   const sql = data.sql
-    ? `<details><summary class="btn btn--subtle">Show SQL</summary><pre class="sql-block" style="margin-top: var(--space-md)"><code>${esc(data.sql)}</code></pre></details>`
+    ? `<details><summary class="btn btn--subtle">Show SQL</summary><pre class="sql-block" style="margin-top: var(--space-md)"><code>${esc(data.sql)}</code></pre>
+       <button class="icon-btn" type="button" aria-label="Copy SQL" data-copy-sql style="margin-top: var(--space-sm)"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg></button></details>`
     : "";
+  // DESIGN.md §7 answer panel: the question echo in body-md-strong, the answer as a display-lg heading
   return `<article class="card" style="margin-top: var(--space-2xl); display: grid; gap: var(--space-lg)">
-    <p class="text-body">${esc(q)}</p>
-    <h3 tabindex="-1">${esc(data.text)}</h3>${table}${sql}</article>`;
+    <p style="font-weight: 500; line-height: var(--lh-tight)">${esc(q)}</p>
+    <h3 tabindex="-1" style="font-size: var(--type-display-lg); line-height: var(--lh-display-lg)">${esc(data.text)}</h3>${table}${sql}</article>`;
 }

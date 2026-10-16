@@ -96,3 +96,56 @@ test("ask: an error event is shown as an error", async ({ page }) => {
   await ask(page, "Which station is busiest?");
   await expect(result(page).locator(".message--error")).toContainText("I couldn't write a safe query.");
 });
+
+test("ask: history keeps the last 5 answers across a reload", async ({ page }) => {
+  let n = 0;
+  await page.route("**/api/ask", async (route) => {
+    n += 1;
+    const answer = { ...ANSWER, text: `Answer ${n}.`, sql: `SELECT ${n}` };
+    await route.fulfill({ status: 200, contentType: "text/event-stream", body: sse([["answer", answer]]) });
+  });
+  await page.goto("/");
+  for (let i = 1; i <= 6; i++) {
+    await page.locator("#ask-input").fill(`Question ${i}`);
+    await page.locator("[data-ask-form] [type=submit]").click();
+    await expect(result(page).locator("h3")).toHaveText(`Answer ${i}.`);
+  }
+  // while asking, the list under the current answer holds the earlier stored ones (5 kept, the newest is on screen)
+  await expect(page.locator("[data-ask-history] h3")).toHaveText(["Answer 5.", "Answer 4.", "Answer 3.", "Answer 2."]);
+
+  await page.reload();
+  await expect(result(page)).toBeEmpty();
+  const history = page.locator("[data-ask-history]");
+  await expect(history.locator("article")).toHaveCount(5);
+  await expect(history.locator("h3")).toHaveText(["Answer 6.", "Answer 5.", "Answer 4.", "Answer 3.", "Answer 2."]);
+  await expect(history.locator("article").first()).toContainText("Question 6");
+  await expect(history.locator("article").first().locator("tbody tr")).toHaveCount(2);
+  await history.locator("article").first().getByText("Show SQL").click();
+  await expect(history.locator("article").first().locator("pre code")).toHaveText("SELECT 6");
+});
+
+test("ask: stored history is escaped, never run as HTML", async ({ page }) => {
+  const evil = '<img src=x onerror="window.__pwned = 1">';
+  await page.addInitScript((e) => {
+    sessionStorage.setItem(
+      "tp-ask-history",
+      JSON.stringify([{ question: e, text: e, columns: [e], rows: [[e]], sql: e }, { question: 1 }, "junk"]),
+    );
+  }, evil);
+  await page.goto("/");
+  const history = page.locator("[data-ask-history]");
+  await expect(history.locator("article")).toHaveCount(1);
+  await expect(history.locator("h3")).toHaveText(evil);
+  await expect(history.locator("img")).toHaveCount(0);
+  expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
+});
+
+test("ask: copy SQL puts the query on the clipboard", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await mockAsk(page, { body: sse([["answer", ANSWER]]) });
+  await ask(page, "Which station is busiest?");
+  await result(page).getByText("Show SQL").click();
+  await result(page).getByRole("button", { name: "Copy SQL" }).click();
+  await expect(page.locator("[data-toast]")).toHaveText("Copied");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(ANSWER.sql);
+});
