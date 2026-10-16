@@ -134,10 +134,11 @@ If the error is about acting as `sa-agent`, check
 The agent costs money per question once it is public: BigQuery bytes and Gemini tokens. Do these steps in order.
 
 1. **Set a BigQuery per-user daily quota first.** Console → IAM & Admin → Quotas → filter "BigQuery API" →
-   **"Query usage per day per user"**. Set it to **20 GiB**.
-   - It applies to every principal, including `sa-agent` and `sa-pipeline`. Before setting it, check the pipeline's
-     peak day in BigQuery → Administration → Monitoring (or `INFORMATION_SCHEMA.JOBS_BY_USER`). If the pipeline
-     needs more, raise the quota and keep it under the 1 TiB/month free tier ÷ 30 ≈ 33 GiB/day.
+   **"Query usage per day per user"**. Set it to **30 GiB**.
+   - It applies to every principal, including `sa-agent` and `sa-pipeline`. Measured 2026-10-16
+     (`INFORMATION_SCHEMA.JOBS_BY_PROJECT`): `sa-pipeline` billed 16.9 GiB on a normal ingest-and-rebuild day and
+     49.8 GiB on the day of the full backfill, so 20 GiB would be too tight. 30 GiB stays under the 1 TiB/month free
+     tier ÷ 30 ≈ 33 GiB/day; raise it for the day of a full backfill, then set it back.
    - Why this matters: the agent's own guards are 1 GB per query (dry run first), 10 questions per IP per minute, and
      a 10 GB daily byte budget. That budget is **per process and in memory**, so it resets whenever an instance
      starts (scale to zero, a new revision, a second instance). The console quota is the only hard daily cap.
