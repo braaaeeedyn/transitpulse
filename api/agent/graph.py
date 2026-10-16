@@ -86,6 +86,7 @@ class AgentDeps:
     max_bytes: int = 1_000_000_000
     row_limit: int = 200
     timeout_s: float = 20.0
+    examples_k: int = 0  # retrieved examples in the SQL prompt (docs/AB_TEST.md)
 
 
 class AgentState(TypedDict, total=False):
@@ -99,6 +100,7 @@ class AgentState(TypedDict, total=False):
     columns: list[str]
     rows: list[list]
     station: str | None
+    exclude_examples: list[str]  # example ids not to retrieve (the eval's leave-one-out)
 
 
 class AgentStop(Exception):
@@ -168,7 +170,9 @@ def build_graph(deps: AgentDeps):
         return {}
 
     def generate(state: AgentState, config) -> AgentState:
-        prompt = prompts.sql_prompt(state["question"], state.get("raw_sql"), state.get("error"))
+        q = state["question"]
+        examples = prompts.retrieve_examples(q, deps.examples_k, state.get("exclude_examples", ()))
+        prompt = prompts.sql_prompt(q, state.get("raw_sql"), state.get("error"), examples=examples)
         raw = _clean_sql(deps.llm.complete(prompt, config))
         return {"raw_sql": raw, "attempts": state.get("attempts", 0) + 1, "error": None, "error_code": None}
 
@@ -285,13 +289,16 @@ def find_station(question: str, stations: list[tuple]) -> str | None:
     return best[0] if best else None
 
 
-def run_agent(question: str, deps: AgentDeps, graph=None) -> Iterator[tuple[str, dict]]:
+def run_agent(
+    question: str, deps: AgentDeps, graph=None, exclude_examples: list[str] | None = None
+) -> Iterator[tuple[str, dict]]:
     """Run the graph and yield (event, payload) pairs; always ends with answer, refusal or error."""
     graph = graph or build_graph(deps)
     config = {"callbacks": tracing.callbacks(), "run_name": "ask-transitpulse"}
+    state = {"question": question, "exclude_examples": exclude_examples or []}
     final = False
     try:
-        for event, data in graph.stream({"question": question}, config, stream_mode="custom"):
+        for event, data in graph.stream(state, config, stream_mode="custom"):
             final = final or event in ("answer", "refusal", "error")
             yield event, data
     except AgentStop as e:
