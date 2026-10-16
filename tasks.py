@@ -41,19 +41,38 @@ def web_data(*args: str) -> None:
     run("uv", "run", "python", "-m", "pipeline.webdata.build", *args)
 
 
-def api() -> None:
-    """Serve the API and the static site on http://localhost:8000.
-
-    Reads the local warehouse (data/transitpulse.duckdb) when it exists, unless TP_WAREHOUSE says otherwise.
-    The API itself never guesses: without TP_WAREHOUSE (or TP_GCP_PROJECT) its data endpoints answer 503.
-    """
+def _use_local_warehouse() -> None:
+    """TP_WAREHOUSE=duckdb when data/transitpulse.duckdb exists, unless TP_WAREHOUSE or TP_GCP_PROJECT says otherwise.
+    The API itself never guesses: without TP_WAREHOUSE (or TP_GCP_PROJECT) its data endpoints answer 503."""
     if (ROOT / "data" / "transitpulse.duckdb").exists() and not os.environ.get("TP_GCP_PROJECT"):
         os.environ.setdefault("TP_WAREHOUSE", "duckdb")
+
+
+def api() -> None:
+    """Serve the API and the static site on http://localhost:8000, on the local warehouse when it exists."""
+    _use_local_warehouse()
     run("uv", "run", "uvicorn", "api.main:app", "--reload", "--port", "8000")
+
+
+def up() -> None:
+    """`docker compose up --build` (docker-compose.yml): the site + API with the Ask agent on an Ollama container,
+    on http://localhost:8000 (TP_PORT). Same warehouse rule as `api`; the data folder is mounted read-only."""
+    _use_local_warehouse()
+    run("docker", "compose", "up", "--build")
 
 
 def web_test() -> None:
     run("npx", "playwright", "test")
+
+
+def screenshots() -> None:
+    """README screenshots (docs/img/) and the Open Graph image (web/img/og.png), from the local warehouse if present."""
+    run("node", "tests/web/screenshots.mjs")
+
+
+def lighthouse(*args: str) -> None:
+    """Lighthouse (mobile) on the home page: --runs N, --assert for the 90/95/95 gate. Local only, not in CI."""
+    run("node", "tests/web/lighthouse.mjs", *args)
 
 
 SPARK_DEFAULT_ARGS = (
@@ -149,7 +168,10 @@ TASKS = {
     "test": test,
     "web-data": web_data,
     "api": api,
+    "up": up,
     "web-test": web_test,
+    "screenshots": screenshots,
+    "lighthouse": lighthouse,
     "spark": spark,
     "stations": stations,
     "baywheels": baywheels,

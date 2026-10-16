@@ -1,0 +1,58 @@
+# `make up` / `uv run python tasks.py up`: the site + API with the Ask agent on a local Ollama, from a fresh clone.
+# Open http://localhost:${TP_PORT:-8000}. The first run downloads the Ollama image and the model (llama3.1:8b is
+# about 4.9 GB; set TP_OLLAMA_MODEL for a smaller one, or TP_OLLAMA_DATA=<host dir> to reuse models already pulled).
+# Without data/transitpulse.duckdb the data endpoints answer 503 and data questions end in a clean error event;
+# `tasks.py up` sets TP_WAREHOUSE=duckdb when that file exists, the same rule as `tasks.py api`.
+name: transitpulse
+
+x-ollama-image: &ollama-image ollama/ollama:0.40.4 # pinned: the version the M5 A/B ran on
+
+services:
+  ollama:
+    image: *ollama-image
+    # ponytail: CPU only. With an NVIDIA GPU add `gpus: all` here (Docker Desktop on WSL2 with the NVIDIA driver),
+    # or leave this service idle and set TP_OLLAMA_URL=http://host.docker.internal:11434 to use a host Ollama.
+    volumes:
+      - ${TP_OLLAMA_DATA:-ollama}:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # one-shot: pulls the model into the ollama service (a no-op once it is there), then exits
+  ollama-pull:
+    image: *ollama-image
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    command: ["pull", "${TP_OLLAMA_MODEL:-llama3.1:8b}"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: .
+    ports:
+      - "${TP_PORT:-8000}:8080"
+    environment:
+      TP_AGENT_ENABLED: "true"
+      TP_AGENT_LLM: ${TP_AGENT_LLM:-ollama}
+      TP_OLLAMA_URL: ${TP_OLLAMA_URL:-http://ollama:11434}
+      TP_OLLAMA_MODEL: ${TP_OLLAMA_MODEL:-llama3.1:8b}
+      TP_WAREHOUSE: ${TP_WAREHOUSE:-none}
+      TP_DUCKDB_PATH: /app/data/transitpulse.duckdb
+    volumes:
+      - ./data:/app/data:ro
+    healthcheck:
+      # the slim image has no curl
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    depends_on:
+      ollama-pull:
+        condition: service_completed_successfully
+
+volumes:
+  ollama:
