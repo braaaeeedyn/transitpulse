@@ -132,3 +132,16 @@ def test_rate_limiter_forgets_idle_clients():
     # a minute later every earlier client is idle: the next request past the cap forgets them all
     assert limiter.allow("192.0.2.1", per_minute=5, now=61.0)
     assert len(limiter._hits) <= 2
+
+
+def test_pages_are_gzipped_but_the_ask_stream_is_not(client):
+    """Text compression for the site and JSON; the event stream stays plain so progress events arrive one by one."""
+    c = client()
+    page = c.get("/", headers={"Accept-Encoding": "gzip"})
+    assert page.headers["content-encoding"] == "gzip"
+    res = c.post(
+        "/api/ask", json={"question": "Which station is busiest?"}, headers={"Accept-Encoding": "gzip"}
+    )
+    assert res.status_code == 200
+    assert "content-encoding" not in res.headers
+    assert [e for e, _ in parse_sse(res.text)] == ["thinking", "sql", "rows", "answer"]

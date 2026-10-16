@@ -7,6 +7,9 @@
     "test": "playwright test"
   },
   "devDependencies": {
-    "@playwright/test": "^1.48.0"
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.48.0",
+    "chrome-launcher": "^1.2.2",
+    "lighthouse": "^12.8.2"
   }
 }

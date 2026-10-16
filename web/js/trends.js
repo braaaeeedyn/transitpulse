@@ -46,6 +46,14 @@ export async function getJSON(url) {
   return res.json();
 }
 
+let kpisRequest = null;
+
+/** GET /api/kpis once per page, shared by the Trends band and the map's text alternative; `fresh` refetches (Retry). */
+export function getKpis(fresh = false) {
+  if (fresh || !kpisRequest) kpisRequest = getJSON("api/kpis");
+  return kpisRequest;
+}
+
 export function messageHTML(text, { error = false, action = "" } = {}) {
   const icon = error ? "i-circle-alert" : "i-info";
   const button = action ? `<button class="btn btn--subtle" type="button" data-action>${esc(action)}</button>` : "";
@@ -199,11 +207,11 @@ export function initTrends(root) {
       (error) => ({ error }),
     );
 
-  async function load() {
+  async function load(retry = false) {
     root.setAttribute("aria-busy", "true");
     const bikes = loadBikes(); // in parallel; the BART parts don't wait for it or fail with it
     try {
-      const [kpis, trend] = await Promise.all([getJSON("api/kpis"), getJSON("api/trends/ridership")]);
+      const [kpis, trend] = await Promise.all([getKpis(retry), getJSON("api/trends/ridership")]);
       if (!kpis.tiles?.length || !trend.rows?.length) {
         forget();
         root.innerHTML = messageHTML("No ridership data has been loaded into the warehouse yet.");
@@ -223,7 +231,7 @@ export function initTrends(root) {
         });
         root.querySelector("[data-action]").addEventListener("click", () => {
           root.innerHTML = skeleton;
-          load();
+          load(true);
         });
       }
     } finally {
@@ -302,4 +310,31 @@ export function initTrends(root) {
   });
 
   load();
+}
+
+// --- Looker Studio dashboard (F7) ------------------------------------------------------------------
+
+/** The configured embed URL, or "" unless <meta name="tp-looker-url"> holds an https URL. */
+export function lookerUrl(doc = globalThis.document) {
+  const raw = doc?.querySelector?.('meta[name="tp-looker-url"]')?.content?.trim() ?? "";
+  try {
+    return new URL(raw).protocol === "https:" ? raw : "";
+  } catch {
+    return "";
+  }
+}
+
+/** A "Dashboard" card: the embed on wide cards, an "Open dashboard" pill on narrow ones (CSS picks). Empty if unset. */
+export function initDashboard(slot) {
+  const url = lookerUrl();
+  if (!slot || !url) return;
+  slot.innerHTML = `<article class="card chart-card dashboard" aria-labelledby="dashboard-title">
+    <div class="card__head">
+      <h3 id="dashboard-title">Dashboard</h3>
+      <p class="card__takeaway">The same ridership marts in Looker Studio, with filters to explore them.</p>
+    </div>
+    <div class="dashboard__frame"><iframe src="${esc(url)}" title="TransitPulse ridership dashboard (Looker Studio)" loading="lazy" allowfullscreen></iframe></div>
+    <a class="btn btn--subtle dashboard__open" href="${esc(url)}" target="_blank" rel="noopener">Open dashboard<svg class="icon" aria-hidden="true"><use href="#i-arrow-up-right"/></svg></a>
+    <p class="caption chart-card__source">A Looker Studio report built on the same BigQuery marts as this page.</p>
+  </article>`;
 }

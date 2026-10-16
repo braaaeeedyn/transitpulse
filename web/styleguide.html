@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Style guide · TransitPulse</title>
+    <meta name="description" content="Every TransitPulse design token and component on one page, for checks against DESIGN.md." />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="css/tokens.css" />
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/layout.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <link rel="stylesheet" href="css/map.css" />
+    <link rel="stylesheet" href="css/charts.css" />
+    <style>
+      /* style-guide-only layout, tokens only */
+      .sg-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-md);
+      }
+      .sg-stack {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--space-2xl);
+      }
+      .sg-stack > h3 {
+        margin-top: var(--space-lg);
+      }
+      .sg-sample {
+        display: block;
+        width: 48px;
+        height: 32px;
+        border: 1px solid var(--color-hairline);
+        border-radius: var(--radius-md);
+      }
+      .sg-sample--soft {
+        background: var(--color-canvas-soft);
+      }
+      .sg-bar {
+        display: block;
+        height: 12px;
+        background: var(--color-ink);
+      }
+      .sg-surface {
+        display: grid;
+        gap: var(--space-xs);
+        padding: var(--space-card);
+        border: 1px solid var(--color-hairline);
+        border-radius: var(--radius-xl);
+      }
+      .sg-icons {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
+        gap: var(--space-md);
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .sg-icons li {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+      }
+      .sg-relative {
+        position: relative;
+        min-height: 120px;
+      }
+    </style>
+    <script type="module" src="js/styleguide.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#tokens">Skip to tokens</a>
+    <header class="nav is-scrolled">
+      <div class="container nav__inner">
+        <a class="wordmark" href="./" aria-label="TransitPulse home"><span class="wordmark__mark" aria-hidden="true"></span>TransitPulse</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="band" aria-labelledby="sg-title">
+        <div class="container section-head">
+          <p class="eyebrow">Design system</p>
+          <h1 id="sg-title">Style guide</h1>
+          <p class="lead">
+            Every token in <code>css/tokens.css</code> and every component in <code>css/components.css</code> on one page,
+            for checking the site against <code>docs/DESIGN.md</code> (v1.0.1).
+          </p>
+        </div>
+      </section>
+
+      <!-- DESIGN.md §2: each text token on the surfaces it is allowed on -->
+      <section class="band" aria-labelledby="sg-text">
+        <div class="container">
+          <div class="section-head">
+            <h2 id="sg-text">Text on surfaces</h2>
+            <p>Each text colour on the surfaces DESIGN.md allows it on. <code>mute</code> is for white surfaces only.</p>
+          </div>
+          <div class="grid-auto">
+            <div class="sg-surface" style="background: var(--color-canvas)">
+              <p class="eyebrow">canvas</p>
+              <p style="color: var(--color-ink)">ink: headings and body text</p>
+              <p style="color: var(--color-body)">body: captions and descriptions</p>
+              <p style="color: var(--color-mute)">mute: timestamps, "data through"</p>
+              <p style="color: var(--color-error)">error: what went wrong</p>
+            </div>
+            <div class="sg-surface" style="background: var(--color-canvas-soft)">
+              <p class="eyebrow">canvas-soft</p>
+              <p style="color: var(--color-ink)">ink: headings and body text</p>
+              <p style="color: var(--color-body)">body: captions and descriptions</p>
+              <p style="color: var(--color-error)">error: in an error message box</p>
+            </div>
+            <div class="sg-surface" style="background: var(--color-canvas-softer)">
+              <p class="eyebrow">canvas-softer</p>
+              <p style="color: var(--color-ink)">ink: headings and body text</p>
+              <p style="color: var(--color-body)">body: captions and descriptions</p>
+            </div>
+            <div class="sg-surface on-ink" style="background: var(--color-ink)">
+              <p class="eyebrow" style="color: var(--color-mute-on-ink)">ink</p>
+              <p style="color: var(--color-on-ink)">on-ink: all text on ink</p>
+              <p style="color: var(--color-mute-on-ink)">mute-on-ink: secondary text on ink</p>
+              <p><a href="#sg-text" style="color: var(--color-on-ink)">A link on ink</a></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="band" aria-labelledby="sg-type">
+        <div class="container sg-stack">
+          <div class="section-head">
+            <h2 id="sg-type">Typography</h2>
+            <p>Inter at 400, 500 and 700; tabular numerals for numbers; the system monospace stack for code.</p>
+          </div>
+          <p class="eyebrow">Eyebrow · display-xxl</p>
+          <p style="font-size: var(--type-display-xxl); line-height: var(--lh-display-xxl); letter-spacing: var(--tracking-display); font-weight: 700">See the Bay Area move</p>
+          <p class="eyebrow">display-xl (section headline)</p>
+          <p style="font-size: var(--type-display-xl); line-height: var(--lh-display-xl); letter-spacing: var(--tracking-display); font-weight: 700">How the Bay Area rides</p>
+          <p class="eyebrow">display-lg · display-md · display-sm</p>
+          <p style="font-size: var(--type-display-lg); line-height: var(--lh-display-lg); font-weight: 700">Answer panel heading</p>
+          <p style="font-size: var(--type-display-md); line-height: var(--lh-display-md); font-weight: 700">Card title</p>
+          <p style="font-size: var(--type-display-sm); line-height: var(--lh-display-sm); font-weight: 700">Sub-card heading</p>
+          <p class="eyebrow">stat</p>
+          <p class="num" style="font-size: var(--type-stat); line-height: var(--lh-stat); font-weight: 700">115,501</p>
+          <p class="lead">body-lg: hero sub-text and lead paragraphs.</p>
+          <p>body-md: paragraphs never go below 16 px. Numbers carry units: 18,240 entries, 61% of 2019, 8:15 AM.</p>
+          <p style="font-size: var(--type-body-sm); line-height: var(--lh-body-sm)">body-sm: tooltips, table body, legends.</p>
+          <p class="caption">caption: chart axes and fine print, in mute on white.</p>
+          <pre style="overflow-x: auto"><code>SELECT station_name, SUM(entries) FROM marts.fct_station_daily GROUP BY 1</code></pre>
+        </div>
+      </section>
+
+      <section class="band" id="tokens" aria-labelledby="sg-tokens">
+        <div class="container sg-stack">
+          <div class="section-head">
+            <h2 id="sg-tokens">Tokens</h2>
+            <p>Read from the stylesheet's <code>:root</code> rules, so this list is always the one the site uses.</p>
+          </div>
+          <div class="sg-stack" data-tokens></div>
+        </div>
+      </section>
+
+      <section class="band" aria-labelledby="sg-icons-title">
+        <div class="container">
+          <div class="section-head">
+            <h2 id="sg-icons-title">Icons</h2>
+            <p>Lucide (ISC), 20 px, 1.75 px stroke, from the page's sprite.</p>
+          </div>
+          <ul class="sg-icons" data-icons></ul>
+        </div>
+      </section>
+
+      <section class="band" aria-labelledby="sg-components">
+        <div class="container sg-stack">
+          <div class="section-head">
+            <h2 id="sg-components">Components</h2>
+            <p>Pills for anything you can press, 16 px cards for anything that holds content.</p>
+          </div>
+
+          <h3>Buttons</h3>
+          <div class="sg-row">
+            <button class="btn btn--primary" type="button">Ask a question</button>
+            <button class="btn btn--secondary" type="button">Secondary</button>
+            <button class="btn btn--subtle" type="button">Show SQL</button>
+            <button class="btn btn--subtle" type="button" aria-pressed="true">Pressed</button>
+            <button class="btn btn--primary" type="button" disabled>Disabled</button>
+          </div>
+          <div class="card card--ink on-ink sg-row">
+            <button class="btn btn--on-ink" type="button">On ink</button>
+          </div>
+
+          <h3>Icon buttons</h3>
+          <div class="sg-row">
+            <button class="icon-btn" type="button" aria-label="Zoom in"><svg class="icon" aria-hidden="true"><use href="#i-plus" /></svg></button>
+            <button class="icon-btn" type="button" aria-label="Copy SQL"><svg class="icon" aria-hidden="true"><use href="#i-copy" /></svg></button>
+            <button class="icon-btn icon-btn--plain" type="button" aria-label="Open menu"><svg class="icon" aria-hidden="true"><use href="#i-menu" /></svg></button>
+          </div>
+
+          <h3>Chips</h3>
+          <div class="chip-row">
+            <button class="chip" type="button">Busiest hour on a weekday?</button>
+            <button class="chip" type="button" aria-pressed="false">Embarcadero</button>
+            <button class="chip" type="button" aria-pressed="true">MacArthur (selected)</button>
+          </div>
+
+          <h3>Segmented control</h3>
+          <div class="sg-row">
+            <div class="segmented" role="group" aria-label="Replay speed">
+              <button type="button" aria-pressed="true">1×</button>
+              <button type="button" aria-pressed="false">10×</button>
+              <button type="button" aria-pressed="false">60×</button>
+            </div>
+          </div>
+
+          <h3>Text input</h3>
+          <div class="input-row">
+            <svg class="icon" aria-hidden="true"><use href="#i-search" /></svg>
+            <label class="visually-hidden" for="sg-input">Example question</label>
+            <input id="sg-input" type="text" placeholder="Ask about BART or Bay Wheels ridership…" />
+          </div>
+
+          <h3>Cards</h3>
+          <div class="grid-auto">
+            <article class="card">
+              <div class="card__head">
+                <h4>card</h4>
+                <p class="card__takeaway">White, 1 px hairline, 16 px corners.</p>
+              </div>
+            </article>
+            <div class="card card--soft"><p>card--soft: empty and error states.</p></div>
+            <div class="card card--ink on-ink"><p>card--ink: the Findings band.</p></div>
+          </div>
+
+          <h3>Ask card</h3>
+          <div class="ask-card">
+            <p class="eyebrow">Ask TransitPulse</p>
+            <div class="input-row">
+              <svg class="icon" aria-hidden="true"><use href="#i-search" /></svg>
+              <label class="visually-hidden" for="sg-ask">Your question</label>
+              <input id="sg-ask" type="text" placeholder="Ask about BART or Bay Wheels ridership…" />
+            </div>
+            <div class="chip-row"><button class="chip" type="button">How close is ridership to 2019?</button></div>
+            <button class="btn btn--primary ask-card__submit" type="button">Ask</button>
+          </div>
+
+          <h3>Stat tiles</h3>
+          <div class="grid-auto">
+            <div class="stat-tile">
+              <p class="stat-tile__label">Average daily entries</p>
+              <button class="stat-tile__info" type="button" aria-label="What does “Average daily entries” mean?"><svg class="icon" aria-hidden="true"><use href="#i-info" /></svg></button>
+              <p class="stat-tile__value">115,501</p>
+              <p class="stat-tile__delta">▲ 3.1% vs a year earlier</p>
+            </div>
+            <div class="stat-tile">
+              <p class="stat-tile__label">Busiest station</p>
+              <p class="stat-tile__value stat-tile__value--text">Powell Street</p>
+              <p class="stat-tile__delta">9.9% of all entries</p>
+            </div>
+          </div>
+
+          <h3>Tooltip and swatches</h3>
+          <div class="sg-relative">
+            <div class="tooltip" style="position: static; pointer-events: auto">
+              <div class="tooltip__title">MacArthur</div>
+              <div class="tooltip__title"><span class="swatch" style="background: var(--line-yellow)"></span><span class="swatch" style="background: var(--line-red)"></span><span class="tooltip__muted">Yellow, Red</span></div>
+              <div>Entries on Dec 31, 2025: 3,041 (48% of 2019)</div>
+              <a href="#sg-components">See its forecast</a>
+            </div>
+          </div>
+
+          <h3>Legend</h3>
+          <ul class="legend" aria-label="Lines">
+            <li><span class="swatch" style="background: var(--line-yellow)"></span>Yellow line <span class="text-body">· Antioch – SFO / Millbrae</span></li>
+            <li><span class="swatch" style="background: var(--line-orange)"></span>Orange line</li>
+            <li><span class="swatch" style="background: var(--line-red)"></span>Red line</li>
+            <li><span class="swatch" style="background: var(--line-green)"></span>Green line</li>
+            <li><span class="swatch" style="background: var(--line-blue)"></span>Blue line</li>
+            <li><span class="swatch" style="background: var(--line-beige)"></span>Airport connector</li>
+          </ul>
+
+          <h3>Messages</h3>
+          <div class="message" role="status">
+            <p class="message__text"><svg class="icon" aria-hidden="true"><use href="#i-info" /></svg>Ridership numbers will appear here once the data pipeline is connected.</p>
+          </div>
+          <div class="message message--error" role="status">
+            <p class="message__text"><svg class="icon" aria-hidden="true"><use href="#i-circle-alert" /></svg>Ridership numbers didn't load. Check your connection and try again.</p>
+            <button class="btn btn--subtle" type="button">Retry</button>
+          </div>
+
+          <h3>SQL block</h3>
+          <pre class="sql-block"><code>SELECT station_name AS station, SUM(entries) AS entries
+FROM marts.fct_station_daily
+GROUP BY 1 ORDER BY 2 DESC LIMIT 5</code></pre>
+
+          <h3>Data table</h3>
+          <div class="table-wrap">
+            <table class="data-table">
+              <caption class="visually-hidden">Example table</caption>
+              <thead><tr><th scope="col">Station</th><th scope="col" class="is-num">Entries</th><th scope="col" class="is-num">Share of 2019</th></tr></thead>
+              <tbody>
+                <tr><td>Powell Street</td><td class="is-num">11,402</td><td class="is-num">52%</td></tr>
+                <tr><td>Embarcadero</td><td class="is-num">10,977</td><td class="is-num">48%</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Skeleton</h3>
+          <div class="grid-auto">
+            <div class="stat-tile" aria-hidden="true"><span class="skeleton skeleton--label"></span><span class="skeleton skeleton--stat"></span><span class="skeleton skeleton--label"></span></div>
+          </div>
+
+          <h3>Toast</h3>
+          <div class="sg-row"><div class="toast is-visible" style="position: static; transform: none">Copied</div></div>
+
+          <h3>FAQ row</h3>
+          <div class="faq">
+            <details>
+              <summary>Where do the train positions come from?<svg class="icon" aria-hidden="true"><use href="#i-chevron-down" /></svg></summary>
+              <div class="faq__body"><p>From BART's published GTFS timetable.</p></div>
+            </details>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer__bottom footer__muted">
+        <span>TransitPulse style guide. Design source: docs/DESIGN.md.</span>
+        <a href="./">Back to the site</a>
+      </div>
+    </footer>
+  </body>
+</html>

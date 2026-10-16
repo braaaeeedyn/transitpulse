@@ -3,6 +3,7 @@
 // screen-reader summary. Rendering lives in network.js (SVG) and trains.js (canvas).
 
 import { formatDate, formatNumber, formatPercent } from "../chart.js";
+import { getKpis } from "../trends.js";
 import { apiUrl } from "../util/api.js";
 import { formatClock, formatDay, pacificParts, shiftDay } from "../util/time.js";
 import { makeView } from "./geometry.js";
@@ -98,6 +99,8 @@ export async function initMap(root) {
   let lastDraw = 0;
   let lastList = 0;
   let lastSummary = 0;
+  let busiest = ""; // the screen-reader summary's busiest-station sentence, from the Trends band's /api/kpis
+  let tooltipHTML = "";
   let raf = 0;
   let timer = 0;
   const colors = {};
@@ -324,7 +327,7 @@ export async function initMap(root) {
       const rec = sum.recovery_ratio === null ? "" : ` (${formatPercent(sum.recovery_ratio)} of 2019)`;
       entries = `<div data-station-entries>Entries on ${formatDate(sum.data_through)}: ${formatNumber(sum.entries)}${rec}</div>`;
     }
-    return `<div class="tooltip__title">${s.name}</div><div class="tooltip__title">${lines}<span class="tooltip__muted">${names}</span></div>${entries}`;
+    return `<div class="tooltip__title">${s.name}</div><div class="tooltip__title">${lines}<span class="tooltip__muted">${names}</span></div>${entries}<a href="#forecast">See its forecast</a>`;
   }
 
   // Ridership numbers for the station tooltip (GET /api/stations/{code}/summary), fetched once per station
@@ -367,6 +370,13 @@ export async function initMap(root) {
     tooltip.style.top = `${top}px`;
   }
 
+  // only rewritten when the text changes: a tooltip redrawn every frame would swallow clicks on its link
+  function setTooltip(html) {
+    if (html === tooltipHTML) return;
+    tooltip.innerHTML = html;
+    tooltipHTML = html;
+  }
+
   function updateTooltip(t) {
     const sel = state.selected;
     if (!sel) {
@@ -379,11 +389,11 @@ export async function initMap(root) {
         clearSelection(); // the trip ended
         return;
       }
-      tooltip.innerHTML = trainHTML(tr, t);
+      setTooltip(trainHTML(tr, t));
       placeTooltip(tr.x, tr.y);
     } else {
       const s = geom.stations[sel.index];
-      tooltip.innerHTML = stationHTML(sel.index);
+      setTooltip(stationHTML(sel.index));
       placeTooltip(s.x, s.y);
     }
   }
@@ -426,7 +436,7 @@ export async function initMap(root) {
   let pinned = false;
 
   stage.addEventListener("pointerdown", (e) => {
-    if (e.target.closest("button, input")) return;
+    if (e.target.closest("button, input, a")) return;
     const r = stage.getBoundingClientRect();
     drag = { x: e.clientX, y: e.clientY, cx: view.center[0], cy: view.center[1], moved: false, rx: r.left, ry: r.top };
     if (state.zoomIdx > 0) stage.setPointerCapture(e.pointerId);
@@ -462,12 +472,17 @@ export async function initMap(root) {
     stage.classList.remove("is-dragging");
     const wasDrag = drag?.moved;
     drag = null;
-    if (wasDrag || e.target.closest("button, input") || !geom) return;
+    if (wasDrag || e.target.closest("button, input, a") || !geom) return;
     const r = stage.getBoundingClientRect();
     const hit = hitAt(e.clientX - r.left, e.clientY - r.top);
     if (hit) {
       pinned = true;
       select(hit);
+      // a click or tap on a station (never a hover) picks it in the forecast explorer, without scrolling there
+      if (hit.type === "station") {
+        const code = network.stations[hit.index].code;
+        document.dispatchEvent(new CustomEvent("tp:station", { detail: { code } }));
+      }
     } else {
       pinned = false;
       clearSelection();
@@ -566,6 +581,7 @@ export async function initMap(root) {
       placed.length === 0
         ? `No trains running at ${formatClock(t.minutes)}.`
         : `${placed.length} trains running on ${lines.size} lines at ${formatClock(t.minutes)}.`;
+    summary.textContent += busiest;
   }
 
   // --- lifecycle -------------------------------------------------------------------------------------
@@ -578,6 +594,15 @@ export async function initMap(root) {
   layout();
   tick(true);
   document.fonts?.ready.then(layout); // label sizes change once Inter has loaded
+  // "latest data", never "right now": ridership ends at the last day BART has published. Left out without KPIs.
+  getKpis().then(
+    (kpis) => {
+      const name = kpis.tiles?.find((tile) => tile.id === "busiest_station")?.value;
+      busiest = typeof name === "string" && name ? ` Busiest station in the latest data: ${name}.` : "";
+      updateSummary(now());
+    },
+    () => {},
+  );
 }
 
 function errorMessage(retry) {
