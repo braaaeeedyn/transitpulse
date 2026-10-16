@@ -33,7 +33,7 @@
 ```
 transitpulse/
 ├── pyproject.toml / uv.lock      # Python 3.12, managed by uv
-├── Makefile                      # make up | test | lint | dbt | spark | web | load
+├── Makefile                      # make up | test | lint | dbt | spark | web-test | screenshots | lighthouse
 ├── docker-compose.yml            # api + ollama for the one-command local run
 ├── .github/workflows/            # ci.yml (PR), deploy.yml (main)
 ├── infra/terraform/              # GCP: datasets, buckets, registry, Cloud Run, IAM, WIF
@@ -116,8 +116,8 @@ this section is the checklist.
 ### M2: KPIs + BI (weeks 4–5) · #8 #9
 - [x] `docs/METRICS.md`: 5–6 KPIs, each with definition, formula, owner question.
 - [x] `mart_kpis_daily`: one row per day with every KPI, so the **website, Looker Studio and Power BI all read the same numbers**.
-- [ ] Looker Studio dashboard (public link) on the marts.
-- [ ] Power BI report per main plan §5 Phase 2; verify 3 KPIs match dbt; ship `.pbix`, PDF, screenshots, recording.
+- [ ] Looker Studio dashboard (public link) on the marts. *(owner step: needs the owner's Google account; every click is in `bi/README.md`, and the site's embed slot takes the URL)*
+- [ ] Power BI report per main plan §5 Phase 2; verify 3 KPIs match dbt; ship `.pbix`, PDF, screenshots, recording. *(owner step: needs Power BI Desktop; `bi/README.md` has the DAX measures and the check week 2025-W39 with its dbt values, checked by `tests/local/test_bi_week.py`)*
 - **Done when:** the same KPI shows the same value in all three places for a chosen week.
 
 ### M3: forecasting (week 6) · #7
@@ -133,6 +133,7 @@ this section is the checklist.
 - [x] `docs/FINDINGS.md`: question → design → assumptions → result (95% CI) → limitations. Export the event-study chart as JSON for the site. *(`api/data/findings.json`, served by `GET /api/findings`; the site's Findings band)*
 - **Done when:** the write-up is finished and the pre-trends plot is in it.
   *Met: verdict "new" by the pre-registered rule. Corridor +4.2% [+1.6%, +7.1%], legacy stations −23.9% [−25.8%, −21.8%] (95% placebo intervals), caution flag off. Caveat: the monthly series shows the corridor drifting up against the controls before the opening.*
+- [x] Post-hoc trend-adjusted estimate (not pre-registered, decided 2026-10-14). *(`analysis/causal/trend_adjusted.py` → `trend_adjusted.json`, FINDINGS.md §Interpretation: corridor weekly +1.0% [−2.4%, +4.2%], monthly −0.1% [−4.3%, +3.2%]; the verdict is unchanged)*
 
 ### M5: agent + evaluation (weeks 8–9) · #19 #5 #6 #7
 - [x] `api/agent/guardrails.py`: sqlglot SELECT-only, table allowlist, auto-`LIMIT`, dry run ≤ 1 GB (BigQuery) / `EXPLAIN` on a locked-down read-only DuckDB connection. Unit-test each rejection path. *(`sa-agent` credentials come with the Cloud Run deploy, M7.)*
@@ -140,11 +141,15 @@ this section is the checklist.
 - [x] Ollama for local dev, Gemini Flash for deployed; one env var (`TP_AGENT_LLM`) switches them. A deterministic FakeLLM for tests.
 - [x] Langfuse callback on every run when its keys are set (no-op and not imported otherwise).
 - [x] `eval/questions.yaml`: 66 questions with gold SQL + 10 out-of-scope; `tasks.py eval` reports execution accuracy, refusal accuracy, guardrail rejections, latency. *(llama3.1:8b: 0.27 execution accuracy, 1.0 refusal accuracy.)*
-- [ ] Power analysis → A/B (schema card vs. + 5 retrieved examples) → McNemar + bootstrap CI → `docs/AB_TEST.md`. *(not started; with accuracy at 27% the few-shot arm is the next thing to try)*
+- [x] Power analysis → A/B (schema card vs. + 5 retrieved examples) → McNemar + bootstrap CI → `docs/AB_TEST.md`. *(2026-10-14: minimum detectable improvement +14 points; arm A 18/66, arm B 33/66, McNemar p = 0.0041, +22.7 points [+9.1, +36.4]; B ships, `TP_AGENT_EXAMPLES_K` = 5. Retrieval is BM25 over the eval's own questions with leave-one-out)*
 - [x] `POST /api/ask` **streams** progress events (Server-Sent Events): `thinking` → `sql` → `rows` → `answer` (or `refusal` / `error`), so the UI can show progress (F6). Rate limit per IP and a daily byte budget answer 429 before streaming.
 - **Done when:** `make eval` runs both arms and the A/B write-up has a decision.
+  *Met, done differently: `tasks.py eval --llm ollama --arm A|B --save-summary` runs one arm at a time (one per call keeps memory low), and `python -m eval.ab` compares them; AB_TEST.md has the decision (ship B).*
 
 ### M6: QLoRA fine-tune (week 10) · #16
+*Deferred (2026-10-14) to its own build loop, not dropped: none of the toolchain (CUDA torch, transformers, peft,
+trl, bitsandbytes, llama.cpp, the Qwen weights) is installed, and it needs about 12–15 GB of free disk. Starting it
+is owner decision 13 in `docs/OWNER_STEPS.md`; arm C plugs into `eval.ab` (`docs/AB_TEST.md`, "Arm C").*
 - [ ] Generate + validate 1–3K question→SQL pairs; hold out eval templates.
 - [ ] QLoRA Qwen2.5-Coder-1.5B-Instruct (r=16, 4-bit) on the RTX 4060; log curves to `ml/finetune/runs/`.
 - [ ] Merge → GGUF → Ollama; add as arm C in `make eval`; McNemar + bootstrap vs. A/B.
@@ -153,10 +158,10 @@ this section is the checklist.
 ### M7: ship (weeks 11–12) · #1 #13 #3 #18
 - [~] Dockerfile (multi-stage, non-root); serves `api/` **and** `web/` (static mount with long cache headers on hashed assets). *(`Dockerfile` + `.dockerignore`: uv build stage, `python:3.12-slim-bookworm` runtime as uid 10001, 119 MB compressed; smoke-tested locally in `tests/deploy/`. Asset names aren't hashed: fonts are cached a year, map data a day, JS/CSS revalidated)*
 - [x] Terraform: Cloud Run (`min=0`, `max=2`), Workload Identity Federation for GitHub. *(`cloudrun.tf`, `wif.tf`: applied; runbook `docs/CLOUD_RUN.md`)*
-- [~] `ci.yml` on PR: ruff, pytest, Playwright (F7), `dbt build --target ci`, `terraform plan`. *(`.github/workflows/ci.yml`: ruff, `dbt parse`, pytest (incl. a DuckDB `dbt build` on a generated fixture), shellcheck, Spark, node tests, Playwright, terraform validate, and a `container` job that builds the image and runs `tests/deploy`; `dbt build --target ci` + `terraform plan` not yet: they need GCP credentials in CI)*
+- [~] `ci.yml` on PR: ruff, pytest, Playwright (F7), `dbt build --target ci`, `terraform plan`. *(`.github/workflows/ci.yml`: ruff, `dbt parse`, pytest (incl. a DuckDB `dbt build` on a generated fixture), shellcheck, Spark, node tests, Playwright, terraform validate, and a `container` job that builds the image and runs `tests/deploy`; `dbt build --target ci` + `terraform plan` not yet: they need a GCP identity for CI, and three owner decisions come first, `docs/OWNER_STEPS.md` §9)*
 - [x] `deploy.yml` on `main`: build → push → `terraform apply` → deploy. *(on since `DEPLOY_ENABLED=true`; deployed `ab55544` on 2026-10-14; keyless WIF auth. **Changed:** no `terraform apply` in CI (it would need owner rights), Terraform stays manual; to confirm with the user)*
-- [~] Locust: forecast + agent (LLM mocked) at 1/10/25 users; p50/p95/p99 + cold start → README. *(`load/locustfile.py`, `load/run_local.py`: local numbers in README; Cloud Run cold start measured 2026-10-15: about 4.4 s to the first byte, warm 0.09–0.17 s; no Locust run against Cloud Run yet)*
-- [ ] README: architecture diagram, `make up`, results, cost, limitations, screenshots of the site at phone + desktop width.
+- [~] Locust: forecast + agent (LLM mocked) at 1/10/25 users; p50/p95/p99 + cold start → README. *(`load/locustfile.py`, `load/run_local.py`: local numbers in README; Cloud Run cold start measured 2026-10-15: about 4.4 s to the first byte, warm 0.09–0.17 s; no Locust run against Cloud Run yet: an optional owner step, `docs/OWNER_STEPS.md` §11)*
+- [x] README: architecture diagram, `make up`, results, cost, limitations, screenshots of the site at phone + desktop width. *(Mermaid diagram, phone + desktop screenshots from `tasks.py screenshots`, `make up`, results incl. A/B and Lighthouse, a cost row ($0 expected; the month-end bill is an owner step), limitations)*
 - **Done when:** a merge to `main` deploys with no manual steps and the public URL loads on a phone.
 
 ---
@@ -191,7 +196,7 @@ Each section uses components from `DESIGN.md §7` and follows its band rhythm:
       tooltip, sql block, table, toast, skeleton, faq row, focus ring). Touch targets ≥ 44 px (`@media (pointer: coarse)`).
 - [x] Nav: overlay menu below 1120 px; focus trapped while open; `Esc` closes; body scroll locked. Skip link "Skip to map".
 - [x] Lucide icons as an inline SVG sprite (only the icons used).
-- [ ] `web/styleguide.html`: every component and token on one page, for visual checks against `DESIGN.md`.
+- [x] `web/styleguide.html`: every component and token on one page, for visual checks against `DESIGN.md`. *(token tables rendered from `tokens.css`'s own `:root` rules; `tests/web/styleguide.spec.js` checks every token and component block is there, no console errors, no sideways scroll 320–2560 px)*
 - [x] Create an empty `docs/DESIGN_BACKLOG.md` for design gaps found while building.
 - **Done when:** the shell and style guide render with **no horizontal scroll from 320 px to 2560 px** and pass a keyboard-only walkthrough.
 
@@ -243,7 +248,7 @@ Build exactly to `DESIGN.md §6` (base layer, train glyph, controls, tooltips). 
   - Pinch/scroll zoom is **off** by default (avoids hijacking page scroll on phones); a `+ / −` pill pair zooms the viewBox instead.
 - [x] **Performance + battery**: pause the animation when the map is off-screen (`IntersectionObserver`) or the tab is hidden (`visibilitychange`).
 - [x] **Reduced motion**: with `prefers-reduced-motion: reduce`, trains are drawn as static positions refreshed every 30 s, no tweening.
-- [~] **Accessibility**: map has a text alternative: "42 trains running. Busiest station right now: Embarcadero." in an *(live summary + List view done; 'busiest station' waits for ridership in the API (F4))*
+- [x] **Accessibility**: map has a text alternative: "42 trains running. Busiest station right now: Embarcadero." in an *(says "Busiest station in the latest data: <name>." from the `/api/kpis` tile the Trends band already loaded, never "right now" (ridership ends Dec 31, 2025); left out without KPIs)*
       `aria-live="polite"` region updated every minute; a "View as list" toggle shows trains as a table (line, destination, next stop).
 - **Done when:** trains move smoothly along the correct lines matching the published schedule at three spot-checked times,
   and the map looks right at 320, 390, 768, 1024, 1440 and 2560 px wide, in portrait and landscape.
@@ -252,42 +257,42 @@ Build exactly to `DESIGN.md §6` (base layer, train glyph, controls, tooltips). 
 - [x] API: `GET /api/kpis` (from `mart_kpis_daily`), `GET /api/stations/{code}/summary`. Cache in memory 1 h (data is daily). *(plus `/api/trends/ridership`, `/api/trends/bikes-vs-trains`; DuckDB or BigQuery via `TP_WAREHOUSE`)*
 - [x] KPI tiles: grid with `repeat(auto-fit, minmax(min(100%, 220px), 1fr))`, so 1 column on phones, up to 4 on desktop, with no media queries.
 - [x] Each tile: value, delta vs. 2019, one-line definition (from `METRICS.md`) behind an ⓘ toggle.
-- [~] Trend charts: inline SVG with `viewBox` (no chart library needed; or Vega-Lite, which the agent's chart tool already uses).
-      Re-layout on container resize; fewer x-axis ticks below 600 px. *("Ridership since 2019" and "Bikes and trains" done; hour × weekday heatmap not started)*
+- [x] Trend charts: inline SVG with `viewBox` (no chart library needed; or Vega-Lite, which the agent's chart tool already uses).
+      Re-layout on container resize; fewer x-axis ticks below 600 px. *("Ridership since 2019" and "Bikes and trains" done. **Cut for v1:** the hour × weekday heatmap. It needs a new mart over the 67.8M-row hourly fact, i.e. a production pipeline change (VM update, BigQuery rebuild), for a chart no one asked for)*
 - [x] Skeleton loaders while loading; an error tile with "Retry" if the API fails; never a blank box.
 - **Done when:** tiles show the same numbers as Looker Studio for the same date. *(tiles = mart values, checked by `tests/local`; Looker Studio doesn't exist yet)*
 
 ### F5: forecast explorer (week 6)
 - [x] `GET /api/forecast/{station}` → 14 days with p10/p50/p90 + last 28 days of actuals.
-- [~] Station picker: searchable combobox (type "mac" → MacArthur), plus chips for 5 popular stations. Clicking a station on the map also selects it. *(combobox + chips done; map click → forecast not done)*
+- [~] Station picker: searchable combobox (type "mac" → MacArthur), plus chips for 5 popular stations. Clicking a station on the map also selects it. *(a click or tap, not a hover, sends a `tp:station` event that `forecast.js` picks up, without scrolling; the station tooltip links "See its forecast" to `#forecast`)*
 - [x] Chart: actuals line + forecast line + shaded interval; plain-English caption. *(worded from the measured coverage: "For Tue, Jan 6, 2026 the model expected about 14,200 entries; model range (10th–90th percentile) 10,500–16,800."; "80% range" only once a calibrated band holds 75–85%)*
 - **Done when:** works with keyboard only and on a phone in portrait. *(met: Playwright `forecast:` tests)*
 
 ### F6: Ask TransitPulse (weeks 8–9, after M5)
 - [x] The hero Ask card: one input row ("Ask about BART or Bay Wheels ridership…"), 4 suggestion chips that fill and submit
       the question, black "Ask" pill. `Enter` submits.
-- [~] Results open as a panel below the hero (full-screen sheet on phones), streaming `/api/ask` events: *(streaming client with a spec-compliant SSE parser + all message states done and tested against mocked streams; no copy button or chart yet)*
+- [x] Results open as a panel below the hero (full-screen sheet on phones), streaming `/api/ask` events: *(streaming client with a spec-compliant SSE parser + all message states, tested against mocked streams; "Copy SQL" icon button with a "Copied" toast. **Changed:** inline below the hero on phones too, no sheet (DESIGN_BACKLOG v1.1 #12); the chart stays cut with the chart tool)*
   progress steps ("Writing SQL… Running query… Drawing chart…") → answer text → table/chart → **"Show SQL"** disclosure with copy button.
 - [x] Friendly states: refusal ("I can only answer questions about the transit data. Try: …" + chips), guardrail rejection *(refusal / rate-limit / 4xx / 5xx / dropped-stream / offline states in `web/js/ask.js`; guardrail and budget messages come from the agent's `error` event)*
       ("That query would scan too much data; try narrowing the date range"), rate limit ("Lots of questions right now — try again in a minute"), network error with Retry.
 - [x] Tables scroll horizontally *inside* their card on small screens (never the page); first column sticky.
 - [x] `aria-live` on the answer region; focus moves to the answer heading when it arrives.
-- [ ] Keep the last 5 Q&As in `sessionStorage` so a refresh doesn't lose them.
+- [x] Keep the last 5 Q&As in `sessionStorage` so a refresh doesn't lose them. *(`tp-ask-history`: answers and refusals, never errors; at most 20 rows each; reshaped and escaped on read, since storage is untrusted)*
 - **Done when:** the 10 suggested/sample questions all return a correct answer on the deployed site, on a phone.
 
 ### F7: polish + QA (weeks 11–12, with M7)
-- [~] **Playwright** tests (`tests/web/`) at 320, 390, 768, 1024, 1440, 1920 px: *(27 tests in `site.spec.js` + `data.spec.js` (API mocked with fixtures) cover all of these except screenshot snapshots)*
+- [x] **Playwright** tests (`tests/web/`) at 320, 390, 768, 1024, 1440, 1920 px: *(57 tests in 7 spec files, API mocked with fixtures. **Cut for v1:** screenshot snapshots. Snapshots made on Windows don't match Linux CI font rendering and the live map animates; the overflow, axe and layout tests cover the risk)*
   - `document.documentElement.scrollWidth <= innerWidth` (no horizontal scroll) on every viewport
   - map canvas size equals container size × DPR after a resize
   - nav overlay opens/closes; Ask flow with the API mocked
   - screenshot snapshots for visual regression
-- [ ] Lighthouse (mobile): Performance ≥ 90, Accessibility ≥ 95, Best Practices ≥ 95. LCP < 2.5 s, CLS < 0.1 (reserve space with `aspect-ratio` for map, charts and embeds).
-- [ ] Contrast check with axe in Playwright: every text token on its allowed surfaces (`DESIGN.md §2`) meets WCAG AA.
-- [ ] Design review: walk `web/styleguide.html` and every page section against `DESIGN.md`; fix drift in code, not in the doc.
-      Move anything left in `DESIGN_BACKLOG.md` into a v1.1 list.
+- [x] Lighthouse (mobile): Performance ≥ 90, Accessibility ≥ 95, Best Practices ≥ 95. LCP < 2.5 s, CLS < 0.1 (reserve space with `aspect-ratio` for map, charts and embeds). *(`tasks.py lighthouse --runs 3 --assert`: 98 / 100 / 100, LCP 2.3 s, CLS 0 on 2026-10-14, after adding gzip. Local only, not in CI: shared-runner performance scores vary)*
+- [x] Contrast check with axe in Playwright: every text token on its allowed surfaces (`DESIGN.md §2`) meets WCAG AA. *(`tests/web/a11y.spec.js`: 0 `color-contrast` violations on the loaded page at 390 and 1440 px and on the style guide; no token change needed)*
+- [x] Design review: walk `web/styleguide.html` and every page section against `DESIGN.md`; fix drift in code, not in the doc.
+      Move anything left in `DESIGN_BACKLOG.md` into a v1.1 list. *(2026-10-14: answer panel type, footer "Data through" + write-up links and numeric headers fixed in code; 19 items in the backlog's v1.1 list)*
 - [ ] Real-device check: an iPhone (Safari), an Android (Chrome), a tablet in both orientations, a desktop at 125% and 200% zoom.
-- [ ] Looker Studio embed in a responsive wrapper (`aspect-ratio`, `loading="lazy"`); on phones show a "Open dashboard" pill instead of the iframe.
-- [~] Meta: favicon, Open Graph image (a screenshot of the train map), `<title>`, description. *(favicon, title, description done; Open Graph image pending)*
+- [x] Looker Studio embed in a responsive wrapper (`aspect-ratio`, `loading="lazy"`); on phones show a "Open dashboard" pill instead of the iframe. *(a Trends "Dashboard" card, shown only when `<meta name="tp-looker-url">` holds an https URL; the iframe on cards ≥ 768 px, the pill below. The URL itself is an owner step: `bi/README.md`)*
+- [x] Meta: favicon, Open Graph image (a screenshot of the train map), `<title>`, description. *(`og:*` + `twitter:card` tags; `web/img/og.png` 1200×630 from `tasks.py screenshots`, absolute URL on braedynthompson.com)*
 - **Done when:** all of the above pass in CI and on the real devices.
 
 ---
@@ -310,10 +315,10 @@ All BigQuery reads go through `sa-agent` (read-only) with `maximum_bytes_billed`
 
 ## 6. Definition of done for the whole project
 - [~] Public URL on Cloud Run; trains running on the map on a phone and a desktop. *(public at braedynthompson.com/transitpulse + Cloud Run; the real-device check is still to do)*
-- [ ] `make up` brings up the whole thing locally (API + web + Ollama) from a fresh clone.
-- [~] CI green: ruff, pytest, Playwright, dbt CI build, terraform plan. *(ruff, pytest, Playwright, terraform validate and the container job are green on every push; dbt CI build and terraform plan aren't in CI yet)*
-- [ ] README has real numbers: raw data size, forecast MAE vs. baseline, agent accuracy (A/B/C), McNemar p-values, DiD estimate with CI *(✅ M4: in the README)*, Locust p95, monthly cost.
-- [ ] GCP bill for the month: $0.
+- [x] `make up` brings up the whole thing locally (API + web + Ollama) from a fresh clone. *(`docker-compose.yml`: a pinned `ollama/ollama:0.40.4`, a one-shot model pull, the API image with the agent on and `./data` mounted read-only; `tests/test_compose.py` + `tests/compose/` (marker `docker`); run by hand once on 2026-10-14 with `qwen2.5-coder:0.5b`, one question answered)*
+- [~] CI green: ruff, pytest, Playwright, dbt CI build, terraform plan. *(ruff, pytest, Playwright, terraform validate and the container job are green on every push; dbt CI build and terraform plan wait for the owner's CI identity decisions, `docs/OWNER_STEPS.md` §9)*
+- [ ] README has real numbers: raw data size, forecast MAE vs. baseline, agent accuracy (A/B/C), McNemar p-values, DiD estimate with CI *(✅ M4: in the README)*, Locust p95, monthly cost. *(A/B accuracy and McNemar p in the README since 2026-10-14; arm C waits for M6, Locust p95 on Cloud Run and the bill for the owner)*
+- [ ] GCP bill for the month: $0. *(owner step, `docs/OWNER_STEPS.md` §12)*
 - [x] Portfolio entry added (see `TRANSITPULSE_PLAN.md §9`). *(braedynthompson.com/transitpulse, from the `portfolio` repo's `static/transitpulse/`)*
 
 ---

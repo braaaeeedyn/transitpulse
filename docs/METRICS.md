@@ -94,10 +94,40 @@ schema has no bike type) and dockless (no start station).
 | Refusal accuracy | share of the out-of-scope questions (10) the agent refused |
 | Guardrail rejections | questions that ended because both SQL attempts were rejected by the guardrails |
 | Latency p50/p95 | wall time per question through the whole graph (route, SQL, query, answer) |
+| Mean SQL-prompt length | mean characters (system + user) of every SQL prompt sent, repair prompts included |
 
 `--llm fake` scripts the FakeLLM with the gold SQL (an oracle): it checks the harness and must score 1.0. The model
-numbers are in `eval/results/summary-*.json`, written only with `--save-summary`; first run (llama3.1:8b, local DuckDB, 2026-10-09): execution accuracy
-**0.27** (18/66), refusal accuracy 1.0, 0 guardrail rejections, p50 2.4 s / p95 6.4 s.
+numbers are in `eval/results/summary-*.json`, written only with `--save-summary`.
+
+### M5 A/B test (`python -m eval.ab`, write-up in [`AB_TEST.md`](AB_TEST.md))
+
+Arm A: today's prompts (no examples). Arm B: arm A plus 5 BM25-retrieved example questions with their gold SQL in the
+SQL prompt, each question's own example left out. Both arms are paired by question id over the 66 in-scope questions.
+
+| Metric | Definition |
+|---|---|
+| acc_A, acc_B | execution accuracy of each arm (above) |
+| b, c | discordant pairs: b = A right and B wrong, c = A wrong and B right |
+| McNemar p | exact two-sided: min(1, 2 × Σ_{i ≤ min(b, c)} C(b + c, i) / 2^(b+c)); 1 when b + c = 0 |
+| Effect and CI | acc_B − acc_A, with the 2.5th and 97.5th percentiles (linear) of 10,000 paired bootstrap resamples of the 66 questions (Python `random.Random(0)`) |
+| Power | share of 10,000 simulations (seed 0) with B ahead and McNemar p < 0.05, when B breaks each A-right question with g = 0.05 and fixes each A-wrong one with f = (Δ·n + g·n_right) / n_wrong |
+| Minimum detectable improvement | the smallest whole-point Δ with power ≥ 80% |
+| Decision | ship B (`agent_examples_k = 5`) iff McNemar p < 0.05, acc_B > acc_A and B's refusal accuracy ≥ 0.9 |
+
+Results (llama3.1:8b, Ollama 0.40.4, local DuckDB, 2026-10-15 UTC):
+
+| | Arm A | Arm B |
+|---|---|---|
+| Execution accuracy | **0.2727** (18/66) | **0.5000** (33/66) |
+| Refusal accuracy | 1.0 | 1.0 |
+| Errors / in-scope refused / guardrail rejections | 11 / 7 / 0 | 7 / 7 / 0 |
+| Latency p50 / p95 | 2.46 s / 6.71 s | 1.74 s / 4.71 s |
+| Mean SQL-prompt length | 3,423 characters | 4,595 characters |
+
+b = 5, c = 20, McNemar p = 0.00408; acc_B − acc_A = +0.2273, 95% CI [+0.0909, +0.3636]. Power from arm A
+(p_A = 0.2727): 0.114 / 0.532 / 0.856 / 0.970 at +5 / +10 / +15 / +20 points; minimum detectable improvement +14
+points. Decision: **B ships** (`TP_AGENT_EXAMPLES_K` defaults to 5). Arm A reproduces the 2026-10-09 run (18/66)
+exactly.
 
 ## Causal estimates (eBART study, `api/data/findings.json`, `GET /api/findings`)
 
@@ -138,5 +168,23 @@ Defined by the pre-registration (`analysis/causal/preregistration.json` + Amendm
 - **Caution flag:** a weekly pre-trend RI p < 0.10, or a monthly corridor interval that excludes 0 with the opposite
   sign.
 
-## Cross-tool check (M2, to do)
-Once the Power BI report exists, pick 3 KPIs for one week and confirm that DAX = dbt mart value; record it here.
+### Post-hoc trend-adjusted estimate (not pre-registered; `analysis/causal/trend_adjusted.json`)
+
+| Estimate | Definition |
+|---|---|
+| gap_t | treated log outcome − mean control log outcome in period t (corridor: the summed unit; legacy: the mean of the 3 logs) |
+| β (trend per month) | OLS slope of the monthly gap on event month over the 28 pre-period months, in log points a month |
+| Monthly adjusted b | mean over the 21 post months of gap_t − (α + β·t) |
+| Weekly adjusted b | the pre-registered weekly b − β × (mean post-week date − mean pre-week date, in months: 12.77) |
+| Interval and RI p | the same procedure on each of the 5,984 pre-registered sets of 3 controls; [b − q97.5, b − q2.5] and the two-sided RI p |
+
+Values: corridor monthly −0.1% (−4.3% to +3.2%), weekly +1.0% (−2.4% to +4.2%); legacy monthly −26.5% (−29.1% to
+−24.0%), weekly −25.9% (−28.2% to −23.8%); β = +0.0025 (corridor) and +0.0021 (legacy). Exploratory only: the
+pre-registered verdict is unchanged.
+
+## Cross-tool check (M2)
+The check week is **ISO week 2025-W39** (22–28 Sep 2025). Its dbt values, from `marts.mart_kpis_daily` (checked by
+`tests/local/test_bi_week.py`): total entries 1,128,303; mean service-weekday recovery 0.4385; mean service-weekday
+peak-hour share 0.1169; busiest station Embarcadero (5 of 7 days). [`bi/README.md`](../bi/README.md) has the
+Looker Studio and Power BI steps and the DAX measures. Once the Power BI report exists, record here that its DAX
+measures show the same four values (not done yet).
