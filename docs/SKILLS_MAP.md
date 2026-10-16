@@ -13,10 +13,10 @@ Verified = it ran on real data or passed tests on 2026-10-08 (see [`CURRENT_STAT
 | 3 | Load and latency testing | 🟡 (local) | [`load/`](../load/) |
 | 4 | Larger datasets | 🟡 | [`pipeline/spark/clean_bart_od.py`](../pipeline/spark/clean_bart_od.py), [`pipeline/baywheels.py`](../pipeline/baywheels.py) |
 | 5 | Monitoring (LLM tracing) | 🟡 | [`api/agent/tracing.py`](../api/agent/tracing.py) (wired, no Langfuse project yet) |
-| 6 | A/B testing | ⬜ | — |
-| 7 | Formal statistics | 🟡 | [`ml/forecast/evaluate.py`](../ml/forecast/evaluate.py), [`analysis/causal/did.py`](../analysis/causal/did.py) |
+| 6 | A/B testing | ✅ (llama3.1:8b, local) | [`eval/ab.py`](../eval/ab.py), [`docs/AB_TEST.md`](AB_TEST.md) |
+| 7 | Formal statistics | ✅ | [`ml/forecast/evaluate.py`](../ml/forecast/evaluate.py), [`analysis/causal/did.py`](../analysis/causal/did.py), [`eval/ab.py`](../eval/ab.py) |
 | 8 | Business metrics | ✅ | [`docs/METRICS.md`](METRICS.md), [`mart_kpis_daily.sql`](../dbt/transitpulse/models/marts/mart_kpis_daily.sql) |
-| 9 | BI dashboards | ⬜ | — |
+| 9 | BI dashboards | 🟡 (guide and check week only; the reports need the owner's accounts) | [`bi/README.md`](../bi/README.md) |
 | 10 | Warehouse + dbt + dimensional modeling | ✅ (local) / 🟡 (BigQuery) | [`dbt/transitpulse/`](../dbt/transitpulse/) |
 | 11 | Orchestration | ✅ (local) / 🟡 (VM: files ready, not deployed) | [`pipeline/definitions.py`](../pipeline/definitions.py), [`deploy/oracle/`](../deploy/oracle/) |
 | 13 | CI/CD | 🟡 | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), [`deploy.yml`](../.github/workflows/deploy.yml) |
@@ -215,8 +215,11 @@ plan` in CI (they need GCP credentials in CI).
   uid 10001 ([:42](../Dockerfile#L42)), `api/` + `web/` + the venv only (`.dockerignore` is an allowlist).
 - The map data build is deterministic: two builds produce byte-identical files (checked with hashes).
 - The dbt `local` target rebuilds the warehouse with no cloud account.
+- `make up` ([`docker-compose.yml`](../docker-compose.yml), [`tasks.py`](../tasks.py) `up`) starts the site, API and
+  agent on a pinned Ollama image from a fresh clone, with the warehouse mounted read-only; a no-Docker test reads
+  the YAML and a `docker` test starts the `api` service and always takes it down.
 
-**Missing:** a one-command `make up` (Docker Compose with the API + Ollama) and a public evaluation set.
+**Missing:** a public evaluation set.
 
 ---
 
@@ -233,15 +236,18 @@ scheduled BART train drawn as small pills that scale with the map.
 | Schedule interpolation | [`schedule.js:62` `tripPosition`, `:101` `trainsAt`](../web/js/map/schedule.js#L62) | Picks the services running on a Pacific date (holiday exceptions included) and interpolates each trip between departure and arrival; after-midnight trips belong to the previous service day. |
 | Parallel lanes | [`geometry.js:49` `offsetPolyline`](../web/js/map/geometry.js#L49) | Offsets each line sideways by lane index, with a consistent west/south side and a miter limit. |
 | Small trains that scale | [`trains.js:6` `trainSize`](../web/js/map/trains.js#L6) | Length `clamp(6, 1.2% of map width, 14)` px; drawn on a DPR-sized canvas so they're sharp. |
-| Resize handling | [`map.js:167`, `:572`](../web/js/map/map.js#L167) | `ResizeObserver` → re-fit, re-render, resize canvas × `devicePixelRatio`. |
+| Resize handling | [`map.js:168` `layout`, `:589`](../web/js/map/map.js#L168) | `ResizeObserver` → re-fit, re-render, resize canvas × `devicePixelRatio`. |
 | Label collision avoidance | [`network.js:149` `placeLabels`](../web/js/map/network.js#L149) | Greedy placement (hubs first), skipping labels that would overlap labels, stations or track. |
-| Battery/perf | [`map.js:573`](../web/js/map/map.js#L573) |
-| Timetable expiry | [`schedule.js:17` `timetableRange`, `:28` `isOutsideTimetable`](../web/js/map/schedule.js#L17), [`map.js:260`](../web/js/map/map.js#L260) | Outside the bundled feed's dates the notice says the timetable ended (with the date) instead of "No trains running right now". | Pauses off-screen/hidden; redraw rate follows replay speed. |
-| Accessibility | [`index.html:194`](../web/index.html#L194), [`map.js:78`](../web/js/map/map.js#L78) | Live-region summary, List view, reduced motion, focus-trapped menu, skip link, 44 px touch targets. |
+| Battery/perf | [`map.js:590`](../web/js/map/map.js#L590) |
+| Timetable expiry | [`schedule.js:17` `timetableRange`, `:28` `isOutsideTimetable`](../web/js/map/schedule.js#L17), [`map.js:264` `updateNotice`](../web/js/map/map.js#L264) | Outside the bundled feed's dates the notice says the timetable ended (with the date) instead of "No trains running right now". | Pauses off-screen/hidden; redraw rate follows replay speed. |
+| Accessibility | [`index.html:207`](../web/index.html#L207), [`map.js:578` `updateSummary`](../web/js/map/map.js#L578) | Live-region summary, List view, reduced motion, focus-trapped menu, skip link, 44 px touch targets. |
 | Chart helpers | [`chart.js:22` `niceTicks`, `:56` `linePath`, `:80` `bandPath`](../web/js/chart.js#L22) | Pure functions (node-tested): nice 1/2/2.5/5 ticks, fewer below 600 px, and paths that **break at missing months** instead of bridging gaps. |
-| No layout shift | [`charts.css:20-45`](../web/css/charts.css#L20), [`index.html:206`](../web/index.html#L206) | Skeleton heights are the same `font-size × line-height` calcs as the loaded text, and charts have fixed aspect ratios; Playwright checks the Trends height changes by ≤ 2 px. |
-| Trends band | [`trends.js:184` `initTrends`](../web/js/trends.js#L184) | KPI tiles with ⓘ definitions and ink ▲/▼ deltas, the ridership chart and the bikes-vs-trains chart; 503 / error + Retry / empty states; the bike chart fails on its own. |
+| No layout shift | [`charts.css:20-45`](../web/css/charts.css#L20), [`index.html:219`](../web/index.html#L219) | Skeleton heights are the same `font-size × line-height` calcs as the loaded text, and charts have fixed aspect ratios; Playwright checks the Trends height changes by ≤ 2 px. |
+| Trends band | [`trends.js:193` `initTrends`](../web/js/trends.js#L193) | KPI tiles with ⓘ definitions and ink ▲/▼ deltas, the ridership chart and the bikes-vs-trains chart; 503 / error + Retry / empty states; the bike chart fails on its own. |
 | ARIA combobox | [`forecast.js:28` `matchStations`, `:182` `initForecast`](../web/js/forecast.js#L28) | Focus stays in the input; `aria-activedescendant` tracks the option; ↑/↓, Enter, Esc; ranked matches by name or code. |
+| Audits in the test suite | [`a11y.spec.js`](../tests/web/a11y.spec.js), [`lighthouse.mjs`](../tests/web/lighthouse.mjs) | axe's colour-contrast rule on the loaded page (390 and 1440 px) and the style guide: 0 violations. Lighthouse mobile (median of 3, local): 98 / 100 / 100 after adding gzip, gated at 90 / 95 / 95. |
+| Style guide from the source | [`styleguide.js:21` `rootTokens`](../web/js/styleguide.js#L21) | Token tables are read from `tokens.css`'s own `:root` rules (media overrides too), so the page can't drift; a Playwright test checks every token and component block is on it. |
+| Untrusted client storage | [`ask.js:27` `readHistory`](../web/js/ask.js#L27) | The last 5 Q&As in `sessionStorage` are reshaped on read and escaped on render; a Playwright test plants an `<img onerror>` entry and checks it renders as text. |
 | Tests | [`tests/web/site.spec.js`](../tests/web/site.spec.js), [`data.spec.js`](../tests/web/data.spec.js), [`chart.test.mjs`](../tests/web/chart.test.mjs), [`forecast.test.mjs`](../tests/web/forecast.test.mjs), [`forecast-caption.test.mjs`](../tests/web/forecast-caption.test.mjs) | 29 Playwright (data endpoints mocked with JSON fixtures) + 19 node tests. |
 
 ---
@@ -292,6 +298,7 @@ Result: verdict **new** under the pre-registered rule. The corridor is +4.2% [+1
 | Decision rules | [`did.py:355` `verdict`](../analysis/causal/did.py#L355), [`did.py:367` `caution`](../analysis/causal/did.py#L367) | The pre-registered new / moved / fewer / inconclusive rule and caution flag, applied to the placebo intervals. |
 | One reproducible run | [`run.py:114` `compute`](../analysis/causal/run.py#L114), [`run.py:305` `main`](../analysis/causal/run.py#L305) | Reads only committed CSVs and writes `api/data/findings.json` with sorted keys, 6-decimal floats and data-derived dates; `--check` recomputes byte-for-byte. |
 | Validation before the real run | [`synthetic.py:40` `generate`](../analysis/causal/synthetic.py#L40), [`synthetic.py:89` `study`](../analysis/causal/synthetic.py#L89) | Known-effect panels. The 0.90 coverage bar caught the original corridor placebo, which led to Amendment 1. |
+| Post-hoc trend adjustment (not pre-registered) | [`trend_adjusted.py:47` `trend_weights`](../analysis/causal/trend_adjusted.py#L47), [`:62` `gaps`](../analysis/causal/trend_adjusted.py#L62), [`:99` `compute`](../analysis/causal/trend_adjusted.py#L99) | OLS of the treated-minus-control gap on time over the pre-period, written as one weight vector so the adjusted effect of every one of the 5,984 placebo draws is a single matrix product; the same placebo interval and RI p as the pre-registered analysis. Labelled post-hoc and kept out of `findings.json` and the site. |
 | Serving | [`api/routes/findings.py:33`](../api/routes/findings.py#L33), [`web/js/findings.js:101` `renderEventStudy`](../web/js/findings.js#L101) | `GET /api/findings` without a warehouse; the ink band renders the verdict, the figures and two event-study panels from the JSON. |
 | Tests | [`tests/test_causal.py`](../tests/test_causal.py), [`tests/test_api_findings.py`](../tests/test_api_findings.py), [`tests/local/test_causal_local.py`](../tests/local/test_causal_local.py) | Prereg and amendment hashes, recovery of synthetic effects, inference formulas, the monthly parser, the FINDINGS.md numbers against the JSON, the API, and the inputs against the warehouse. |
 
@@ -303,11 +310,33 @@ Result: verdict **new** under the pre-registered rule. The corridor is +4.2% [+1
 
 ---
 
-## 🟡 #7 Formal statistics
+## ✅ #6 A/B testing
 
-**What it does now:** confidence intervals for model comparison, and (M4) cluster-robust standard errors, Wald
-tests, randomization inference and a simulation study of interval coverage. **Missing:** McNemar and power analysis
-(M5).
+**What it does:** an offline A/B test of two prompt strategies for the Ask agent on the fixed 66-question eval set
+([`AB_TEST.md`](AB_TEST.md)): arm A is today's prompt, arm B adds 5 retrieved example queries. The design and the
+ship rule were fixed first, the power analysis was written from arm A before arm B ran, and the default setting
+follows the rule. Result: 18/66 → 33/66, McNemar p = 0.0041, so B ships (`TP_AGENT_EXAMPLES_K` = 5).
+
+| Concept | Where | How |
+|---|---|---|
+| Treatment as one setting | [`settings.py:43` `agent_examples_k`](../api/settings.py#L43), [`graph.py:174`](../api/agent/graph.py#L174) | One integer selects the arm everywhere (API, eval, Cloud Run); with 0 the prompts are byte-identical to the control (a sha256 fingerprint check). |
+| Retrieval (the treatment) | [`prompts.py:108` `retrieve_examples`](../api/agent/prompts.py#L108), [`prompts.py:83` `sql_prompt`](../api/agent/prompts.py#L83) | BM25 (k1 1.2, b 0.75) in the standard library over the pool's question text; deterministic, ties in pool order, no network, so it runs the same on Cloud Run. |
+| Leave-one-out | [`run_eval.py:70` `evaluate`](../eval/run_eval.py#L70), [`graph.py:292` `run_agent`](../api/agent/graph.py#L292) | The question being scored passes its own id as `exclude_examples`, so B never sees its own gold SQL. |
+| Pool kept in sync | [`examples.py:16` `build`](../eval/examples.py#L16) | The eval's in-scope SQL questions exported to `api/agent/examples.json`; a test fails if the file drifts from `questions.yaml`. |
+| Paired comparison | [`ab.py:145` `compare`](../eval/ab.py#L145) | Both arms joined by question id: accuracies, discordant counts b/c, McNemar p, bootstrap CI, and the three-part ship rule with its reasons. |
+| Results can't drift from the write-up | [`ab.py:219` `check`](../eval/ab.py#L219) | Fails if an arm is missing, a summary doesn't cover all 76 ids, the eval set's hash changed, AB_TEST.md's numbers differ from a recomputation, or the default setting isn't what the rule gives. |
+| Tests | [`tests/test_ab.py`](../tests/test_ab.py) | McNemar against scipy and exhaustive enumeration, seeded bootstrap, power monotone in the effect, deterministic leave-one-out retrieval, both arms' prompts through the real graph, the pool, the default, the doc. |
+
+**Honest limits:** the pool is the eval set itself, so many questions have a near-twin (8 of the 20 that B fixed);
+one model (llama3.1:8b), one run per arm (deterministic at temperature 0); production would run Gemini.
+
+---
+
+## ✅ #7 Formal statistics
+
+**What it does now:** confidence intervals for model comparison, (M4) cluster-robust standard errors, Wald tests,
+randomization inference and a simulation study of interval coverage, and (M5) an exact McNemar test, a paired
+bootstrap and a simulation power analysis.
 
 | Technique | Where | How |
 |---|---|---|
@@ -317,6 +346,9 @@ tests, randomization inference and a simulation study of interval coverage. **Mi
 | Walk-forward (time-series CV) | [`evaluate.py:30` `fold_split`](../ml/forecast/evaluate.py#L30) | Out-of-time evaluation only; no random splits. |
 | Cluster-robust (CR1) SEs | [`did.py:105` `_fit`](../analysis/causal/did.py#L105), [`did.py:119` `twfe`](../analysis/causal/did.py#L119) | statsmodels OLS with `cov_type="cluster"` by station and `use_t=True` (t with G−1 df). A test checks it against a hand-computed sandwich with the G/(G−1)·(N−1)/(N−K) correction. |
 | Joint Wald test | [`did.py:135` `event_study`](../analysis/causal/did.py#L135) | F test that every pre-period event-study bin is zero (the reference bin excluded). |
+| Exact McNemar test | [`ab.py:44` `mcnemar_exact`](../eval/ab.py#L44) | Two-sided exact binomial test on the discordant pairs, min(1, 2 × lower tail) with `math.comb`; matches scipy's `binomtest` and a brute-force enumeration in the tests. |
+| Paired bootstrap over questions | [`ab.py:60` `bootstrap_ci`](../eval/ab.py#L60) | Resamples the 66 questions with replacement (10,000, seed 0) and takes the linear 2.5th/97.5th percentiles of acc_B − acc_A, so the pairing is kept. |
+| Power by simulation | [`ab.py:71` `power`](../eval/ab.py#L71), [`ab.py:91` `power_analysis`](../eval/ab.py#L91) | From arm A's accuracy: B fixes each wrong question with f and breaks each right one with g = 0.05; power = share of 10,000 simulations with B ahead and p < 0.05; the minimum detectable improvement at 80% (+14 points) was written down before arm B ran. |
 | Randomization inference | [`did.py:258` `placebo`](../analysis/causal/did.py#L258), [`did.py:314`](../analysis/causal/did.py#L314) | Two-sided RI p = (1 + #{\|b_p\| ≥ \|b\|}) / (1 + N) over every placebo assignment; the pre-trend RI p uses the sum of squared pre-bin coefficients ([`did.py:332`](../analysis/causal/did.py#L332)). |
 | Coverage simulation | [`synthetic.py:89` `study`](../analysis/causal/synthetic.py#L89) | 200 panels per scenario (null / moved / new) with AR(1) noise: bias, RMSE and coverage of the CR1 and placebo intervals. CR1 covers 0.79–0.83 with 3 treated clusters, the placebo intervals 0.925–0.965. |
 
@@ -368,21 +400,22 @@ marts, running it and summarising the rows, streamed to the site as Server-Sent 
 
 | Concept | Where | How |
 |---|---|---|
-| LangGraph state machine | [`graph.py:136` `build_graph`](../api/agent/graph.py#L136) | `route` → `refuse` / `forecast` / `generate` → `execute` → `answer`, with a conditional edge back to `generate` for **one** repair attempt carrying the error; a second failure raises an `error` event. |
-| Streaming progress | [`graph.py:143` `run`, `:288` `run_agent`](../api/agent/graph.py#L143) | Nodes emit `(event, payload)` through LangGraph's custom stream writer; `run_agent` guarantees the stream ends with exactly one answer / refusal / error. |
+| LangGraph state machine | [`graph.py:138` `build_graph`](../api/agent/graph.py#L138) | `route` → `refuse` / `forecast` / `generate` → `execute` → `answer`, with a conditional edge back to `generate` for **one** repair attempt carrying the error; a second failure raises an `error` event. |
+| Streaming progress | [`graph.py:145` `run`, `:292` `run_agent`](../api/agent/graph.py#L145) | Nodes emit `(event, payload)` through LangGraph's custom stream writer; `run_agent` guarantees the stream ends with exactly one answer / refusal / error. |
 | SSE endpoint | [`ask.py:68` `admit`, `:95` `ask`](../api/routes/ask.py#L68) | A FastAPI dependency does the 503 / rate-limit / budget checks so they're real HTTP statuses before streaming; the handler yields `fastapi.sse.ServerSentEvent`s. |
 | SQL guardrails | [`guardrails.py:136` `check_sql`](../api/agent/guardrails.py#L136) | sqlglot AST: one SELECT, no DML/DDL/INTO, table allowlist (CTE-aware), no file readers or table functions, LIMIT added/clamped, transpiled BigQuery → DuckDB and qualified for the target. |
 | Defence in depth | [`warehouse.py:94` `agent_connection`, `:195` BigQuery dry run](../api/warehouse.py#L94) | DuckDB: read-only, `enable_external_access=false`, locked config, `EXPLAIN` + interrupt timeout. BigQuery: a free dry run refuses > 1 GB, then `maximum_bytes_billed` = 1 GB and `job_timeout_ms` (cancelled on a client-side timeout); a per-process daily byte budget. |
 | Rate limiting behind a proxy | [`ask.py:29` `RateLimiter`, `:58` `client_ip`](../api/routes/ask.py#L29) | Sliding one-minute window per IP; above 10,000 IPs, idle ones are forgotten; `X-Forwarded-For` is read (right-most entry) only when `TP_TRUST_PROXY=true`, since otherwise it's client-controlled. |
 | Swappable LLMs + test double | [`llm.py:134` `make_llm`, `:80` `FakeLLM`](../api/agent/llm.py#L134) | One `complete(prompt)` interface over ChatOllama / ChatGoogleGenerativeAI; the fake is scripted per question (incl. failing first attempts) so graph tests are deterministic and offline. |
 | Optional tracing | [`tracing.py:12` `callbacks`](../api/agent/tracing.py#L12) | Langfuse v4 LangChain handler only when keys are set; otherwise langfuse is never imported (tested in a fresh interpreter). |
-| Execution-accuracy eval | [`eval/questions.yaml`](../eval/questions.yaml), [`scoring.py:66` `execution_match`](../eval/scoring.py#L66), [`run_eval.py:52` `evaluate`](../eval/run_eval.py#L52) | 66 gold-SQL questions + 10 refusals; rows compared as multisets (ordered for top-N), column-permutation-insensitive, floats at 1e-4. The gold SQL itself passes the guardrails and runs on the CI fixture and the real warehouse. |
-| Streaming client | [`ask.js:25` `createEventParser`](../web/js/ask.js#L25) | Spec-compliant SSE parsing (LF/CRLF/CR, multi-line data, comments, split chunks) and distinct messages for 4xx, 5xx, dropped streams and streams that end without an answer. |
+| Execution-accuracy eval | [`eval/questions.yaml`](../eval/questions.yaml), [`scoring.py:66` `execution_match`](../eval/scoring.py#L66), [`run_eval.py:70` `evaluate`](../eval/run_eval.py#L70) | 66 gold-SQL questions + 10 refusals; rows compared as multisets (ordered for top-N), column-permutation-insensitive, floats at 1e-4. The gold SQL itself passes the guardrails and runs on the CI fixture and the real warehouse. |
+| Streaming client | [`ask.js:69` `createEventParser`](../web/js/ask.js#L69) | Spec-compliant SSE parsing (LF/CRLF/CR, multi-line data, comments, split chunks) and distinct messages for 4xx, 5xx, dropped streams and streams that end without an answer. |
 | Tests | [`test_agent_guardrails.py`](../tests/test_agent_guardrails.py), [`test_agent_graph.py`](../tests/test_agent_graph.py), [`test_ask_api.py`](../tests/test_ask_api.py), [`test_agent_eval.py`](../tests/test_agent_eval.py), [`ask.test.mjs`](../tests/web/ask.test.mjs), [`ask.spec.js`](../tests/web/ask.spec.js) | Every rejection path, the repair loop, refusals, forecast tool, SSE wire format parsed like the browser, rate limit and proxy trust, byte budget, scoring rules, mocked streams in Chromium. |
 
-**Honest limits:** llama3.1:8b scores **0.27** execution accuracy (18/66) and 1.0 refusal accuracy on the local
-DuckDB; it often picks the wrong table or adds/omits a column. Not deployed; Langfuse has no project yet; no A/B of
-prompt variants yet.
+**Honest limits:** llama3.1:8b scores **0.50** execution accuracy (33/66) with 5 retrieved examples and **0.27**
+(18/66) without, and 1.0 refusal accuracy, on the local DuckDB; it still often picks the wrong table or adds/omits
+a column. Not deployed (the live agent would run Gemini, which hasn't been A/B-tested); Langfuse has no project
+yet.
 
 ---
 
@@ -407,6 +440,5 @@ Results are in the README (25 users: ~30 req/s, forecast p95 14 ms, ask p95 140 
 ## ⬜ Not started (planned milestone)
 | # | Skill | Milestone | Planned location |
 |---|---|---|---|
-| 6 | A/B testing (power analysis, offline A/B) | M5 second half | `eval/`, `docs/AB_TEST.md` (the eval harness it needs exists) |
-| 9 | BI dashboards (Looker Studio, Power BI + DAX) | M2 | `bi/` |
+| 9 | BI dashboards (Looker Studio, Power BI + DAX) | M2 | `bi/` (the build guide, DAX and check week are written; the reports need the owner's accounts) |
 | 16 | Fine-tuning (QLoRA) | M6 | `ml/finetune/` |

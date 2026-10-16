@@ -1114,3 +1114,207 @@ The VM was on `025f80a` (Oct 9). `bootstrap.sh` brought it to `1fd224a`. Its fir
 2026-10-12 never ran. The schedules had never been switched on in the UI. All three now set
 `default_status=DefaultScheduleStatus.RUNNING`, like the sensors (a UI toggle still overrides it), and
 `test_every_schedule_and_sensor_starts_running` keeps it that way.
+
+## 2026-10-14 · M5 + M4 + M2 · build loop iter 1 · A/B test (B ships), post-hoc eBART trend adjustment, BI guide
+
+**Did.**
+- **M5 A/B harness.** `Settings.agent_examples_k` (`TP_AGENT_EXAMPLES_K`) → `AgentDeps.examples_k` →
+  `service.get_agent`. `prompts.retrieve_examples` (BM25, k1 1.2, b 0.75, standard library, ties in pool order) over
+  `api/agent/examples.json`, the eval's 63 in-scope `sql` questions exported by `python -m eval.examples --write`.
+  `sql_prompt` gained a keyword-only `examples=()`; with none the prompts are byte-identical (fingerprint
+  `85a1cbe8…da56` unchanged). The graph reads `exclude_examples` from its input state, which `eval.run_eval.evaluate`
+  sets to the scored question's id (leave-one-out). `run_eval --arm A|B` (k 0 / 5); summaries add `arm`,
+  `examples_k`, `eval_sha256`, `ollama_version`, `per_question`, `sql_prompt_chars_mean`; files are named
+  `<llm>-<arm>-<ts>.json`. New `eval/ab.py` (exact McNemar, paired bootstrap, power, `--check`) and
+  `tests/test_ab.py` (the plan's 8 tests).
+- **Order of the A/B, with times (UTC, 2026-10-15; PDT is 2026-10-14, −7 h):**
+  1. 01:26 — `docs/AB_TEST.md` Question and pre-registered Design written (copied from the plan).
+  2. 01:26:42–01:30:24 — arm A run (`summary-ollama-A-20261015T013021Z.json`).
+  3. 01:30:49 — `python -m eval.ab --power --json` on arm A; the Power section written right after.
+  4. 01:31:20–01:33:57 — arm B run (`summary-ollama-B-20261015T013355Z.json`).
+  5. Then Results and Decision, and `agent_examples_k` set to 5.
+  The two arms ran one at a time, never in parallel (memory: the machine had 0.5–5.5 GB free during the runs).
+- **M4 post-hoc trend adjustment.** `analysis/causal/trend_adjusted.py` (`--write`, `--check`, `--summary`) →
+  `analysis/causal/trend_adjusted.json`. It reuses `design.load`, `did.monthly_panel`, `did.weekly_panel`, `did.gap`,
+  `did.aggregate_unit`, `did.draw_sets` and `run.render`. The trend fit is written as one weight vector, so every
+  placebo draw costs one matrix product (the whole run takes under 1 s). FINDINGS.md gets "Post-hoc:
+  trend-adjusted estimate (not pre-registered)"; four new `trend_adjusted` tests in `tests/test_causal.py`.
+- **M2 BI guide.** `bi/README.md`: the check week, Looker Studio (connector, data sources, charts that mirror the
+  tiles, owner's credentials, sharing, the embed URL and the `tp-looker-url` meta), Power BI (connector, model, four
+  DAX measures, the check, `.pbix`/PDF/screenshots). `tests/local/test_bi_week.py` (localdata) recomputes the week;
+  `tests/test_docs_deliverables.py::test_bi_guide_present` (default suite) checks the guide's content.
+
+**Decided.**
+- **Ship arm B** (`agent_examples_k` default 5) by the pre-registered rule: McNemar p = 0.00408 < 0.05, acc_B 0.5000 >
+  acc_A 0.2727, B's refusal accuracy 1.0 ≥ 0.9. `eval.ab --check` fails if the default and the rule ever disagree.
+- **Leave-one-out through graph state, not by matching question text.** Excluding by text would also drop a
+  visitor's question that happens to equal a pool question; production must use the whole pool.
+- **Power = P(B ahead and p < 0.05)**, i.e. the rule's first two conditions, conditioning on arm A's observed 18
+  right / 48 wrong. Rejected: simulating A too (adds noise for no decision value).
+- **Doc check parses labelled numbers in the Results section** (`Execution accuracy | k/n = x | k/n = x`, `b = `,
+  `c = `, `McNemar exact p = `, `acc_B - acc_A = `, `bootstrap CI [..]`) and compares them as formatted strings.
+  Rejected: substring search for each number (a wrong "0.125" would pass a check for "0.1").
+- **Weekly secondary adjustment = weekly b − β × (mean post-week date − mean pre-week date in months).** The weekly
+  and monthly gaps have different levels (7-day sums vs average weekdays), so only the monthly slope carries over.
+- **The FINDINGS post-hoc section is a `###` subsection at the end of §Interpretation**, not a new `##` section: the
+  existing `test_findings_doc_has_the_sections_in_order` pins the `##` list, and existing tests are not edited. It
+  still sits directly before Limitations, as the plan asks.
+- **Check week 2025-W39** (22–28 Sep): 7 days, 5 service weekdays, no holiday, and a clear busiest station
+  (Embarcadero 5 of 7 days; W12 and W38 split 4/3).
+- `make eval` does not run both arms in one call; one arm per call keeps memory low. Recorded on the M5 "Done when"
+  line.
+
+**Found.**
+- Arm A reproduced the earlier runs exactly on Ollama 0.40.4: all 76 per-question outcomes equal those of each of
+  the 8 local llama3.1:8b runs of Oct 9–10. Temperature 0 is deterministic here.
+- B's gains are in trend (+5), OD (+4), KPI (+4) and bikes (+2) questions. Station questions are flat (s01, s03,
+  s05, s06 fixed; s02, s04, s13, s14 broken); t07 is the fifth question B broke. For 8 of the 20 questions B fixed, the top retrieved example is a
+  near-twin with a word or two changed (k05/k06, s05/s06, t04/t05/t06, b03/b02, o05/o02), the stated leave-one-out
+  limitation.
+- B is faster, not slower: p50 2.46 → 1.74 s, p95 6.71 → 4.71 s, with errors 11 → 7. Its SQL prompt is 34% longer
+  (3,423 → 4,595 characters).
+- Ollama runs llama3.1:8b with a 4,096-token context; B's prompts (about 1,200 tokens) fit.
+- The trend adjustment reproduces the pre-registered unadjusted numbers exactly (weekly corridor +4.235082%,
+  monthly +6.39275%), so the units are built as the pre-registered analysis builds them.
+- The monthly corridor pre-bins rise mostly in 2016 (−6.8% → −0.8% by months −19…−17, then between −2.6% and 0), so a
+  straight line over all 28 pre months may over-correct. Stated in FINDINGS.
+
+**Fixed.** Nothing broken was found. Three SKILLS_MAP line links into `graph.py` and `run_eval.py` moved with this
+change and were updated (build_graph 136 → 138, run 143 → 145, run_agent 288 → 292, evaluate 52 → 70).
+
+**Measured.**
+- A/B: arm A 18/66 = 0.2727, arm B 33/66 = 0.5000; b = 5, c = 20; McNemar p = 0.00408; acc_B − acc_A = +0.2273,
+  95% paired bootstrap CI [+0.0909, +0.3636]; refusal 10/10 both.
+- Power (n = 66, p_A = 0.2727, g = 0.05, 10,000 sims, seed 0): 0.114 / 0.532 / 0.856 / 0.970 at +5/+10/+15/+20
+  points; minimum detectable improvement **+14 points** (0.804; +13 gives 0.747). The Architect's hand estimate was
+  about +15.
+- Post-hoc trend-adjusted (not pre-registered): corridor monthly −0.1% [−4.3%, +3.2%] (RI p 0.95), weekly +1.0%
+  [−2.4%, +4.2%] (RI p 0.57); legacy monthly −26.5% [−29.1%, −24.0%], weekly −25.9% [−28.2%, −23.8%]; β = +0.0025
+  (corridor) and +0.0021 (legacy) log points a month. Both corridor intervals contain 0, so FINDINGS says the +4.2%
+  is not distinguishable from trend. The pre-registered verdict ("new") is unchanged; `findings.json`, the PNGs and
+  both pre-registration files are byte-identical (hash checks pass).
+- Check week 2025-W39: total entries 1,128,303; service-weekday recovery 0.4385; service-weekday peak-hour share
+  0.1169; Embarcadero busiest on 5 of 7 days at a mean share of 0.0912.
+- Tests: pytest default 159 passed (this iteration adds 13: 8 A/B, 4 trend-adjusted, 1 BI guide); localdata 13
+  (+ 1, the BI week); node 37; ruff clean.
+- Read-only GETs on 2026-10-14: the live pages, `/api/health` (`{"ok":true}`) and `/api/findings` all answer 200, so
+  CURRENT_STATE's lines saying they weren't live were removed.
+
+**Not done / for the owner.**
+- The BI dashboards themselves (Looker Studio, Power BI) need the owner's Google account and Power BI Desktop; the
+  guide is ready.
+- The live agent runs Gemini, which this A/B didn't test; the optional Gemini A/B goes in `docs/OWNER_STEPS.md`
+  (iteration 3).
+- Docker checks were not run this iteration (Docker Desktop was stopped to free memory); nothing here changes the
+  image except `api/agent/examples.json` and the new default, which ships inside `api/`.
+
+## 2026-10-14 · F5–F7 + M7 · build loop iter 2 · website gaps, style guide, axe + Lighthouse, README images, `make up`, owner steps
+
+This build iteration did the plan's iteration 2 (website, polish, README images, design review) and, with every
+check still green, its iteration 3 (`make up`, `docs/OWNER_STEPS.md`).
+
+**Did.**
+- **Ask history and Copy SQL** (`web/js/ask.js`). Answers and refusals (never errors) go to `sessionStorage`
+  (`tp-ask-history`): question, text, columns, the first 20 rows, SQL; at most 5, newest first. After a reload they
+  render under the Ask card ("Earlier answers") through `renderAnswer`, the same escaping path as a live answer.
+  `readHistory` reshapes every stored entry and drops anything malformed; storage errors read as no history. "Show
+  SQL" gained a Copy icon button (`navigator.clipboard.writeText`); the toast (`aria-live`) says "Copied". The toast
+  moved from `main.js` to `web/js/util/toast.js`, so `ask.js` can use it without importing `main.js` (which would
+  break `ask.js`'s node tests).
+- **Map → forecast** (`map.js`, `forecast.js`). A click or tap on a station (pointerup, never a hover) dispatches
+  `tp:station` on `document`; the forecast explorer picks the station with its existing `choose()`. No scrolling. The
+  station tooltip ends with "See its forecast" → `#forecast`.
+- **Busiest station.** The map's live summary appends "Busiest station in the latest data: <name>." from the
+  `busiest_station` KPI tile. `trends.js` now has `getKpis()`, one shared `/api/kpis` request per page (Retry
+  refetches), which the map and the footer reuse.
+- **Dashboard slot.** `<meta name="tp-looker-url" content="">`; with an `https:` URL, `initDashboard` renders a
+  "Dashboard" chart card under the bikes card: a lazy 4:3 `iframe` on cards ≥ 768 px (container query), an "Open
+  dashboard" pill below that. Empty or non-https → nothing.
+- **Open Graph.** `og:*` (absolute URLs on braedynthompson.com) and `twitter:card`; `web/img/og.png`, 1200×630.
+- **Images.** `tests/web/screenshots.mjs` (`tasks.py screenshots`) with a shared `tests/web/server.mjs` that starts
+  uvicorn on a free port (local DuckDB when present) and kills the process tree on Windows. Wednesday 8:00 AM PT:
+  `web/img/og.png` (map stage forced to 1200×630, controls hidden), `docs/img/screenshot-phone.png` (390 px, the
+  map band), `docs/img/screenshot-desktop.png` (1440 px, top of the page through the map).
+- **Style guide** (`web/styleguide.html`, `web/js/styleguide.js`): text tokens on their allowed surfaces, type
+  samples, token tables rendered from `tokens.css`'s `:root` rules (media overrides included), the icon sprite
+  copied from `index.html`, and every component block. Linked from the footer, `noindex`.
+- **axe + Lighthouse.** `@axe-core/playwright`, `lighthouse` 12.8 (Node ≥ 18.16, so it runs on Node 20 and CI) and
+  `chrome-launcher` (declared, not relied on transitively) as devDependencies. `tests/web/a11y.spec.js`;
+  `tests/web/lighthouse.mjs` (`tasks.py lighthouse`, `make lighthouse`).
+- **Design review** (below) and `docs/DESIGN_BACKLOG.md` rewritten as a numbered "v1.1 list" (the 10 open rows + 9
+  new gaps).
+- **README:** a Mermaid architecture diagram, both screenshots, a Lighthouse row, a GCP cost row, `make up`, the
+  coastline source corrected to the US Census (it said Natural Earth), "Left to do" rewritten (M6 + the two v1 cuts;
+  "Needs you" points at OWNER_STEPS).
+- **`make up`.** `docker-compose.yml`: `ollama` (`ollama/ollama:0.40.4`, named volume or `TP_OLLAMA_DATA`,
+  healthcheck), one-shot `ollama-pull`, `api` (the Dockerfile, `${TP_PORT:-8000}:8080`, agent on, `./data` read-only,
+  Python healthcheck, waits for the pull). `tasks.py up` + a Makefile `up` target; `tasks.py api` and `up` share
+  `_use_local_warehouse()`. `tests/test_compose.py` (default suite) and `tests/compose/test_compose_up.py` (marker
+  `docker`, project `tp-compose-smoke`, port 8814, always `down`).
+- **`docs/OWNER_STEPS.md`:** 14 ordered steps (0–13) with commands, what to expect and how to verify, including the
+  10 phone questions with expected answers computed from the local DuckDB. `test_owner_steps_complete_and_ordered`.
+- **Other docs:** IMPLEMENTATION_PLAN markers (F1 style guide, F3 busiest, F4 heatmap cut, F5 map click, F6 history
+  + copy, F7 all but the real-device check, M6 deferral note, M7 README and `make up`, §6), CURRENT_STATE, SKILLS_MAP
+  (7 line links that had drifted, at HEAD too, re-pointed at their symbols; 3 new rows; `make up` under #18).
+
+**Decided.**
+- **gzip in the API** (`GZipMiddleware`, ≥ 1 KB). Lighthouse's first run scored performance 88: observed FCP = LCP =
+  369 ms came after every JS module and JSON request, so Lantern charged ~400 KB of uncompressed text to the
+  simulated FCP/LCP (2.0 s / 3.8 s). With gzip: 1.5 s / 2.3 s, performance 98. Cloud Run sends what the app sends, so
+  live JSON gets smaller too. Starlette 1.7 skips `text/event-stream`, so Ask still streams event by event; a new
+  test in `tests/test_ask_api.py` pins that. Rejected: preloading Inter 400 (the LCP paragraph's weight): no clear
+  gain over 3 runs, and DESIGN.md §3 says only 700 is preloaded.
+- **Lighthouse stays out of CI**: shared-runner performance varies by several points. It is a local gate
+  (`--runs 3 --assert`, median run).
+- **Copy SQL is an icon button with the toast**, as DESIGN.md §7 specifies (a "Copy" icon button; the toast "used
+  only for 'Copied'"), placed under the SQL block (backlog #15).
+- **History renders the stored list minus the newest while asking** (that one is on screen), all of it after a
+  reload; nothing in static mode.
+- **The dashboard picks iframe vs pill with a container query**, not JS, so it follows the card, as DESIGN.md §4 asks.
+- **`getKpis()` memoises the request, not the result,** and Retry passes `fresh`: the existing "Retry reloads" test
+  still sees exactly 2 `/api/kpis` calls although the map now reads the same response.
+- **Tooltips are rewritten only when their HTML changes.** They were rewritten every frame (≤ 250 ms), which would
+  swallow a click on the new link (the element under the pointer replaced between pointerdown and click).
+- **README screenshots at DPR 1** so the widths are exactly 390 and 1440 (the test pins them).
+- **`make up` smoke uses its own compose project** (`tp-compose-smoke`) so it never touches a running `make up`.
+- **The manual `tasks.py up` used `qwen2.5-coder:0.5b`, not llama3.1:8b:** 2.5 GB of RAM was free (the orchestrator
+  asked for a small model). The model volume was removed afterwards (`down -v`).
+- **The phone questions' expected answers** are the gold SQL results (eval k02, s09, o04) or the obvious SQL for the
+  chips; question 4 (bikes vs trains "last month") and 7 (the forecast) are worded for BigQuery's data, which
+  differs from the local file there.
+
+**Found (design review against DESIGN.md).**
+- Fixed in code: the answer panel's question echo was `body` grey at 400 (spec: body-md-strong) and its heading
+  `display-md` (spec: `display-lg`); numeric table headers were left-aligned over right-aligned numbers; the footer
+  lacked "Data through <date>" and the write-up links (§7 Footer).
+- Recorded for v1.1 (DESIGN_BACKLOG 11–19): the placeholder token (`mute` fails AA off white; the code uses `body`),
+  the phone answer sheet (built inline), the progress-step list (no chart step), earlier answers, Copy SQL placement,
+  the station tooltip wording + link, the dashboard card, the segmented thumb (a fade, not a slide), the stat-tile
+  label wording.
+- axe found **0** contrast violations on the loaded page at 390 and 1440 px and on the style guide, so no token
+  changed and DESIGN.md is untouched. A planted `mute`-on-`canvas-soft` paragraph was caught, so the check works.
+- The Mermaid diagram was rendered with Mermaid 11 in Chromium to check its syntax.
+- The pinned Ollama image is **9.37 GB** on disk (CUDA/ROCm libraries). The disk went from 50 to 36 GB free.
+
+**Fixed.** The style guide first overflowed at 320 px (a `pre` widened its grid column; a nav button didn't fit),
+the OG shot came out 631 px tall (a fractional element box; now a whole-pixel clip), and "DESIGN.md" in a CSS
+comment was read as a class by the components test (comments are stripped first).
+
+**Measured.**
+- Lighthouse (mobile, local server, 3 runs): performance 98 / 97 / 100 (median 98), accessibility 100, best practices
+  100, LCP 2.2–2.3 s, CLS 0. Before gzip: 88, LCP 3.7 s.
+- Images: og 104 KB, phone 68 KB, desktop 203 KB.
+- `make up` by hand: pull OK, API healthy, `/api/kpis` 200 from the read-only DuckDB on the Windows bind mount,
+  "Which station had the most entries on 2025-12-31?" → `thinking, sql, rows, answer` in 8.3 s on CPU. The 0.5B
+  model summed all of 2025 while saying "on 2025-12-31": the wiring works, that model's answers don't.
+- Tests: pytest default 167 (+8: gzip/SSE, 3 docs deliverables, 4 compose); Playwright 57 (+14); node 37; localdata
+  13; Docker 6 (`tests/deploy`) + 3 (`tests/compose`); load-local OK; ruff clean.
+- Playwright: one full run (of 8) failed "no horizontal scroll and a correctly sized map at 768px"; it passed alone,
+  in 96 targeted repeats and in the other 7 full runs. The error text wasn't kept. No change here touches the map's
+  sizing at 768 px, so it is recorded as an unexplained one-off.
+
+**Not done / for the owner.** Everything is in `docs/OWNER_STEPS.md`: commit and push (deploys Cloud Run), re-export
+the pages (new web code), the `deploy.yml` decision, the live agent (quota, Gemini key, optional Gemini A/B, Terraform),
+Looker Studio (then the meta URL) and Power BI, the CI identity decisions, the real-device check, an optional Locust
+run against Cloud Run, the month-end bill, and whether to start M6. `npm install` reported 27 advisories (19
+moderate, 8 high) in Lighthouse's dependency tree; dev-only, never in the image, not fixed with `--force`.

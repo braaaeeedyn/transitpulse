@@ -4,7 +4,8 @@
 > It is rewritten whenever behaviour changes. History lives in [`DEVLOG.md`](DEVLOG.md); the task list in
 > [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
 >
-> **Last verified:** 2026-10-10, on Windows 11. **Live at https://braedynthompson.com/transitpulse/**: the pages are
+> **Last verified:** 2026-10-14, on Windows 11 (the live pages, `/api/health` and `/api/findings` answer 200).
+> **Live at https://braedynthompson.com/transitpulse/**: the pages are
 > published by the portfolio's GitHub Pages (`portfolio/static/transitpulse/`, exported with `tasks.py export
 > --api-base`) and call the API on Cloud Run (https://transitpulse-api-etumz4pfva-uw.a.run.app) across origins
 > (CORS allows `https://braedynthompson.com`). The Dagster pipeline runs on the Oracle VM against BigQuery.
@@ -15,10 +16,10 @@
 
 | Part | State | How to run |
 |---|---|---|
-| Website (static, `web/`) | **Working**: live train map, ridership tiles + charts, forecast explorer, Ask card UI, Findings band | `uv run python tasks.py api` → http://localhost:8000 |
+| Website (static, `web/`) | **Working**: live train map, ridership tiles + charts, forecast explorer, Ask card UI (history, Copy SQL), Findings band, an optional Looker Studio card, Open Graph tags, and a style guide at `/styleguide.html` | `uv run python tasks.py api` → http://localhost:8000 |
 | API (`api/`) | **Working**: serves the site; data endpoints read the local DuckDB or BigQuery marts when a warehouse is configured; `POST /api/ask` streams the agent's answer when `TP_AGENT_ENABLED=true`, 503 otherwise (the default) | same as above |
-| Ask TransitPulse agent (`api/agent/`) | **Working** locally: LangGraph text-to-SQL with guardrails, fake / Ollama / Gemini LLM, optional Langfuse | `TP_AGENT_ENABLED=true TP_AGENT_LLM=ollama uv run --group agent python tasks.py api` |
-| Agent eval (`eval/`) | **Working**: 66 in-scope questions with gold SQL + 10 out-of-scope | `uv run python tasks.py eval [--llm ollama]` |
+| Ask TransitPulse agent (`api/agent/`) | **Working** locally: LangGraph text-to-SQL with guardrails, 5 retrieved example queries in the SQL prompt (the M5 A/B winner), fake / Ollama / Gemini LLM, optional Langfuse | `TP_AGENT_ENABLED=true TP_AGENT_LLM=ollama uv run --group agent python tasks.py api` |
+| Agent eval + A/B (`eval/`) | **Working**: 66 in-scope questions with gold SQL + 10 out-of-scope; arms A (no examples) and B (5 examples), compared by `eval.ab` ([`AB_TEST.md`](AB_TEST.md)) | `uv run python tasks.py eval --llm ollama --arm A\|B`, then `uv run --group agent python -m eval.ab` |
 | Map data build (`pipeline/webdata/`) | **Working** | `uv run python tasks.py web-data` |
 | Spark cleaning job (`pipeline/spark/`) | **Working** (Docker on Windows, native on Linux) | `uv run python tasks.py spark` |
 | Bay Wheels download + cleaning (`pipeline/baywheels.py`) | **Working** (DuckDB, no Spark) | `uv run python tasks.py baywheels` |
@@ -28,13 +29,16 @@
 | Oracle VM deployment (`deploy/oracle/`) | **Running**: Dagster daemon + UI on the VM (2 OCPU / 12 GB), on `1fd224a`+, `gcp` mode. Sensors and schedules start as RUNNING (until 2026-10-14 the schedules had never been switched on, so nothing scheduled had run) | [`ORACLE_VM.md`](ORACLE_VM.md) |
 | Terraform (`infra/terraform/`) | M0 **applied** to GCP project `transitpulse-511002` (33 resources). `cloudrun.tf` + `wif.tf` (10 more resources) are **applied** | see `infra/README.md` |
 | Container image (`Dockerfile`) | **Built, tested and pushed by `deploy.yml`** on every push to `main` (non-root, 119 MB compressed) | `uv run python tasks.py image` |
+| Local stack (`docker-compose.yml`) | **Working**: the API image with the agent on, an Ollama container and a one-shot model pull (see §5 "`make up`") | `make up` / `uv run python tasks.py up` → http://localhost:8000 |
 | Cloud Run service `transitpulse-api` (us-west1) | **Live** (Terraform applied; image `api:<commit sha>`, deployed by `deploy.yml`). Ask agent off (`/api/ask` → 503) | [`CLOUD_RUN.md`](CLOUD_RUN.md) |
 | Cloud Run deploy (`.github/workflows/deploy.yml`) | **On** (`DEPLOY_ENABLED=true`): every push to `main` builds, smoke-tests, pushes and deploys (first seen for `ab55544`, 2026-10-14) | [`CLOUD_RUN.md`](CLOUD_RUN.md) |
 | Pages at braedynthompson.com/transitpulse/ | **Live**: the portfolio repo publishes `static/transitpulse/`; re-export only when the website code changes | [`CLOUD_RUN.md`](CLOUD_RUN.md) §5 |
 | Load test (`load/`) | **Working** locally: Locust at 1/10/25 users on a fixture warehouse with the fake LLM | `uv run python tasks.py load` |
 | CI (`.github/workflows/ci.yml`) | **Runs on GitHub** (python, spark, web, container, terraform jobs) | — |
-| eBART causal study (`analysis/causal/`) | **Done** (pre-registered + Amendment 1; one real run): verdict **new**, served by `GET /api/findings` and the Findings band; write-up in [`FINDINGS.md`](FINDINGS.md) | `uv run python tasks.py causal` (see §5 "Causal study") |
-| Fine-tuning, BI reports | **Not implemented** | — |
+| eBART causal study (`analysis/causal/`) | **Done** (pre-registered + Amendment 1; one real run): verdict **new**, served by `GET /api/findings` and the Findings band; write-up in [`FINDINGS.md`](FINDINGS.md). A post-hoc trend-adjusted estimate (not pre-registered) is in `trend_adjusted.json` and FINDINGS.md only | `uv run python tasks.py causal`; `uv run --group ml python -m analysis.causal.trend_adjusted` (see §5 "Causal study") |
+| BI (`bi/README.md`) | **Guide only**: Looker Studio and Power BI build steps, DAX measures and a check week (2025-W39) whose values a localdata test checks. The dashboards themselves are not built | — |
+| Fine-tuning (M6) | **Not implemented**; deferred to its own build loop (owner decision 13 in [`OWNER_STEPS.md`](OWNER_STEPS.md)) | — |
+| Owner steps | The remaining steps that need accounts, tools, devices or decisions, in order: [`OWNER_STEPS.md`](OWNER_STEPS.md) | — |
 
 ---
 
@@ -85,8 +89,18 @@ S3 baywheels-data ──► data/raw/baywheels/*.zip ─► DuckDB clean ─► 
    (focus trapped, Esc closes, body scroll locked). Below 600 px the CTA becomes a search icon.
 2. **Hero + Ask card**: question input, 4 suggestion chips, Ask button. Submitting POSTs to `/api/ask` and reads
    the streamed answer (`web/js/ask.js`):
-   - Progress steps are listed as `thinking` / `sql` / `rows` / `answer` events arrive; the answer renders as a
-     heading (focused), a table and a "Show SQL" disclosure.
+   - Progress steps are listed as `thinking` / `sql` / `rows` / `answer` events arrive. The answer renders in a card:
+     the question (body-md-strong), the answer as a `display-lg` heading (focused), a table (numeric columns
+     right-aligned, header included) and a "Show SQL" disclosure.
+   - **Copy SQL:** inside the disclosure, an icon button ("Copy SQL") writes the query with
+     `navigator.clipboard.writeText`; the toast (`aria-live`) says "Copied", or "Couldn't copy…" when the browser
+     refuses.
+   - **History:** each answer or refusal (never an error) is stored in `sessionStorage` (`tp-ask-history`): question,
+     answer text, columns, the first 20 rows and the SQL, at most 5, newest first. After a reload they render under
+     the Ask card as "Earlier answers" through the same escaping as a live answer; while asking, the list shows the
+     stored ones except the newest, which is on screen. Stored entries count as untrusted: they are reshaped on read
+     (wrong types dropped) and every field is escaped. Storage that is full, off or corrupt reads as no history. In
+     static mode (no server) nothing is stored or shown.
    - A refusal shows its message and suggestion chips (a chip asks its question); an `error` event shows the message.
    - 503 → "The analyst isn't connected yet…" (the default: the agent is off); 429 → "Lots of questions right now";
      other 4xx (e.g. 422) → "That question couldn't be read…"; 5xx → "The analyst ran into a problem…"; a failed
@@ -99,7 +113,14 @@ S3 baywheels-data ──► data/raw/baywheels/*.zip ─► DuckDB clean ─► 
 5. **Forecast** explorer (`web/js/forecast.js`, see below).
 6. **Findings** (black band, `web/js/findings.js`, see below).
 7. **About**: three FAQ rows (`<details>`).
-8. **Footer**: data sources with licences (Bay Wheels links its Data License Agreement), GitHub link, credits.
+8. **Footer**: data sources with licences (Bay Wheels links its Data License Agreement); links to GitHub, the eBART
+   and A/B write-ups and the style guide; credits; "Data through Dec 31, 2025." from the KPIs (left out without them).
+
+**`<head>`:** title, description, favicon, and Open Graph tags: `og:title`, `og:description`, `og:type` website,
+`og:url` `https://braedynthompson.com/transitpulse/`, `og:image` `https://braedynthompson.com/transitpulse/img/og.png`
+(absolute, as crawlers need) with its width 1200, height 630 and alt text, and `twitter:card`
+`summary_large_image`. `web/img/og.png` is the train map at 8:00 AM on a Wednesday (104 KB), written by
+`tasks.py screenshots`. `<meta name="tp-looker-url" content="">` holds the dashboard URL (see Trends band).
 
 ### Findings band
 `web/js/findings.js` reads `GET /api/findings` (through `apiUrl`, so the exported pages call Cloud Run). Every
@@ -130,7 +151,9 @@ number comes from the JSON:
   an error message with Retry.
 
 ### Trends band
-- Loads `/api/kpis`, `/api/trends/ridership` and (in parallel, optional) `/api/trends/bikes-vs-trains`.
+- Loads `/api/kpis`, `/api/trends/ridership` and (in parallel, optional) `/api/trends/bikes-vs-trains`. `/api/kpis` is
+  fetched once per page (`getKpis()`), and the map's text alternative and the footer reuse that response; Retry
+  fetches it again.
 - **While loading:** skeletons of the final size; tiles and charts don't shift when the data arrives.
 - **"Data through Dec 31, 2025. Tiles cover the 28 days to that date."** (caption, `mute`).
 - **Four `stat-tile`s** (`auto-fit` grid: 1 column on phones, 4 on desktop), each with a value, a delta line and an
@@ -151,9 +174,15 @@ number comes from the JSON:
   - Any other failure → error message + Retry.
   - Empty marts → one-sentence message.
   - Bike data missing (404) → only the bikes card shows a message; the BART parts stay.
+- **Dashboard card** (`initDashboard`): only when `<meta name="tp-looker-url">` holds an `https:` URL; empty or
+  anything else renders nothing. It is a chart card titled "Dashboard" under the bikes card, independent of the API.
+  On cards at least 768 px wide (a container query) it shows the URL as given in an `iframe` (`loading="lazy"`,
+  4:3 `aspect-ratio`, a title); narrower cards show an "Open dashboard" pill link instead. The live pages have no
+  URL yet (owner step, `bi/README.md`).
 
 ### Forecast explorer
-- **Station picker:** an ARIA combobox matching names or codes ("mac" → MacArthur, "12" → 12th St Oakland).
+- **Station picker:** an ARIA combobox matching names or codes ("mac" → MacArthur, "12" → 12th St Oakland). A
+  click or tap on a station on the live map picks it too (a `tp:station` event on `document`), without scrolling.
   ↑/↓ moves through the options, Enter picks, Esc closes the list. Below it, chips for Embarcadero, Montgomery St,
   Powell St, 12th St Oakland and MacArthur (the selected chip is outlined). Embarcadero loads by default.
 - **Chart card:** station name; a caption about the first Tuesday in the forecast, with the year and in the past
@@ -207,6 +236,10 @@ number comes from the JSON:
   2 min". Station: name + lines and, once its summary has loaded (one request per station, cached in the page),
   "Entries on Dec 31, 2025: 4,956 (17% of 2019)". With no warehouse (503) or on an error there's no numbers line.
   Tap elsewhere to dismiss.
+- **Map → forecast:** clicking or tapping a station (not hovering) pins its tooltip and selects it in the forecast
+  explorer; the page doesn't scroll. The station tooltip ends with a "See its forecast" link to `#forecast`, the
+  only part of a tooltip that takes clicks (24 px tall, 44 px on touch). Tooltips are rewritten only when their
+  text changes, so the link stays clickable while trains move.
 - **List view**: table of running trains (line, destination, next stop, minutes), refreshed every 5 s.
 - **Out of service** (current feed: last train ends 1:52 AM; first departs 4:28 AM weekdays, 5:28 AM Saturdays,
   7:28 AM Sundays): a card says when service resumes, with *Jump to 8:00 AM*.
@@ -214,14 +247,26 @@ number comes from the JSON:
   the bundled feed ends **Jan 10, 2027**): the card says "This site's BART timetable ended on Jan 10, 2027. Positions
   can't be shown until it's updated." (or "starts on …"), without the Jump button.
 - **Performance**: redraws ~4×/s at 1×, ~20×/s at 10×, every frame at 60×; stops while off-screen or in a hidden tab.
-- **Accessibility**: a polite live region announces "N trains running on K lines at h:mm" once a minute; reduced
+- **Accessibility**: a polite live region announces "N trains running on K lines at h:mm" once a minute, followed by
+  "Busiest station in the latest data: Powell Street." from the KPIs' busiest-station tile (never "right now": the
+  ridership data ends Dec 31, 2025; left out when the KPIs are unavailable); reduced
   motion → positions update every 30 s with no animation; all controls are buttons ≥ 44 px on touch; skip link.
 - **Failure**: if the map data can't load, the map area shows an error message with Retry.
 
 ### Design system
 `web/css/tokens.css` mirrors `docs/DESIGN.md` **v1.0.1** (frozen). Black/white interface; line colours only in data
-marks; Inter 400/500/700; pills for controls, 16 px cards. Chart, trends and forecast styles are in
-`web/css/charts.css`. Deviations awaiting v1.1 are listed in `DESIGN_BACKLOG.md`.
+marks; Inter 400/500/700; pills for controls, 16 px cards. Chart, trends, forecast and dashboard styles are in
+`web/css/charts.css`. Deviations awaiting v1.1 are the numbered "v1.1 list" in `DESIGN_BACKLOG.md` (19 items).
+- **Style guide** (`web/styleguide.html` + `web/js/styleguide.js`, linked from the footer, `noindex`): each text
+  token on the surfaces DESIGN.md §2 allows; type samples; tables of every custom property, read from
+  `tokens.css`'s own `:root` rules (media-query overrides included, with a sample swatch, size, radius, bar or
+  shadow); the icon sprite, copied from `index.html`; and every component block in `components.css`.
+- **Accessibility tests:** axe's `color-contrast` rule finds 0 violations on the page with every section loaded
+  (390 and 1440 px) and on the style guide (`tests/web/a11y.spec.js`). No token value needed changing.
+- **Lighthouse** (`tests/web/lighthouse.mjs`, `tasks.py lighthouse`): starts its own server (local DuckDB when
+  present), runs the default mobile config N times in Playwright's Chromium and prints the median-performance run.
+  Last result (3 runs): performance 98, accessibility 100, best practices 100, LCP 2.3 s, CLS 0. `--assert` gates
+  90/95/95. Not in CI, because performance scores on shared runners vary.
 
 ---
 
@@ -229,7 +274,7 @@ marks; Inter 400/500/700; pills for controls, 16 px cards. Chart, trends and for
 
 | Method | Path | Current behaviour |
 |---|---|---|
-| GET | `/` and static files | serves `web/`. Cache: `/fonts/*` 1 year, `/data/*` 1 day, everything else `no-cache` |
+| GET | `/` and static files | serves `web/`. Cache: `/fonts/*` 1 year, `/data/*` 1 day, everything else `no-cache`. Responses over 1 KB are gzipped when the client accepts it (pages and JSON alike; the `text/event-stream` of `/api/ask` never is) |
 | GET | `/healthz` | `{"ok": true}` |
 | GET | `/api/kpis` | `{data_through, window:{start,end,days}, tiles:[{id,label,value,unit,delta,delta_label,definition}], source}` over the 28 days ending at the latest date in `mart_kpis_daily` |
 | GET | `/api/trends/ridership` | `{data_through, rows:[{month_start, days, avg_daily_entries, avg_service_weekday_recovery}], source}` from `mart_ridership_monthly` |
@@ -269,7 +314,8 @@ Configuration: environment variables with prefix `TP_` (`api/settings.py`).
 - **Graph** (`graph.py`, LangGraph `StateGraph`):
   - `route`: a keyword pre-filter refuses requests to change data, prompt-injection phrases and secrets; otherwise
     the LLM answers `sql`, `forecast` or `refuse`.
-  - `sql`: the LLM writes BigQuery Standard SQL against `marts.<table>` → guardrails → dry run → execute. A rejected
+  - `sql`: the LLM writes BigQuery Standard SQL against `marts.<table>` → guardrails → dry run → execute. The SQL
+    prompt carries `TP_AGENT_EXAMPLES_K` (default **5**) retrieved examples (see Examples below). A rejected
     or failed query is retried **once** with the error in the prompt; a second failure ends with `error`
     (`sql_rejected`, `query_failed` or `too_expensive`).
   - `forecast`: finds the station (4-letter code or the longest station name in the question) and runs a fixed query
@@ -293,19 +339,41 @@ Configuration: environment variables with prefix `TP_` (`api/settings.py`).
   `request.client.host`, or the right-most `X-Forwarded-For` entry only with `TP_TRUST_PROXY=true`. A per-process
   daily budget of warehouse bytes (`TP_AGENT_DAILY_BYTES`, 10 GB, resets at UTC midnight): spent → 429 `agent_busy`
   before streaming, or an `agent_busy` error if a query would exceed it.
+- **Examples** (`prompts.py`, `api/agent/examples.json`):
+  - The pool is the eval set's 63 in-scope `sql` questions with their gold SQL (id, question, sql, tags), exported
+    by `python -m eval.examples --write`; `python -m eval.examples` exits 1 if the file is out of date. It ships in
+    the image (`api/` is copied whole).
+  - `retrieve_examples(question, k, exclude)`: BM25 (k1 1.2, b 0.75) over lower-cased word tokens of the pool's
+    questions, standard library only, ties in pool order. Production excludes nothing; the eval excludes the
+    question's own id (leave-one-out, via the graph state's `exclude_examples`).
+  - `sql_prompt(question, previous_sql, error, *, examples=())`: with examples the user message starts with
+    "Examples of questions and SQL that answers them:" and each `Question: …` / `SQL: …` pair, then
+    "Now write the SQL for this." and the question. With `TP_AGENT_EXAMPLES_K=0` the prompts are byte-identical to
+    arm A (fingerprint `85a1cbe8…da56`). Route and answer prompts never carry examples.
 - **LLM** (`llm.py`, `TP_AGENT_LLM`): `fake` (default; deterministic test double with a few canned queries),
   `ollama` (`TP_OLLAMA_MODEL` llama3.1:8b at `TP_OLLAMA_URL`), `gemini` (`TP_GEMINI_MODEL`, key from
   `GOOGLE_API_KEY`).
 - **Tracing** (`tracing.py`): Langfuse v4 callback only when `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are set;
   otherwise langfuse isn't imported.
 - **Eval** (`eval/`): `questions.yaml` has 66 in-scope questions (tags kpi, station, trend, bikes, forecast, od) with
-  BigQuery-dialect gold SQL and 10 that must be refused. `python -m eval.run_eval --llm fake|ollama|gemini
-  --warehouse duckdb [--duckdb-path] [--ids] [--json] [--save-summary] [--results-dir]` scores execution accuracy
-  (`eval/scoring.py`, defined in `docs/METRICS.md`), refusal accuracy, guardrail rejections and latency, and writes
-  the per-question detail to `eval/results/` (gitignored). `summary-<llm>-<ts>.json` (committed) is written only
-  with `--save-summary`; the one committed summary is `summary-ollama-20261009T143938Z.json`. `--llm fake` is an oracle (1.0 by
-  construction). **llama3.1:8b on the local DuckDB: execution accuracy 0.27 (18/66), refusal accuracy 1.0,
-  0 guardrail rejections, 11 failed queries, 7 in-scope questions refused, p50 2.4 s / p95 6.4 s.**
+  BigQuery-dialect gold SQL and 10 that must be refused (sha256 frozen in `eval/ab.py`).
+  - `python -m eval.run_eval --llm fake|ollama|gemini --warehouse duckdb [--arm A|B] [--duckdb-path] [--ids]
+    [--json] [--save-summary] [--results-dir]` scores execution accuracy (`eval/scoring.py`, defined in
+    `docs/METRICS.md`), refusal accuracy, guardrail rejections, latency and the mean SQL-prompt length, and writes
+    the per-question detail to `eval/results/<llm>-<arm>-<ts>.json` (gitignored). `--arm A` (default) runs with no
+    examples, `--arm B` with 5 (each question's own left out). `--llm fake` is an oracle (1.0 by construction).
+  - `--save-summary` also writes `summary-<llm>-<arm>-<ts>.json` (committed), which adds `arm`, `examples_k`,
+    `eval_sha256`, `ollama_version` and `per_question` ({id: {correct, outcome}}). Committed: the two A/B arms
+    (`summary-ollama-A-20261015T013021Z.json`, `summary-ollama-B-20261015T013355Z.json`) and the older
+    `summary-ollama-20261009T143938Z.json`.
+  - `python -m eval.ab [--llm ollama:llama3.1:8b] [--json] [--power] [--check]` (standard library only) pairs the
+    newest A and B summaries by question: exact McNemar, a paired bootstrap CI (10,000, seed 0), the decision rule,
+    and `--power` (simulation from arm A's accuracy). `--check` exits 1 if an arm is missing, `per_question` doesn't
+    cover all 76 ids, `eval_sha256` isn't the frozen hash, `docs/AB_TEST.md`'s Results numbers differ from a
+    recomputation, or `Settings.agent_examples_k`'s default isn't what the rule gives.
+  - **llama3.1:8b on the local DuckDB (Ollama 0.40.4):** arm A 0.2727 (18/66), arm B **0.5000 (33/66)**; refusal
+    accuracy 1.0 in both; discordant b = 5, c = 20, McNemar p = 0.0041; acc_B − acc_A +0.227 [+0.091, +0.364];
+    p50 / p95 2.5 / 6.7 s (A) and 1.7 / 4.7 s (B). Minimum detectable improvement at 80% power: +14 points.
 
 ---
 
@@ -488,6 +556,17 @@ the nearby legacy stations, and did it bring new riders or only move them? The w
   - Buffer +0.5% [−1.7%, +3.0%].
   - Weekly pre-trend RI p: legacy 0.43, corridor 0.66. Legacy CR1 Wald p = 0.027.
   - Monthly: corridor +6.4% [+2.2%, +12.3%], with pre-trend RI p 0.11 (legacy 0.069).
+- **Post-hoc trend-adjusted estimate (`trend_adjusted.py`; not pre-registered, decided 2026-10-14).**
+  - Per unit (corridor aggregate, pooled legacy), gap_t = treated log − mean control log. Monthly: OLS of gap_t on
+    t over the 28 pre months, then the mean over the 21 post months of gap_t − (α + β·t). Weekly: the weekly
+    double difference minus the unit's monthly β × 12.77 months (mean post week − mean pre week).
+  - Inference: the same procedure on all 5,984 pre-registered sets of 3 controls (corridor sets summed);
+    [b − q.975, b − q.025] and the two-sided RI p.
+  - `--write` writes `analysis/causal/trend_adjusted.json` (sorted keys, 6 decimals); `--check` recomputes and exits
+    1 on any difference; `--summary` prints the headline numbers. It never touches `findings.json`, the PNGs or
+    the site.
+  - Results: corridor monthly −0.1% [−4.3%, +3.2%], weekly +1.0% [−2.4%, +4.2%] (β = +0.0025 log points a month);
+    legacy monthly −26.5% [−29.1%, −24.0%], weekly −25.9% [−28.2%, −23.8%]. The corridor intervals contain 0.
 
 ### Dagster (`pipeline/definitions.py`)
 - **Assets:**
@@ -525,7 +604,7 @@ the nearby legacy stations, and did it bring new riders or only move them? The w
 - `bootstrap.sh` installs and updates everything (apt or dnf, Java 17, uv, `uv sync --frozen`, `dbt parse`). It
   starts the services only once the key is in place. Steps are in [`ORACLE_VM.md`](ORACLE_VM.md).
 
-### Cloud Run (`Dockerfile`, `infra/terraform/cloudrun.tf` + `wif.tf`, `deploy.yml`; live, deploys from GitHub off)
+### Cloud Run (`Dockerfile`, `infra/terraform/cloudrun.tf` + `wif.tf`, `deploy.yml`; live, deploys on every push to `main`)
 - **Image.**
   - Build stage: `python:3.12-slim-bookworm` + the uv binary. It runs
     `uv sync --frozen --no-dev --no-default-groups --group agent --no-install-project` into `/app/.venv` (main
@@ -543,7 +622,7 @@ the nearby legacy stations, and did it bring new riders or only move them? The w
   - Env: `TP_WAREHOUSE=bigquery`, `TP_GCP_PROJECT`, `TP_TRUST_PROXY=true`, `TP_AGENT_ENABLED` from
     `var.agent_enabled` (default **false**). Only when that is true do `TP_AGENT_LLM=gemini`, `TP_GEMINI_MODEL` and
     `GOOGLE_API_KEY` (Secret Manager `transitpulse-gemini-api-key`, version `latest`, added by hand) appear, along
-    with `sa-agent`'s access to that secret.
+    with `sa-agent`'s access to that secret. `TP_AGENT_EXAMPLES_K` is not set, so the agent uses the default 5.
   - The image is in `ignore_changes`: the first revision uses Google's `hello` placeholder, and CI owns the image
     after that.
   - `allUsers` has `run.invoker` on this service only.
@@ -564,6 +643,28 @@ the nearby legacy stations, and did it bring new riders or only move them? The w
   - No Terraform in Actions.
 - Applying it, switching it on, enabling the agent, quotas, rollback, costs and teardown are in
   [`CLOUD_RUN.md`](CLOUD_RUN.md).
+
+### `make up` (`docker-compose.yml`, `tasks.py up`)
+- **Services:** `ollama` (`ollama/ollama:0.40.4`, pinned to the version the A/B ran on; models in the named volume
+  `transitpulse_ollama`, or in a host folder when `TP_OLLAMA_DATA` is set; healthy once `ollama list` answers);
+  `ollama-pull` (one shot: `ollama pull ${TP_OLLAMA_MODEL:-llama3.1:8b}` against `ollama`, then exits); `api` (built
+  from the `Dockerfile`, `${TP_PORT:-8000}:8080`, healthy once `/api/health` answers, checked with Python because the
+  image has no curl). `api` starts only after the pull completed.
+- **The API's settings:** `TP_AGENT_ENABLED=true`, `TP_AGENT_LLM=${TP_AGENT_LLM:-ollama}`,
+  `TP_OLLAMA_URL=${TP_OLLAMA_URL:-http://ollama:11434}`, `TP_OLLAMA_MODEL`, `TP_WAREHOUSE=${TP_WAREHOUSE:-none}`,
+  `TP_DUCKDB_PATH=/app/data/transitpulse.duckdb`, with `./data` mounted read-only.
+- **`tasks.py up`** runs `docker compose up --build` and, like `tasks.py api`, sets `TP_WAREHOUSE=duckdb` when
+  `data/transitpulse.duckdb` exists (unless `TP_WAREHOUSE` or `TP_GCP_PROJECT` is set). The Makefile's `up` calls it.
+- **From a fresh clone** (no warehouse) the data endpoints answer 503 and a data question ends with one `error` event
+  (`agent_unavailable`, "The analyst isn't connected to the data right now."), never a 500.
+- **CPU by default.** The compose file's comment names the GPU options: `gpus: all` on `ollama`, or
+  `TP_OLLAMA_URL=http://host.docker.internal:11434` for a host Ollama.
+- **Size:** the Ollama image is 9.4 GB on disk; `llama3.1:8b` adds about 4.9 GB to the volume.
+- **Last run** (2026-10-14, by hand, `TP_OLLAMA_MODEL=qwen2.5-coder:0.5b` because RAM was short, local warehouse): the
+  pull succeeded, the API turned healthy, `/api/kpis` answered from the read-only DuckDB on the Windows bind mount,
+  and "Which station had the most entries on 2025-12-31?" streamed `thinking → sql → rows → answer` in 8.3 s on CPU.
+  The 0.5B model's SQL summed all of 2025 while the answer said "on 2025-12-31", so the wiring works but that small
+  model's answers can't be trusted.
 
 ### Load test (`load/`)
 - `load/run_local.py`:
@@ -586,17 +687,22 @@ the nearby legacy stations, and did it bring new riders or only move them? The w
 
 | Suite | Command | Count | Status |
 |---|---|---|---|
-| Python unit (map data, API data endpoints, Bay Wheels cleaning, dbt build on a generated fixture, dbt regressions (backfill, ISO year, rolling window), forecast + calibration, Dagster definitions and schedules, VM files, agent guardrails / graph / `/api/ask` / eval, Cloud Run Terraform + deploy workflow, cross-origin, causal study (prereg + amendment, synthetic data, inference, monthly parser, FINDINGS.md vs findings.json), `/api/findings`) | `uv run --group dbt --group ml --group pipeline --group agent pytest -m "not spark and not gcp and not localdata and not docker"` | 143 (33 in `tests/test_causal.py`, 10 in `tests/test_api_findings.py`) | pass (~70 s) |
-| Local warehouse (real data, incl. every gold SQL of the agent eval) | `uv run --group dbt --group ml --group agent pytest -m localdata tests/local` | 12 (4 in `test_causal_local.py`: the committed weekly CSV equals a fresh build, the opening date, the monthly cross-check, new-station trips recorded through) | pass (needs `data/transitpulse.duckdb` with Bay Wheels + forecast) |
+| Python unit (map data, API data endpoints, Bay Wheels cleaning, dbt build on a generated fixture, dbt regressions (backfill, ISO year, rolling window), forecast + calibration, Dagster definitions and schedules, VM files, agent guardrails / graph / `/api/ask` / eval, the M5 A/B (McNemar, bootstrap, power, BM25 retrieval, arm prompts, examples pool, default k, AB_TEST.md), Cloud Run Terraform + deploy workflow, cross-origin, causal study (prereg + amendment, synthetic data, inference, monthly parser, FINDINGS.md vs findings.json, the post-hoc trend adjustment), `/api/findings`, gzip never on the Ask stream, the docs deliverables (BI guide, README diagram + screenshots, design backlog v1.1 list, owner steps), the compose file) | `uv run --group dbt --group ml --group pipeline --group agent pytest -m "not spark and not gcp and not localdata and not docker"` | 167 (37 in `tests/test_causal.py`, 8 in `tests/test_ab.py`, 10 in `tests/test_api_findings.py`, 4 in `tests/test_docs_deliverables.py`, 4 in `tests/test_compose.py`) | pass (~50 s) |
+| Local warehouse (real data, incl. every gold SQL of the agent eval) | `uv run --group dbt --group ml --group agent pytest -m localdata tests/local` | 13 (4 in `test_causal_local.py`: the committed weekly CSV equals a fresh build, the opening date, the monthly cross-check, new-station trips recorded through; 1 in `test_bi_week.py`: the BI guide's check-week values) | pass (needs `data/transitpulse.duckdb` with Bay Wheels + forecast) |
 | Spark job | in Docker: `docker run --rm -v "$PWD:/app" transitpulse-spark python -m pytest tests/spark -m spark` | 1 | pass (auto-skipped on Windows outside Docker) |
 | Browser maths (schedule, timetable range, chart helpers, station search, forecast wording, SSE parser, findings wording) | `node --test tests/web/` | 37 | pass |
-| Browser (Playwright, Chromium; API mocked for data, Ask and Findings tests) | `npx playwright test` | 43 | pass |
+| Browser (Playwright, Chromium; API mocked for data, Ask and Findings tests): layout, map, Trends, forecast, map → forecast, busiest station, dashboard slot, Ask (incl. history, escaping, Copy SQL), Findings, Open Graph, style guide, axe contrast | `npx playwright test` | 57 (4 in `styleguide.spec.js`, 3 in `a11y.spec.js`) | pass |
+| Lighthouse (mobile, local server; not in CI) | `uv run python tasks.py lighthouse --runs 3 --assert` | — | 98 / 100 / 100 (gate 90 / 95 / 95) |
+| README and Open Graph images | `uv run python tasks.py screenshots` (fails if a file is over its size limit) | — | og 104 KB, phone 68 KB, desktop 203 KB |
 | dbt data tests | `uv run python tasks.py dbt` | 73 (+15 models/snapshot) | pass (incremental ~2.3 min) |
 | Shellcheck (VM bootstrap) | `docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:stable deploy/oracle/bootstrap.sh` | — | clean |
 | ARM wheels (pipeline, dbt, ml groups) | `uv pip compile pyproject.toml --group pipeline --group dbt --group ml --python-platform aarch64-manylinux_2_28 --python-version 3.12 --only-binary :all:` | — | resolves |
 | Container (marker `docker`; needs the built image `transitpulse-api:loop`) | `docker build -t transitpulse-api:loop . && uv run pytest -m docker tests/deploy` | 6 (incl. `/api/findings` served from the image) | pass |
+| `make up` without Docker (the compose file as YAML, `tasks.py up`'s warehouse rule) | `uv run pytest tests/test_compose.py` | 4 (in the default suite) | pass |
+| `make up` smoke (marker `docker`): the `api` service only, fake LLM, port 8814, project `tp-compose-smoke`, always taken down | `uv run pytest -m docker tests/compose` | 3 (health and site, `/api/kpis` 200 with the DuckDB file else 503, one terminal Ask event) | pass |
 | Load test (Locust, fixture warehouse, fake LLM) | `uv run --group load --group agent python load/run_local.py [--users N --seconds S]` | — | 0 failures |
 | Workflows | `docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:latest` | — | clean (`ci.yml`, `deploy.yml`) |
+| A/B and post-hoc reproducibility | `uv run --group agent python -m eval.ab --check`, `uv run python -m eval.examples`, `uv run --group ml python -m analysis.causal.trend_adjusted --check` | — | pass |
 | Lint/format | `uv run ruff check . && uv run ruff format --check .` | — | clean |
 | Terraform | `terraform validate` / `fmt -check`; `plan` for the applied M0 resources | — | clean; the M0 plan showed no changes (the M7 files were never planned against the real backend) |
 
@@ -607,8 +713,10 @@ the nearby legacy stations, and did it bring new riders or only move them? The w
 - Local Bay Wheels data covers 2019 and 2025 only (BigQuery has 2018 → 2026-09).
 - The bundled GTFS timetable (`web/data/schedule.json`) ends on 2027-01-10; after that the map shows no trains and
   says the timetable has ended until `web/data` is rebuilt from a newer feed (`tasks.py web-data`).
-- The agent's accuracy with llama3.1:8b is 27% on the eval set; it is off unless `TP_AGENT_ENABLED=true`. Its rate
-  limit and byte budget are per process and in memory.
+- The agent's accuracy with llama3.1:8b is 50% on the eval set with the retrieved examples (27% without); it is
+  off unless `TP_AGENT_ENABLED=true`. The A/B used llama3.1:8b with leave-one-out retrieval from a pool of near-twin
+  questions, so the lift for new kinds of question, and for Gemini (production), is unmeasured. Its rate limit
+  and byte budget are per process and in memory.
 - The forecast's band held 73% of back-test days after calibration (raw p10–p90: 70.5%; nominal 80%), mostly because
   of the Christmas fold (44%), so the site calls it the "model range" and says it is narrower than it should be.
 - Production (BigQuery) serves the pre-calibration run until the Oracle VM runs this code; the API then shows the raw
@@ -618,14 +726,21 @@ the nearby legacy stations, and did it bring new riders or only move them? The w
 - On Windows, Spark runs only through Docker.
 - The eBART study has 3 treated stations and 1 corridor unit, and 20 weekly pre-periods. In the monthly series the
   corridor already drifts up against the controls before the opening, which the pre-registered caution rule doesn't
-  test, so part of the +4.2% may be trend (see `FINDINGS.md` §Limitations).
-- The live Cloud Run image predates `/api/findings`, so the live Findings band shows "The analysis is in progress."
-  until a new image is deployed and the pages are re-exported (`CLOUD_RUN.md` §5).
-- The running Cloud Run image (`manual-2dd730f`) predates `/api/health`; the next deploy adds it. On `*.run.app`,
-  `/healthz` is answered by Google's front end (404), so outside checks use `/api/health`.
+  test. A post-hoc trend-adjusted estimate (not pre-registered) puts the corridor effect at about 0 with an
+  interval containing 0; the pre-registered verdict stays "new" (see `FINDINGS.md`).
+- On `*.run.app`, `/healthz` is answered by Google's front end (404), so outside checks use `/api/health`.
+- The BI dashboards (Looker Studio, Power BI) are not built yet; `bi/README.md` is the guide. Until the owner puts
+  a URL in `<meta name="tp-looker-url">`, the Trends band has no dashboard card.
+- The Open Graph image URL is absolute to braedynthompson.com, the only public host. A copy hosted elsewhere would
+  still point crawlers there.
+- Ask history lives in `sessionStorage`: per tab, gone when the tab closes, and not shared between devices.
+- Lighthouse runs locally only; its numbers come from this PC (simulated mobile throttling), not from the live
+  pages on GitHub Pages and Cloud Run.
+- `make up` runs Ollama on the CPU unless the compose file is edited for a GPU; `llama3.1:8b` needs about 5–6 GB of
+  free RAM there. The compose smoke test runs only the `api` service with the fake LLM, so it doesn't prove the
+  Ollama path; that was checked once by hand with a 0.5B model.
 - The first API request after the service scales to zero takes ~5 s (cold start + first BigQuery queries); later
   ones ~0.15 s. The map needs no API and shows immediately.
-- The load-test numbers are from this PC on a tiny fixture warehouse, not from Cloud Run or BigQuery. Cloud Run's
-  cold start has not been measured.
+- The load-test numbers are from this PC on a tiny fixture warehouse, not from Cloud Run or BigQuery.
 - Static assets have no hashed names: JS/CSS are served `no-cache` (revalidated), fonts are cached a year, and map
   data a day. The timetable is part of the image, so refreshing it means deploying a new image.
