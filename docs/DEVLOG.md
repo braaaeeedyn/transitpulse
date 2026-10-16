@@ -1318,3 +1318,15 @@ the pages (new web code), the `deploy.yml` decision, the live agent (quota, Gemi
 Looker Studio (then the meta URL) and Power BI, the CI identity decisions, the real-device check, an optional Locust
 run against Cloud Run, the month-end bill, and whether to start M6. `npm install` reported 27 advisories (19
 moderate, 8 high) in Lighthouse's dependency tree; dev-only, never in the image, not fixed with `--force`.
+
+## 2026-10-16 · owner steps · site published; Terraform stays manual; quota measured
+**Did**
+- Committed the loop's work in six commits (`62be844..cdea28f`) and pushed; CI and the deploy passed, the live API
+  serves gzip. Re-exported the pages (portfolio `a321d7e`); Pages deployed, `og.png`, `styleguide.html` and CORS
+  check out. Removed the empty `tp-compose-smoke_ollama` volume.
+- The owner chose to keep Terraform manual. `infra/README.md` now lists when to run `terraform apply`.
+
+**Measured.** BigQuery billed per principal per day (`JOBS_BY_PROJECT`): `sa-pipeline` 49.8 GiB on 2026-10-09 (the
+full backfill) and 16.9 GiB on 2026-10-15 (an ingest and rebuild). The runbook's 20 GiB per-user quota would have
+failed pipeline runs, so it is now 30 GiB (under the free tier's ≈ 33 GiB/day), raised for the day of a full backfill.
+The quota is not set yet: it is the owner's console step.

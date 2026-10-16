@@ -123,26 +123,20 @@ git diff --stat f441638 -- pipeline dbt ml deploy pyproject.toml uv.lock
 
 This run changed none of those paths (the loop's guard check proved it), so **no VM update is needed now**.
 
-## 5. Decision: `deploy.yml` skips `terraform apply`
+## 5. Decided: `deploy.yml` skips `terraform apply` (Terraform stays manual)
 
-`deploy.yml` builds, pushes and deploys the image, but it does not run `terraform apply`: infrastructure changes
-(new IAM bindings, the agent switch, CORS origins) are applied by you, locally. Choose:
-
-- **Keep Terraform manual (recommended).** Nothing changes. CI never holds rights to change IAM or secrets; you run
-  `terraform plan` / `apply` for the rare infra change. Then edit the `deploy.yml` line in
-  [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) §M7: replace "to confirm with the user" with "confirmed by the
-  owner on <date>".
-- **Apply from CI.** `sa-deploy` would need project IAM admin, Secret Manager admin and billing rights, and your
-  `terraform.tfvars` values would become GitHub secrets. Ask for a follow-up loop that adds a gated `terraform apply`
-  job; leave the IMPLEMENTATION_PLAN line as it is until then.
+You chose on 2026-10-16 to keep Terraform manual: `deploy.yml` builds, pushes and deploys the image, and you run
+`terraform plan` / `apply` locally for the rare infrastructure change, so CI never holds rights to change IAM,
+secrets or billing. When an apply is needed is listed in [`infra/README.md`](../infra/README.md) "When to run
+`terraform apply`". Nothing to do here.
 
 ## 6. Turn on the live agent
 
 [`CLOUD_RUN.md`](CLOUD_RUN.md) §4, in this order:
 
 1. **BigQuery quota first.** Console → IAM & Admin → Quotas → "BigQuery API" → **Query usage per day per user** →
-   20 GiB. Check the pipeline's peak day first (BigQuery → Administration → Monitoring); it applies to `sa-pipeline`
-   too.
+   30 GiB. It applies to `sa-pipeline` too, which billed 16.9 GiB on a normal day and 49.8 GiB on the full backfill
+   ([`CLOUD_RUN.md`](CLOUD_RUN.md) §4): raise it for the day of a full backfill.
 2. **The Gemini key** (Google AI Studio), as a new secret version:
    ```sh
    printf '%s' "$GEMINI_KEY" | gcloud secrets versions add transitpulse-gemini-api-key --data-file=- --project transitpulse-511002
