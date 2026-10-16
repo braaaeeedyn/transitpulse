@@ -1,7 +1,16 @@
 """Prompts and the schema the LLM sees. The LLM writes BigQuery Standard SQL against marts.<table>; the guardrails
 transpile it for DuckDB when the local warehouse is used."""
 
+import json
+import math
+import re
+from collections import Counter
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+from functools import cache
+from pathlib import Path
+
+EXAMPLES_PATH = Path(__file__).with_name("examples.json")
 
 SCHEMA = """\
 marts.dim_date(date_day DATE, year INT64, month INT64, iso_week INT64, iso_year INT64, weekday INT64 -- 1 = Sunday .. 7 = Saturday,
@@ -71,11 +80,56 @@ def route_prompt(question: str) -> Prompt:
     return Prompt("route", ROUTE_SYSTEM, f"Question: {question}\nOne word:", question)
 
 
-def sql_prompt(question: str, previous_sql: str | None = None, error: str | None = None) -> Prompt:
+def sql_prompt(
+    question: str, previous_sql: str | None = None, error: str | None = None, *, examples: Sequence[dict] = ()
+) -> Prompt:
+    """With `examples` (dicts with question and sql, from `retrieve_examples`) the user message starts with them;
+    without, it is exactly the arm-A prompt."""
     user = f"Question: {question}"
+    if examples:
+        shown = "\n\n".join(f"Question: {x['question']}\nSQL: {x['sql']}" for x in examples)
+        user = f"Examples of questions and SQL that answers them:\n\n{shown}\n\nNow write the SQL for this.\n{user}"
     if error:
         user += f"\n\nYour previous SQL:\n{previous_sql}\nfailed with: {error}\nWrite a corrected query."
     return Prompt("sql", SQL_SYSTEM, user, question, error)
+
+
+@cache
+def example_pool() -> tuple[dict, ...]:
+    """The few-shot pool: eval/questions.yaml's in-scope SQL questions, exported by `python -m eval.examples --write`
+    so the API image has it without eval/."""
+    return tuple(json.loads(EXAMPLES_PATH.read_text(encoding="utf-8")))
+
+
+def _tokens(text: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", text.lower())
+
+
+def retrieve_examples(question: str, k: int, exclude: Iterable[str] = (), pool=None) -> list[dict]:
+    """The k pool examples whose questions best match `question` by BM25 (k1 1.2, b 0.75), ties in pool order.
+    `exclude` drops ids first (the eval's leave-one-out).
+    ponytail: lexical only; semantic retrieval needs an embedding API at request time. Revisit if a hosted
+    embedder is free."""
+    if k <= 0:
+        return []
+    skip = set(exclude)
+    docs = [x for x in (example_pool() if pool is None else pool) if x["id"] not in skip]
+    if not docs:
+        return []
+    toks = [_tokens(x["question"]) for x in docs]
+    avg = sum(map(len, toks)) / len(toks)
+    df = Counter(t for ts in toks for t in set(ts))
+    idf = {t: math.log((len(docs) - n + 0.5) / (n + 0.5) + 1) for t, n in df.items()}
+    query = _tokens(question)
+    k1, b = 1.2, 0.75
+
+    def score(ts: list[str]) -> float:
+        tf = Counter(ts)
+        norm = k1 * (1 - b + b * len(ts) / avg)
+        return sum(idf[t] * tf[t] * (k1 + 1) / (tf[t] + norm) for t in query if t in tf)
+
+    ranked = sorted(range(len(docs)), key=lambda i: (-score(toks[i]), i))
+    return [docs[i] for i in ranked[:k]]
 
 
 def answer_prompt(question: str, columns: list[str], rows: list[list], sql: str) -> Prompt:

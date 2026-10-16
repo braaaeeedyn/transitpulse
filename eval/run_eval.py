@@ -1,21 +1,26 @@
 """Run the Ask TransitPulse eval set (eval/questions.yaml) through the agent and score it.
 
-    uv run --group agent python -m eval.run_eval --llm fake|ollama|gemini --warehouse duckdb
+    uv run --group agent python -m eval.run_eval --llm fake|ollama|gemini --warehouse duckdb [--arm A|B]
         [--duckdb-path data/transitpulse.duckdb] [--ids k01,s02] [--json] [--save-summary] [--results-dir DIR]
 
 Reports execution accuracy (in-scope questions whose answer rows match the gold rows, see eval/scoring.py), refusal
 accuracy (out-of-scope questions refused; in-scope ones that were refused count as wrong), guardrail rejections
 (questions that ended because every SQL attempt was rejected) and latency p50/p95. Writes
-eval/results/<llm>-<timestamp>.json with every question's outcome (gitignored). Only with `--save-summary` does it
-also write summary-<llm>-<timestamp>.json, the file that is committed when a run is worth citing; routine runs
-don't add one.
+eval/results/<llm>-<arm>-<timestamp>.json with every question's outcome (gitignored). Only with `--save-summary` does
+it also write summary-<llm>-<arm>-<timestamp>.json, the file that is committed when a run is worth citing; routine
+runs don't add one.
+
+`--arm` is the M5 A/B arm (docs/AB_TEST.md): A = today's prompts, B = A plus 5 retrieved question + SQL examples in
+the SQL prompt, each question's own example left out. `python -m eval.ab` compares the two arms' summaries.
 
 `--llm fake` is the FakeLLM scripted with the gold SQL and routes: an oracle that checks the harness, the guardrails
 and the warehouse path end to end. It should score 1.0; it says nothing about a model.
 """
 
 import argparse
+import dataclasses
 import datetime as dt
+import hashlib
 import json
 import statistics
 import sys
@@ -27,10 +32,23 @@ from api.agent.guardrails import GuardrailError
 from api.agent.llm import FakeLLM, make_llm
 from api.settings import ROOT, Settings
 from api.warehouse import DuckDBWarehouse
-from eval.gold import load_questions, run_gold
+from eval.gold import QUESTIONS, load_questions, run_gold
 from eval.scoring import execution_match, is_ordered
 
 RESULTS = Path(__file__).with_name("results")
+ARMS = {"A": 0, "B": 5}  # retrieved examples in the SQL prompt
+
+
+class PromptMeter:
+    """Passes prompts through to the LLM and records the length of every SQL prompt sent."""
+
+    def __init__(self, llm):
+        self.llm, self.name, self.sql_chars = llm, llm.name, []
+
+    def complete(self, prompt, config=None):
+        if prompt.task == "sql":
+            self.sql_chars.append(len(prompt.system) + len(prompt.user))
+        return self.llm.complete(prompt, config)
 
 
 def oracle_llm(questions: list[dict]) -> FakeLLM:
@@ -50,10 +68,13 @@ def _percentile(values: list[float], q: float) -> float | None:
 
 
 def evaluate(questions: list[dict], deps: AgentDeps) -> dict[str, Any]:
+    meter = PromptMeter(deps.llm)
+    deps = dataclasses.replace(deps, llm=meter)
     graph = build_graph(deps)
     results = []
     for q in questions:
-        events, secs = timed(run_agent(q["question"], deps, graph))
+        # leave-one-out: a question's own example is never retrieved for it
+        events, secs = timed(run_agent(q["question"], deps, graph, exclude_examples=[q["id"]]))
         final_event, final = events[-1] if events else ("error", {"code": "no_events"})
         row: dict[str, Any] = {
             "id": q["id"],
@@ -102,6 +123,8 @@ def evaluate(questions: list[dict], deps: AgentDeps) -> dict[str, Any]:
             )
             for t in tags
         },
+        "sql_prompt_chars_mean": round(statistics.mean(meter.sql_chars), 1) if meter.sql_chars else None,
+        "per_question": {r["id"]: {"correct": r["correct"], "outcome": r["outcome"]} for r in results},
         "results": results,
     }
 
@@ -115,9 +138,19 @@ def _ollama_reachable(url: str) -> bool:
         return False
 
 
+def _ollama_version(url: str) -> str | None:
+    import httpx
+
+    try:
+        return httpx.get(f"{url.rstrip('/')}/api/version", timeout=3).json().get("version")
+    except (httpx.HTTPError, ValueError):
+        return None
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--llm", choices=["fake", "ollama", "gemini"], default="fake")
+    ap.add_argument("--arm", choices=sorted(ARMS), default="A", help="A/B arm: A = no examples, B = 5 (M5)")
     ap.add_argument("--warehouse", choices=["duckdb"], default="duckdb")
     ap.add_argument("--duckdb-path", type=Path, default=ROOT / "data" / "transitpulse.duckdb")
     ap.add_argument("--ids", help="comma-separated question ids to run (default: all)")
@@ -150,6 +183,7 @@ def main(argv: list[str] | None = None) -> int:
         max_bytes=settings.agent_max_bytes,
         row_limit=settings.agent_row_limit,
         timeout_s=settings.agent_timeout_s,
+        examples_k=ARMS[args.arm],
     )
     report = evaluate(questions, deps)
     stamp = dt.datetime.now(dt.UTC).strftime("%Y%m%dT%H%M%SZ")
@@ -157,20 +191,26 @@ def main(argv: list[str] | None = None) -> int:
         "llm": llm.name if args.llm != "fake" else "fake (oracle)",
         "warehouse": f"duckdb:{args.duckdb_path.name}",
         "run_at": stamp,
+        "arm": args.arm,
+        "examples_k": ARMS[args.arm],
+        "eval_sha256": hashlib.sha256(QUESTIONS.read_bytes()).hexdigest(),
+        **({"ollama_version": _ollama_version(settings.ollama_url)} if args.llm == "ollama" else {}),
         **{k: v for k, v in report.items() if k != "results"},
     }
     results_dir = args.results_dir
     results_dir.mkdir(parents=True, exist_ok=True)
     detail = json.dumps({**summary, "results": report["results"]}, indent=2) + "\n"
-    (results_dir / f"{args.llm}-{stamp}.json").write_text(detail, encoding="utf-8", newline="\n")
+    (results_dir / f"{args.llm}-{args.arm}-{stamp}.json").write_text(detail, encoding="utf-8", newline="\n")
     if args.save_summary:
         text = json.dumps(summary, indent=2) + "\n"
-        (results_dir / f"summary-{args.llm}-{stamp}.json").write_text(text, encoding="utf-8", newline="\n")
+        name = f"summary-{args.llm}-{args.arm}-{stamp}.json"
+        (results_dir / name).write_text(text, encoding="utf-8", newline="\n")
     if args.json:
         print(json.dumps(summary))
     else:
         for k, v in summary.items():
-            print(f"{k:>22}: {v}")
+            if k != "per_question":
+                print(f"{k:>22}: {v}")
         for r in report["results"]:
             if not r["correct"]:
                 print(f"  wrong: {r['id']} -> {r['outcome']} {r.get('error_code', '')}")

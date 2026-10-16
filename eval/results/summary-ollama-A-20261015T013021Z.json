@@ -1,0 +1,333 @@
+{
+  "llm": "ollama:llama3.1:8b",
+  "warehouse": "duckdb:transitpulse.duckdb",
+  "run_at": "20261015T013021Z",
+  "arm": "A",
+  "examples_k": 0,
+  "eval_sha256": "45e5a1f238dbfa1363605a6f7c4dfb778be42d29e3437ac69c9e4b79b557277c",
+  "ollama_version": "0.40.4",
+  "n_in_scope": 66,
+  "n_refusal": 10,
+  "execution_accuracy": 0.2727272727272727,
+  "refusal_accuracy": 1.0,
+  "in_scope_refused": 7,
+  "guardrail_rejections": 0,
+  "errors": 11,
+  "latency_p50_s": 2.463,
+  "latency_p95_s": 6.7075,
+  "by_tag": {
+    "bikes": 0.1818,
+    "forecast": 0.5,
+    "kpi": 0.2667,
+    "od": 0.0,
+    "station": 0.4706,
+    "trend": 0.0667
+  },
+  "sql_prompt_chars_mean": 3423.0,
+  "per_question": {
+    "k01": {
+      "correct": true,
+      "outcome": "answer"
+    },
+    "k02": {
+      "correct": true,
+      "outcome": "answer"
+    },
+    "k03": {
+      "correct": false,
+      "outcome": "error"
+    },
+    "k04": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "k05": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "k06": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "k07": {
+      "correct": false,
+      "outcome": "error"
+    },
+    "k08": {
+      "correct": true,
+      "outcome": "answer"
+    },
+    "k09": {
+      "correct": false,
+      "outcome": "error"
+    },
+    "k10": {
+      "correct": false,
+      "outcome": "refusal"
+    },
+    "k11": {
+      "correct": false,
+      "outcome": "error"
+    },
+    "k12": {
+      "correct": false,
+      "outcome": "error"
+    },
+    "k13": {
+      "correct": true,
+      "outcome": "answer"
+    },
+    "k14": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "k15": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "s01": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "s02": {
+      "correct": true,
+      "outcome": "answer"
+    },
+    "s03": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "s04": {
+      "correct": true,
+      "outcome": "answer"
+    },
+    "s05": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "s06": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "s07": {
+      "correct": false,
+      "outcome": "error"
+    },
+    "s08": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "s09": {
+      "correct": true,
+      "outcome": "answer"
+    },
+    "s10": {
+      "correct": true,
+      "outcome": "answer"
+    },
+    "s11": {
+      "correct": true,
+      "outcome": "answer"
+    },
+    "s12": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "s13": {
+      "correct": true,
+      "outcome": "answer"
+    },
+    "s14": {
+      "correct": true,
+      "outcome": "answer"
+    },
+    "s15": {
+      "correct": true,
+      "outcome": "answer"
+    },
+    "s16": {
+      "correct": false,
+      "outcome": "error"
+    },
+    "t01": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "t02": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "t03": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "t04": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "t05": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "t06": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "t07": {
+      "correct": true,
+      "outcome": "answer"
+    },
+    "t08": {
+      "correct": false,
+      "outcome": "error"
+    },
+    "t09": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "t10": {
+      "correct": false,
+      "outcome": "error"
+    },
+    "t11": {
+      "correct": false,
+      "outcome": "error"
+    },
+    "t12": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "b01": {
+      "correct": true,
+      "outcome": "answer"
+    },
+    "b02": {
+      "correct": true,
+      "outcome": "answer"
+    },
+    "b03": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "b04": {
+      "correct": false,
+      "outcome": "refusal"
+    },
+    "b05": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "b06": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "b07": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "b08": {
+      "correct": false,
+      "outcome": "refusal"
+    },
+    "b09": {
+      "correct": false,
+      "outcome": "refusal"
+    },
+    "b10": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "b11": {
+      "correct": false,
+      "outcome": "error"
+    },
+    "o01": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "o02": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "o03": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "o04": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "o05": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "o06": {
+      "correct": false,
+      "outcome": "answer"
+    },
+    "f01": {
+      "correct": true,
+      "outcome": "answer"
+    },
+    "f02": {
+      "correct": true,
+      "outcome": "answer"
+    },
+    "f03": {
+      "correct": true,
+      "outcome": "answer"
+    },
+    "f04": {
+      "correct": false,
+      "outcome": "refusal"
+    },
+    "f05": {
+      "correct": false,
+      "outcome": "refusal"
+    },
+    "f06": {
+      "correct": false,
+      "outcome": "refusal"
+    },
+    "r01": {
+      "correct": true,
+      "outcome": "refusal"
+    },
+    "r02": {
+      "correct": true,
+      "outcome": "refusal"
+    },
+    "r03": {
+      "correct": true,
+      "outcome": "refusal"
+    },
+    "r04": {
+      "correct": true,
+      "outcome": "refusal"
+    },
+    "r05": {
+      "correct": true,
+      "outcome": "refusal"
+    },
+    "r06": {
+      "correct": true,
+      "outcome": "refusal"
+    },
+    "r07": {
+      "correct": true,
+      "outcome": "refusal"
+    },
+    "r08": {
+      "correct": true,
+      "outcome": "refusal"
+    },
+    "r09": {
+      "correct": true,
+      "outcome": "refusal"
+    },
+    "r10": {
+      "correct": true,
+      "outcome": "refusal"
+    }
+  }
+}

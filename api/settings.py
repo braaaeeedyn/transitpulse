@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     agent_rate_per_min: int = 10  # questions per client IP per minute
     agent_daily_bytes: int = 10_000_000_000  # per-process daily budget of BigQuery bytes for agent queries
     agent_timeout_s: float = 20.0  # DuckDB agent queries are interrupted after this
+    # Retrieved question + SQL examples in the SQL prompt (api/agent/examples.json); 0 = none. 5 because arm B won
+    # the M5 A/B test under its pre-registered rule (docs/AB_TEST.md; `python -m eval.ab --check` enforces it).
+    agent_examples_k: int = 5
     # Behind Cloud Run's front end the client IP is the right-most X-Forwarded-For entry; elsewhere the header is
     # client-controlled, so it is only read when this is set.
     trust_proxy: bool = False
