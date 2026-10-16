@@ -19,7 +19,7 @@ import pandas as pd
 import pytest
 from scipy import stats
 
-from analysis.causal import design, did, monthly, panel, synthetic
+from analysis.causal import design, did, monthly, panel, synthetic, trend_adjusted
 
 ROOT = Path(__file__).resolve().parents[1]
 CAUSAL = ROOT / "analysis" / "causal"
@@ -528,3 +528,75 @@ def test_findings_doc_limitations_cover_the_known_threats():
     for needle in needles:
         assert needle in lower, needle
     assert "spillover" in lower or "sutva" in lower
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# post-hoc trend-adjusted estimate (analysis/causal/trend_adjusted.py), not pre-registered
+
+
+def _trend_panel(d, slope: float, effect: float, seed: int = 0) -> pd.DataFrame:
+    """A monthly panel: controls flat (station FE + a shared month effect), the legacy stations with a linear trend in
+    event time and `effect` log points from the opening on."""
+    rng = np.random.default_rng(seed)
+    months = pd.period_range(d.first_month, d.last_month, freq="M").strftime("%Y-%m").tolist()
+    season = rng.normal(0, 0.05, len(months))
+    rows = []
+    for s in list(d.controls) + list(d.treated):
+        fe = rng.normal(math.log(5000), 0.5)
+        for m, shared in zip(months, season, strict=True):
+            e = d.month_e(m)
+            y = fe + shared + rng.normal(0, 0.002)
+            if s in d.treated:
+                y += slope * e + effect * (e >= 0)
+            rows.append({"station_code": s, "month": m, "avg_weekday_entries": math.exp(y)})
+    return did.monthly_panel(pd.DataFrame(rows), d)
+
+
+def _unadjusted_and_adjusted(p, d, unit) -> tuple[float, float]:
+    g, _, e, _ = trend_adjusted.gaps(p, d, unit, "avg_weekday_entries")
+    w = trend_adjusted.trend_weights(e.astype(float), e < 0, e >= 0)
+    return float(g @ did.post_weights(e)), float(g @ w)
+
+
+def test_trend_adjusted_removes_a_linear_pre_trend_with_zero_effect(d):
+    p = _trend_panel(d, slope=0.003, effect=0.0)
+    for unit in trend_adjusted.UNITS:
+        unadjusted, adjusted = _unadjusted_and_adjusted(p, d, unit)
+        assert unadjusted > 0.05, unit  # the trend alone looks like an effect to the plain double difference
+        assert abs(adjusted) < 0.01, unit
+
+
+def test_trend_adjusted_recovers_a_known_effect_on_top_of_a_trend(d):
+    p = _trend_panel(d, slope=0.003, effect=math.log(1.1), seed=1)
+    for unit in trend_adjusted.UNITS:
+        _, adjusted = _unadjusted_and_adjusted(p, d, unit)
+        assert abs(adjusted - math.log(1.1)) < 0.01, unit
+
+
+def test_trend_adjusted_unadjusted_numbers_are_the_preregistered_ones():
+    doc = json.loads(trend_adjusted.OUT.read_text(encoding="utf-8"))
+    findings = json.loads(FINDINGS_JSON.read_text(encoding="utf-8"))
+    for unit in trend_adjusted.UNITS:
+        assert doc["weekly"][unit]["unadjusted_pct"] == pytest.approx(
+            findings["estimates"][unit]["pct"], abs=1e-6
+        )
+        monthly_pct = findings["robustness"]["monthly"][unit]["pct"]
+        assert doc["monthly"][unit]["unadjusted_pct"] == pytest.approx(monthly_pct, abs=1e-6)
+
+
+def test_trend_adjusted_findings_section_quotes_the_json():
+    text = FINDINGS_DOC.read_text(encoding="utf-8")
+    head = "### Post-hoc: trend-adjusted estimate (not pre-registered)\n"
+    assert head in text.split("\n## Limitations\n", 1)[0], "the post-hoc section comes before Limitations"
+    section = text.split(head, 1)[1].split("\n## ", 1)[0]
+    flat = " ".join(section.replace("\u2212", "-").replace("**", "").split())
+    assert "not pre-registered" in flat and "does not change the pre-registered verdict" in flat
+    doc = json.loads(trend_adjusted.OUT.read_text(encoding="utf-8"))
+    assert doc["status"] == "post-hoc, not pre-registered"
+    for freq in ("monthly", "weekly"):
+        for unit in trend_adjusted.UNITS:
+            e = doc[freq][unit]
+            lo, hi = e["placebo_ci_pct"]
+            assert f"{_pct(e['pct'])} ({_pct(lo)} to {_pct(hi)})" in flat, (freq, unit)
+            assert _pct(e["unadjusted_pct"]) in flat, (freq, unit)
+            assert f"{e['trend_per_month']:+.4f}" in flat, (freq, unit)

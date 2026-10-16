@@ -2,8 +2,9 @@
 
 A pre-registered difference-in-differences study of the eBART extension to Pittsburg Center and Antioch, which
 opened on Saturday 26 May 2018. Every number on this page comes from `api/data/findings.json`, written by
-`python -m analysis.causal.run` from the committed data in `analysis/causal/data/`. The site's Findings band and
-`GET /api/findings` serve the same file. Data provided by BART: the inputs are BART's public origin-destination
+`python -m analysis.causal.run` from the committed data in `analysis/causal/data/`, except the post-hoc
+trend-adjusted section, which comes from `analysis/causal/trend_adjusted.json`. The site's Findings band and
+`GET /api/findings` serve findings.json only. Data provided by BART: the inputs are BART's public origin-destination
 ridership data and monthly ridership reports (see `analysis/causal/data/README.md`).
 
 **Short answer.** Under the pre-registered rule the verdict is **new**. The whole line from Concord to Antioch
@@ -11,7 +12,9 @@ ridership data and monthly ridership reports (see `analysis/causal/data/README.m
 **+1.6% to +7.1%**), about 500 more entries a day. The three old stations together lost **-23.9%** (95% placebo
 interval **-25.8% to -21.8%**), so most of the new stations' riders came from them. The pre-registered caution flag
 is off. Read §Interpretation and §Limitations before quoting the +4.2%: the gain fades after the first year, and the
-longer monthly series shows the corridor already rising against the controls in 2016–2017.
+longer monthly series shows the corridor already rising against the controls in 2016–2017. A post-hoc estimate that
+removes that pre-opening trend (not pre-registered, so it does not change the verdict) puts the corridor gain at
+about +1% with an interval that contains 0.
 
 ## Question
 Did the eBART extension to Pittsburg Center (PCTR) and Antioch (ANTC) change ridership at the nearby legacy
@@ -209,6 +212,37 @@ Primary weekly estimates (109 weeks, 34 controls). b is in log points and % = 10
     from the second half of the first year.
   - There is no sign of spillover to the rest of the yellow line.
 
+### Post-hoc: trend-adjusted estimate (not pre-registered)
+- **Status.** Decided on 2026-10-14, after the pre-registered results above were seen, because of the monthly
+  pre-period drift (§Limitations). It is exploratory and **not pre-registered**, and it **does not change the
+  pre-registered verdict** (new) or the caution flag. Code: `analysis/causal/trend_adjusted.py`; numbers:
+  `analysis/causal/trend_adjusted.json` (`python -m analysis.causal.trend_adjusted --check` recomputes them).
+- **Method.** For each unit (the corridor aggregate and the pooled legacy stations, built exactly as the
+  pre-registered analysis builds them), gap_t = treated log outcome − mean control log outcome.
+  - **Monthly (the post-hoc primary):** fit gap_t = α + β·t by OLS over the 28 pre-period months (2016-01 to
+    2018-04), then average gap_t − (α + β·t) over the 21 post months (2018-06 to 2020-02).
+  - **Weekly (secondary):** the pre-registered weekly double difference minus β (from the same unit's monthly
+    pre-period) times the 12.77 months between the mean post week and the mean pre week.
+  - **Inference:** the same procedure on every pre-registered placebo draw (all 5,984 sets of 3 controls; corridor
+    sets summed, as in Amendment 1), giving the pre-registered interval form [b − q(0.975), b − q(0.025)] and a
+    two-sided RI p.
+
+| estimate | pre-registered (no trend term) | trend-adjusted, post-hoc (95% placebo CI) | RI p | pre-trend β (log points / month) |
+|---|---|---|---|---|
+| Corridor, monthly | +6.4% (+2.2% to +12.3%) | **-0.1%** (-4.3% to +3.2%) | 0.95 | +0.0025 |
+| Corridor, weekly | +4.2% (+1.6% to +7.1%) | **+1.0%** (-2.4% to +4.2%) | 0.57 | +0.0025 |
+| Legacy, monthly | -22.5% (-25.4% to -18.9%) | **-26.5%** (-29.1% to -24.0%) | 0.0002 | +0.0021 |
+| Legacy, weekly | -23.9% (-25.8% to -21.8%) | **-25.9%** (-28.2% to -23.8%) | 0.0002 | +0.0021 |
+
+- **Reading.** Both intervals for the corridor contain 0, so once the pre-opening drift (about +0.25% a month
+  against the controls) is carried forward, **the +4.2% is not distinguishable from trend**. The legacy loss
+  survives and gets slightly larger, because the legacy stations were drifting up too. "Moved" describes this
+  estimate best; the pre-registered verdict stays "new" because the rule was fixed before this was looked at.
+- **Its own limits.** A straight line through 28 months, extrapolated 21 months ahead, is a strong assumption. Most
+  of the rise is in 2016: the monthly corridor pre-bins go from -6.8% (months -29 to -26) to -0.8% (months -19 to
+  -17), then stay between -2.6% and 0. If the drift had ended by 2017, this over-corrects. Choosing the adjustment after seeing the results is exactly what the pre-registration exists to
+  prevent, so this section is a sensitivity check, not a finding.
+
 ## Limitations
 - **Few treated units.** There are 3 legacy stations and 1 corridor unit. Placebo/RI inference is exact only under
   its exchangeability assumption, and the per-station intervals rest on 34 placebos.
@@ -218,9 +252,10 @@ Primary weekly estimates (109 weeks, 34 controls). b is in log points and % = 10
 - **A pre-existing upward drift in the monthly data.** Against the controls, the corridor rose about 6.5% from early
   2016 to spring 2018 (monthly pre-trend RI p 0.11; legacy 0.069).
   - If that drift had continued after the opening, it alone could account for much of the +4.2%.
-  - The pre-registered caution rule doesn't test the monthly pre-trend, so the flag is off. The trend-adjusted
-    estimate was not pre-registered and is not computed here.
-  - Treat "new riders" as **a small effect that may partly be trend**, not as a firm finding.
+  - The pre-registered caution rule doesn't test the monthly pre-trend, so the flag is off. A trend-adjusted
+    estimate, chosen after the results and not pre-registered, is in §Interpretation (Post-hoc): it puts the
+    corridor effect at about 0.
+  - Treat "new riders" as **a small effect that may be mostly trend**, not as a firm finding.
 - **The monthly data are average weekdays only**, so they miss weekend ridership. They come from BART's published
   average-weekday OD workbooks, not the daily files. They agree with the daily files to a 0.78% median (§Data), but
   which days count as weekdays and holidays is BART's own definition.
