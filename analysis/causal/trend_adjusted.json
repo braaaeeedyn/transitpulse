@@ -1,0 +1,82 @@
+{
+  "decided_on": "2026-10-14",
+  "monthly": {
+    "corridor": {
+      "b": -0.001107,
+      "n_draws": 5984,
+      "pct": -0.110622,
+      "placebo_ci": [
+        -0.043888,
+        0.031096
+      ],
+      "placebo_ci_pct": [
+        -4.293919,
+        3.158502
+      ],
+      "ri_p": 0.95071,
+      "trend_per_month": 0.002473,
+      "unadjusted_b": 0.061967,
+      "unadjusted_pct": 6.39275
+    },
+    "fit_months": 28,
+    "legacy": {
+      "b": -0.307726,
+      "n_draws": 5984,
+      "pct": -26.488327,
+      "placebo_ci": [
+        -0.343851,
+        -0.275013
+      ],
+      "placebo_ci_pct": [
+        -29.096532,
+        -24.043742
+      ],
+      "ri_p": 0.000167,
+      "trend_per_month": 0.002083,
+      "unadjusted_b": -0.254613,
+      "unadjusted_pct": -22.478365
+    },
+    "post_months": 21
+  },
+  "note": "Exploratory: chosen after the pre-registered results were seen. It does not change the pre-registered verdict in api/data/findings.json.",
+  "preregistration_sha256": "a05df98504818ffd4ea5fb69c720cea37eff76dd55859941acc3ce23d56e40f4",
+  "status": "post-hoc, not pre-registered",
+  "unit": "log points; trend_per_month is the OLS slope of the monthly pre-period gap",
+  "weekly": {
+    "corridor": {
+      "b": 0.009887,
+      "n_draws": 5984,
+      "pct": 0.993646,
+      "placebo_ci": [
+        -0.02474,
+        0.0413
+      ],
+      "placebo_ci_pct": [
+        -2.443677,
+        4.216486
+      ],
+      "ri_p": 0.574102,
+      "trend_per_month": 0.002473,
+      "unadjusted_b": 0.041479,
+      "unadjusted_pct": 4.235082
+    },
+    "legacy": {
+      "b": -0.299584,
+      "n_draws": 5984,
+      "pct": -25.887343,
+      "placebo_ci": [
+        -0.330605,
+        -0.272127
+      ],
+      "placebo_ci_pct": [
+        -28.151131,
+        -23.824285
+      ],
+      "ri_p": 0.000167,
+      "trend_per_month": 0.002083,
+      "unadjusted_b": -0.272982,
+      "unadjusted_pct": -23.889341
+    },
+    "months_between_post_and_pre_means": 12.771875
+  }
+}
