@@ -55,6 +55,19 @@ test("ask: streamed answer renders text, table and SQL", async ({ page }) => {
   expect(requests).toEqual([{ question: "Which station is busiest?" }]);
 });
 
+test("ask: a long SQL line wraps inside the card instead of running off the page", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const sql = `SELECT ${Array.from({ length: 12 }, (_, i) => `station_name_${i}`).join(", ")} FROM marts.fct_station_daily LIMIT 200`;
+  await mockAsk(page, { body: sse([["answer", { ...ANSWER, sql }]]) });
+  await ask(page, "Which station is busiest?");
+  await result(page).getByText("Show SQL").click();
+  const fit = await result(page).evaluate((card) => {
+    const pre = card.querySelector("pre");
+    return { pre: pre.scrollWidth <= pre.clientWidth, page: document.documentElement.scrollWidth <= innerWidth };
+  });
+  expect(fit).toEqual({ pre: true, page: true });
+});
+
 test("ask: refusal shows suggestion chips", async ({ page }) => {
   const suggestions = ["Which stations had the most entries in 2025?", "How close is weekday ridership to 2019?",
     "What's the 14-day forecast for Embarcadero?"];

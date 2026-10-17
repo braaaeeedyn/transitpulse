@@ -359,7 +359,9 @@
   background: var(--color-ink);
   color: var(--color-on-ink);
   line-height: var(--lh-code);
-  overflow-x: auto;
+  /* agent SQL is often one long line: wrap it, or it widens the card past the screen */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 /* --- data table --------------------------------------------------------- */

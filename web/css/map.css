@@ -250,7 +250,7 @@
   }
 }
 
-/* range input styled as a thin ink track with a white pill thumb */
+/* range input styled as a thin grey track (mute: 4.5:1 on the white bar) with a white pill thumb */
 .map-scrub input[type="range"] {
   width: 100%;
   height: var(--touch-target);
@@ -264,13 +264,13 @@
 .map-scrub input[type="range"]::-webkit-slider-runnable-track {
   height: 4px;
   border-radius: var(--radius-pill);
-  background: var(--color-canvas-soft);
+  background: var(--color-mute);
 }
 
 .map-scrub input[type="range"]::-moz-range-track {
   height: 4px;
   border-radius: var(--radius-pill);
-  background: var(--color-canvas-soft);
+  background: var(--color-mute);
 }
 
 .map-scrub input[type="range"]::-webkit-slider-thumb {
