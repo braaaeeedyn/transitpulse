@@ -1356,3 +1356,12 @@ minute at any station). The time slider drags and clicks in Playwright Chromium,
 refresh never reaches the site. Owner step 3 now says to rebuild `web/data` and re-export before then. The GCP free
 trial ends about Jan 6, 2027 (owner step 12) and can't change quotas, so the 30 GiB BigQuery quota waits for the
 upgrade.
+
+## 2026-10-16 · site · SQL block wraps; the time slider's track is visible; Ask live
+- **Show SQL ran off the page.** The agent's SQL is often one long line, and `pre` grew its card past the screen.
+  `.sql-block` now wraps (`pre-wrap`, `overflow-wrap: anywhere`); a Playwright test opens a long query at 390 px.
+- **The time slider looked static.** Its 4 px track was `canvas-soft` (#efefef) on the white control bar, about
+  1.2:1, so only the thumb showed and nothing said it could move (probably the owner's "can't change the time on the
+  PC"). Track is now `mute` (#767676, 4.5:1).
+- **Ask is live** on `gemini-3.5-flash-lite` (owner applied Terraform): "average daily BART ridership in 2019" →
+  324,958 in 3.3 s; "What's the weather tomorrow?" → refusal with suggestions in 0.8 s.
