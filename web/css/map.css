@@ -113,6 +113,7 @@
   align-items: flex-start;
   gap: var(--space-sm);
   pointer-events: none;
+  z-index: 1; /* above the list view, which comes later in the DOM; under tooltips (5) */
 }
 
 .map-top > * {
@@ -200,9 +201,17 @@
   background: var(--color-mute);
 }
 
-.map-now[aria-pressed="true"] {
+/* the hover selector outranks .btn--subtle:hover, which would turn the pill light grey under white text */
+.map-now[aria-pressed="true"],
+.map-now[aria-pressed="true"]:hover:not(:disabled),
+.map-controls .segmented button[aria-pressed="true"] {
   background: var(--color-ink);
   color: var(--color-on-ink);
+  box-shadow: none;
+}
+
+.map-controls .segmented button:hover:not([aria-pressed="true"]) {
+  background: var(--color-pressed);
 }
 
 .map-now[aria-pressed="true"] .map-now__dot {

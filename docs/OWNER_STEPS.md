@@ -109,6 +109,19 @@ cd ../transitpulse
   page URL into a link-preview checker (LinkedIn Post Inspector, or a Slack/Discord message to yourself) to see the
   card with the map.
 
+**Before Jan 10, 2027: new BART timetable.** The map reads `data/schedule.json` from this export, and the
+timetable in it ends on **Jan 10, 2027**. After that the map shows "This site's BART timetable ended…" instead of
+trains (the VM refreshes GTFS monthly, but only on the VM). Once BART has posted its next schedule (usually a few weeks
+before), rebuild the map data from the current feed, commit it, and re-export:
+
+```sh
+uv run --group pipeline python -m pipeline.webdata.build     # downloads BART's current GTFS
+python -c "import json; print(max(s['end'] for s in json.load(open('web/data/schedule.json'))['services']))"   # must be after 20270110
+git add web/data && git commit -m "Map: BART timetable from <date>" && git push
+```
+
+then run the export above again.
+
 ## 4. Oracle VM: update only if pipeline code changed
 
 The rule, every time you pull new code:
@@ -135,8 +148,11 @@ secrets or billing. When an apply is needed is listed in [`infra/README.md`](../
 [`CLOUD_RUN.md`](CLOUD_RUN.md) §4, in this order:
 
 1. **BigQuery quota first.** Console → IAM & Admin → Quotas → "BigQuery API" → **Query usage per day per user** →
-   30 GiB. It applies to `sa-pipeline` too, which billed 16.9 GiB on a normal day and 49.8 GiB on the full backfill
-   ([`CLOUD_RUN.md`](CLOUD_RUN.md) §4): raise it for the day of a full backfill.
+   30 GiB (30720 MiB). It applies to `sa-pipeline` too, which billed 16.9 GiB on a normal day and 49.8 GiB on the full
+   backfill ([`CLOUD_RUN.md`](CLOUD_RUN.md) §4): raise it for the day of a full backfill. **A free-trial account can't
+   change quotas** ("free trial does not permit quota increase"): the agent went live on 2026-10-16 without it, held
+   by its own caps (1 GB a query, 10 GB a day per instance, at most 2 instances), and the quota is set after step 12's
+   upgrade.
 2. **The Gemini key** (Google AI Studio), as a new secret version:
    ```sh
    printf '%s' "$GEMINI_KEY" | gcloud secrets versions add transitpulse-gemini-api-key --data-file=- --project transitpulse-511002
@@ -148,7 +164,7 @@ secrets or billing. When an apply is needed is listed in [`infra/README.md`](../
    export GOOGLE_API_KEY="$GEMINI_KEY"
    uv run --group agent python -m eval.run_eval --llm gemini --arm A --save-summary
    uv run --group agent python -m eval.run_eval --llm gemini --arm B --save-summary
-   uv run --group agent python -m eval.ab --llm gemini:gemini-2.5-flash
+   uv run --group agent python -m eval.ab --llm gemini:gemini-3.5-flash-lite
    ```
    Each arm is 76 questions at about 2–4 model calls each. Check the current free-tier daily request cap for the
    model in AI Studio first; if one arm doesn't fit in a day, run arm A today and arm B tomorrow. Commit the two
@@ -262,6 +278,11 @@ Caveats:
 At the start of next month: Console → **Billing → Reports**, filter the project `transitpulse-511002`, last month.
 **Expect: $0** (everything runs inside free tiers; `CLOUD_RUN.md` "Costs" lists them). Write the month and the amount
 into the README's "GCP cost" row under Results.
+
+**Before about Jan 6, 2027: upgrade from the free trial.** The project runs on a GCP free trial (82 days left on
+2026-10-16). When a trial ends without an upgrade, Google stops its resources, so Cloud Run, and with it the site's
+API and Ask, would go down. Console → Billing → **Upgrade** (to a full account). The free tiers still apply, so the
+bill should stay at $0, and the $1/$5 budget alerts still email you. Then set the BigQuery quota from step 6.1.
 
 ## 13. Decision: start M6 (QLoRA fine-tune) as its own loop
 

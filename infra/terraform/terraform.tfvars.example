@@ -7,5 +7,5 @@ raw_bucket_name    = "transitpulse-raw-XXXXXX"
 
 # Optional (M7, Cloud Run). Defaults shown; the agent stays off until you've added the Gemini key's secret version.
 # agent_enabled     = false
-# gemini_model      = "gemini-2.5-flash"
+# gemini_model      = "gemini-3.5-flash-lite"
 # github_repository = "owner/transitpulse"

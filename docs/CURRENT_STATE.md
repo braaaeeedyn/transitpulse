@@ -30,7 +30,7 @@
 | Terraform (`infra/terraform/`) | M0 **applied** to GCP project `transitpulse-511002` (33 resources). `cloudrun.tf` + `wif.tf` (10 more resources) are **applied** | see `infra/README.md` |
 | Container image (`Dockerfile`) | **Built, tested and pushed by `deploy.yml`** on every push to `main` (non-root, 119 MB compressed) | `uv run python tasks.py image` |
 | Local stack (`docker-compose.yml`) | **Working**: the API image with the agent on, an Ollama container and a one-shot model pull (see §5 "`make up`") | `make up` / `uv run python tasks.py up` → http://localhost:8000 |
-| Cloud Run service `transitpulse-api` (us-west1) | **Live** (Terraform applied; image `api:<commit sha>`, deployed by `deploy.yml`). Ask agent off (`/api/ask` → 503) | [`CLOUD_RUN.md`](CLOUD_RUN.md) |
+| Cloud Run service `transitpulse-api` (us-west1) | **Live** (Terraform applied; image `api:<commit sha>`, deployed by `deploy.yml`). Ask agent **on** since 2026-10-16 (`agent_enabled = true` in the local tfvars), on `gemini-3.5-flash-lite` | [`CLOUD_RUN.md`](CLOUD_RUN.md) |
 | Cloud Run deploy (`.github/workflows/deploy.yml`) | **On** (`DEPLOY_ENABLED=true`): every push to `main` builds, smoke-tests, pushes and deploys (first seen for `ab55544`, 2026-10-14) | [`CLOUD_RUN.md`](CLOUD_RUN.md) |
 | Pages at braedynthompson.com/transitpulse/ | **Live**: the portfolio repo publishes `static/transitpulse/`; re-export only when the website code changes | [`CLOUD_RUN.md`](CLOUD_RUN.md) §5 |
 | Load test (`load/`) | **Working** locally: Locust at 1/10/25 users on a fixture warehouse with the fake LLM | `uv run python tasks.py load` |
@@ -351,8 +351,9 @@ Configuration: environment variables with prefix `TP_` (`api/settings.py`).
     "Now write the SQL for this." and the question. With `TP_AGENT_EXAMPLES_K=0` the prompts are byte-identical to
     arm A (fingerprint `85a1cbe8…da56`). Route and answer prompts never carry examples.
 - **LLM** (`llm.py`, `TP_AGENT_LLM`): `fake` (default; deterministic test double with a few canned queries),
-  `ollama` (`TP_OLLAMA_MODEL` llama3.1:8b at `TP_OLLAMA_URL`), `gemini` (`TP_GEMINI_MODEL`, key from
-  `GOOGLE_API_KEY`).
+  `ollama` (`TP_OLLAMA_MODEL` llama3.1:8b at `TP_OLLAMA_URL`), `gemini` (`TP_GEMINI_MODEL`, default `gemini-3.5-flash-lite`, key from
+  `GOOGLE_API_KEY`). A Gemini quota error (`GoogleRateLimitError`, the free tier's per-model daily cap) ends the
+  stream with `agent_busy`, "The analyst is out of free questions for now".
 - **Tracing** (`tracing.py`): Langfuse v4 callback only when `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are set;
   otherwise langfuse isn't imported.
 - **Eval** (`eval/`): `questions.yaml` has 66 in-scope questions (tags kpi, station, trend, bikes, forecast, od) with
@@ -620,7 +621,7 @@ the nearby legacy stations, and did it bring new riders or only move them? The w
     startup probe on `/healthz`.
   - Runs as `sa-agent` (read-only on `marts` + `ml`).
   - Env: `TP_WAREHOUSE=bigquery`, `TP_GCP_PROJECT`, `TP_TRUST_PROXY=true`, `TP_AGENT_ENABLED` from
-    `var.agent_enabled` (default **false**). Only when that is true do `TP_AGENT_LLM=gemini`, `TP_GEMINI_MODEL` and
+    `var.agent_enabled` (default **false**; the owner's tfvars sets it true). Only when that is true do `TP_AGENT_LLM=gemini`, `TP_GEMINI_MODEL` and
     `GOOGLE_API_KEY` (Secret Manager `transitpulse-gemini-api-key`, version `latest`, added by hand) appear, along
     with `sa-agent`'s access to that secret. `TP_AGENT_EXAMPLES_K` is not set, so the agent uses the default 5.
   - The image is in `ignore_changes`: the first revision uses Google's `hello` placeholder, and CI owns the image

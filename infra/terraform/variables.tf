@@ -33,7 +33,7 @@ variable "agent_enabled" {
 variable "gemini_model" {
   description = "Gemini model the agent uses when agent_enabled (check the current model name before enabling)."
   type        = string
-  default     = "gemini-2.5-flash"
+  default     = "gemini-3.5-flash-lite"
 }
 
 variable "api_initial_image" {

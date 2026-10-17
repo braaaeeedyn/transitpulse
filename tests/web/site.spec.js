@@ -75,14 +75,26 @@ test("list view shows a table of trains", async ({ page }) => {
   await expect(page.locator(".map-list")).toBeVisible();
   expect(await page.locator(".map-list tbody tr").count()).toBeGreaterThan(10);
   await expect(page.locator("[data-list-count]")).toContainText("trains running");
+  // the list used to paint over the Map/List toggle, so there was no way back
+  await expect(page.locator("[data-zoom-in]")).toBeHidden();
+  await page.locator("[data-view=map]").click({ timeout: 2000 });
+  await expect(page.locator(".map-list")).toBeHidden();
+  await expect(page.locator(".map-svg")).toBeVisible();
+  await expect(page.locator("[data-zoom-in]")).toBeVisible();
 });
 
 test("speed buttons switch to replay and Now returns to live", async ({ page }) => {
   await open(page);
   await page.locator("[data-speed='60']").click();
   await expect(page.locator("[data-clock-status]")).toHaveText("Replay 60×");
+  await expect(page.locator("[data-speed='60']")).toHaveAttribute("aria-pressed", "true");
   await page.locator("[data-now]").click();
   await expect(page.locator("[data-clock-status]")).toHaveText("Live schedule");
+  // live has no replay speed: only Now is highlighted
+  await expect(page.locator("[data-speed][aria-pressed=true]")).toHaveCount(0);
+  // still hovered after the click: the pill stays ink with white text (hover used to turn it light grey)
+  await expect(page.locator("[data-now]")).toHaveCSS("background-color", "rgb(0, 0, 0)");
+  await expect(page.locator("[data-now]")).toHaveCSS("color", "rgb(255, 255, 255)");
 });
 
 test("tapping a train shows its tooltip", async ({ page }) => {

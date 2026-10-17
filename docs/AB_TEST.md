@@ -133,8 +133,8 @@ with them.
   retrieved example is the same question with a word or two changed (most/fewest, highest/lowest, average/total,
   each year/lowest year, e-bikes/members, one station pair for another). A visitor's question that resembles nothing in the pool will
   gain less.
-- **Production uses Gemini, not llama3.1.** The live agent (when the owner turns it on) runs `gemini-2.5-flash`, a
-  much stronger model, for which the lift may be smaller. The optional Gemini A/B with the owner's key is in
+- **Production uses Gemini, not llama3.1.** The live agent runs `gemini-3.5-flash-lite` (`gemini-2.5-flash` is closed
+  to new keys, and the free tier allows the larger Flash models only 20 requests a day), for which the lift may differ. The optional Gemini A/B with the owner's key is in
   `docs/OWNER_STEPS.md`.
 - **One model, one run per arm.** Temperature 0 makes each arm deterministic on this Ollama version (arm A matched
   the Oct 9 run exactly), so re-running adds no information; a different Ollama or model build can move both arms.

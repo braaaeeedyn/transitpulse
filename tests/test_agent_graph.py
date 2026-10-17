@@ -153,3 +153,18 @@ def test_langfuse_is_noop_without_keys(fixture_warehouse, monkeypatch):
     out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=120, cwd=ROOT)
     assert out.returncode == 0, out.stderr[-2000:]
     assert out.stdout.strip() == "ok"
+
+
+def test_model_rate_limit_reads_as_busy_not_as_a_crash(fixture_warehouse):
+    class GoogleRateLimitError(Exception):  # the name langchain_google_genai raises on a 429
+        pass
+
+    class Limited(FakeLLM):
+        def complete(self, prompt, config=None):
+            raise GoogleRateLimitError("429 quota exceeded")
+
+    events = _run(fixture_warehouse, Limited())
+    assert events[-1] == (
+        "error",
+        {"code": "agent_busy", "message": "The analyst is out of free questions for now. Try again later."},
+    )
