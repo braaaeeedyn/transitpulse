@@ -16,7 +16,7 @@
 
 | Part | State | How to run |
 |---|---|---|
-| Website (static, `web/`) | **Working**: live train map, ridership tiles + charts, forecast explorer, Ask card UI (history, Copy SQL), Findings band, an optional Looker Studio card, Open Graph tags, and a style guide at `/styleguide.html` | `uv run python tasks.py api` → http://localhost:8000 |
+| Website (static, `web/`) | **Working**: live train map, ridership tiles + charts, forecast explorer, Ask panel with a train mascot (history, Copy SQL), Findings band, an optional Looker Studio card, Open Graph tags, and a style guide at `/styleguide.html` | `uv run python tasks.py api` → http://localhost:8000 |
 | API (`api/`) | **Working**: serves the site; data endpoints read the local DuckDB or BigQuery marts when a warehouse is configured; `POST /api/ask` streams the agent's answer when `TP_AGENT_ENABLED=true`, 503 otherwise (the default) | same as above |
 | Ask TransitPulse agent (`api/agent/`) | **Working** locally: LangGraph text-to-SQL with guardrails, 5 retrieved example queries in the SQL prompt (the M5 A/B winner), fake / Ollama / Gemini LLM, optional Langfuse | `TP_AGENT_ENABLED=true TP_AGENT_LLM=ollama uv run --group agent python tasks.py api` |
 | Agent eval + A/B (`eval/`) | **Working**: 66 in-scope questions with gold SQL + 10 out-of-scope; arms A (no examples) and B (5 examples), compared by `eval.ab` ([`AB_TEST.md`](AB_TEST.md)) | `uv run python tasks.py eval --llm ollama --arm A\|B`, then `uv run --group agent python -m eval.ab` |
@@ -87,17 +87,23 @@ S3 baywheels-data ──► data/raw/baywheels/*.zip ─► DuckDB clean ─► 
 ### Page (single page, `web/index.html`)
 1. **Nav**: sticky; links + "Ask a question" pill. Below 1120 px the links move into a full-screen menu
    (focus trapped, Esc closes, body scroll locked). Below 600 px the CTA becomes a search icon.
-2. **Hero + Ask card**: question input, 4 suggestion chips, Ask button. Submitting POSTs to `/api/ask` and reads
+2. **Hero**: headline, lead, "Ask TransitPulse" (opens the panel) and "See the live map".
+   **Ask panel** (`#ask-panel`, at the end of `<body>`): opened by the corner launcher (`.ask-launcher`, the mascot
+   symbol `#i-mascot`), the nav's "Ask a question" buttons and the hero button (all `[data-ask-open]`, with
+   `aria-expanded`); ✕ or Esc closes it and focus returns to the opener (`web/js/main.js`). A 440 px side panel under
+   the nav from 768 px, not modal; full screen below, where it locks the page scroll. It holds a greeting, 6 suggestion
+   chips (each in `api/agent/suggested.py`, or the forecast one), the answer, earlier answers, and the question input
+   with a send button. The input clears when a question is sent. Submitting POSTs to `/api/ask` and reads
    the streamed answer (`web/js/ask.js`):
    - Progress steps are listed as `thinking` / `sql` / `rows` / `answer` events arrive. The answer renders in a card:
-     the question (body-md-strong), the answer as a `display-lg` heading (focused), a table (numeric columns
+     the question (body-md-strong), the answer as a `display-md` heading (focused), a table (numeric columns
      right-aligned, header included) and a "Show SQL" disclosure.
    - **Copy SQL:** inside the disclosure, an icon button ("Copy SQL") writes the query with
      `navigator.clipboard.writeText`; the toast (`aria-live`) says "Copied", or "Couldn't copy…" when the browser
      refuses.
    - **History:** each answer or refusal (never an error) is stored in `sessionStorage` (`tp-ask-history`): question,
-     answer text, columns, the first 20 rows and the SQL, at most 5, newest first. After a reload they render under
-     the Ask card as "Earlier answers" through the same escaping as a live answer; while asking, the list shows the
+     answer text, columns, the first 20 rows and the SQL, at most 5, newest first. After a reload they render in
+     the Ask panel as "Earlier answers" through the same escaping as a live answer; while asking, the list shows the
      stored ones except the newest, which is on screen. Stored entries count as untrusted: they are reshaped on read
      (wrong types dropped) and every field is escaped. Storage that is full, off or corrupt reads as no history. In
      static mode (no server) nothing is stored or shown.
@@ -312,8 +318,15 @@ Configuration: environment variables with prefix `TP_` (`api/settings.py`).
   `thinking` → `refusal {message, suggestions ×3}`, or an `error {code, message}` at any point. Every run ends with
   exactly one of answer / refusal / error.
 - **Graph** (`graph.py`, LangGraph `StateGraph`):
-  - `route`: a keyword pre-filter refuses requests to change data, prompt-injection phrases and secrets; otherwise
-    the LLM answers `sql`, `forecast` or `refuse`.
+  - `route`, in order: a keyword pre-filter refuses requests to change data, prompt-injection phrases and secrets;
+    with `AgentDeps.suggested` (on in the service, off in the eval) a site suggestion (`suggested.py`, matched
+    ignoring case, spacing and end punctuation) goes straight to `execute` with its reviewed query (still
+    guardrails, dry run and byte budget; one LLM repair if it fails) and the forecast suggestion to `forecast`; a
+    question with data words (ridership, riders, entries, exits, trips, passengers, busiest, Bay Wheels, bikes,
+    stations, recovery, commute) and no off-topic word (weather, fares, tickets, delays, arrival, schedule, parking,
+    plan, directions…) or forecast word goes to `sql` without asking the model; anything else asks the LLM for `sql`,
+    `forecast` or `refuse` (told to refuse only clear off-topic requests). A suggestion costs one model call (the
+    answer), a plain data question two, the rest three.
   - `sql`: the LLM writes BigQuery Standard SQL against `marts.<table>` → guardrails → dry run → execute. The SQL
     prompt carries `TP_AGENT_EXAMPLES_K` (default **5**) retrieved examples (see Examples below). A rejected
     or failed query is retried **once** with the error in the prompt; a second failure ends with `error`

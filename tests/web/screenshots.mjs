@@ -48,7 +48,7 @@ try {
   let page = await openPage(browser, server.url, { width: 1200, height: 900 });
   await page.addStyleTag({
     content: `.container { width: 100%; } .map-card { border-radius: 0; }
-      .map-stage { aspect-ratio: auto; height: 630px; max-height: none; } .map-top, .map-controls { display: none; }`,
+      .map-stage { aspect-ratio: auto; height: 630px; max-height: none; } .map-top, .map-controls, .ask-launcher { display: none; }`,
   });
   await page.locator(".map-stage").scrollIntoViewIfNeeded();
   await page.waitForTimeout(500); // the map re-lays itself out on the stage's ResizeObserver

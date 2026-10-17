@@ -200,6 +200,12 @@
   gap: var(--space-lg);
 }
 
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
 @media (min-width: 1120px) {
   .hero__grid {
     grid-template-columns: minmax(0, 1fr) minmax(0, 520px);

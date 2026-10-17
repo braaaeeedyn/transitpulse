@@ -219,38 +219,156 @@
   color: var(--color-body);
 }
 
-/* --- ask card ----------------------------------------------------------- */
-.ask-card {
-  display: grid;
-  gap: var(--space-md);
-  width: 100%;
-  max-width: 520px;
-  padding: var(--space-lg);
-  border-radius: var(--radius-xl);
-  background: var(--color-canvas);
-  box-shadow: var(--shadow-1);
+/* --- Ask: corner launcher, side panel (full screen under 768 px), mascot ------------------------- */
+.mascot {
+  display: block;
+  flex: none;
+  width: 40px;
+  height: 40px;
 }
 
-.ask-card form {
-  display: grid;
-  gap: var(--space-md);
+.ask-launcher {
+  position: fixed;
+  right: max(var(--space-lg), env(safe-area-inset-right));
+  bottom: max(var(--space-lg), env(safe-area-inset-bottom));
+  z-index: 55; /* over the page, under the nav menu (60), the panel (65) and the toast (70) */
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-lg) var(--space-xs) var(--space-xs);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-ink);
+  color: var(--color-on-ink);
+  font-weight: 500;
+  box-shadow: var(--shadow-3);
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-standard);
 }
 
-/* minmax(0, 1fr): the card's columns shrink to the space available instead of growing to fit the longest
-   unwrapped chip (that pushed the page 14 px wider than a 320 px phone on Linux font metrics) */
-.ask-card,
-.ask-card form {
-  grid-template-columns: minmax(0, 1fr);
+.ask-launcher:hover {
+  transform: translateY(-2px);
 }
 
-.ask-card__submit {
-  justify-self: start;
+.ask-launcher .mascot {
+  width: 44px;
+  height: 44px;
 }
 
-@container (max-width: 380px) {
-  .ask-card__submit {
-    justify-self: stretch;
+@media (max-width: 639px) {
+  .ask-launcher {
+    padding: var(--space-xs);
   }
+  .ask-launcher__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+.is-ask-open .ask-launcher {
+  display: none;
+}
+
+.ask-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 65;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr); /* the screen's width, not the input's natural width */
+  background: var(--color-canvas);
+}
+
+@media (min-width: 768px) {
+  .ask-panel {
+    inset: calc(var(--nav-height) + var(--space-md)) var(--space-lg) var(--space-lg) auto;
+    width: min(440px, calc(100vw - 2 * var(--space-lg)));
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-3);
+    overflow: hidden;
+  }
+}
+
+/* a phone's full-screen panel shouldn't scroll the page behind it */
+@media (max-width: 767px) {
+  .is-ask-open {
+    overflow: hidden;
+  }
+}
+
+.ask-panel__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-md) var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.ask-panel__heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.ask-panel__title {
+  font-size: var(--type-body-md);
+  line-height: var(--lh-tight);
+  font-weight: 700;
+}
+
+.ask-panel__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr); /* long chips and SQL wrap instead of widening the panel */
+  align-content: start;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ask-panel__intro {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.ask-panel__form {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg) calc(var(--space-md) + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-hairline);
+}
+
+.ask-panel__form .input-row {
+  flex: 1;
+  min-width: 0;
+}
+
+.ask-panel__send,
+.ask-panel__send:hover:not(:disabled) {
+  background: var(--color-ink);
+  color: var(--color-on-ink);
+}
+
+.ask-panel__send:disabled {
+  opacity: 0.5;
+}
+
+/* static copies for the style guide */
+.ask-launcher--preview {
+  position: static;
+}
+
+.ask-panel--preview {
+  position: static;
+  width: min(440px, 100%);
+  max-height: 420px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-xl);
 }
 
 /* --- stat tile ---------------------------------------------------------- */

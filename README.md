@@ -118,7 +118,7 @@ Ollama image (9.4 GB on disk) and the model (`llama3.1:8b`, about 4.9 GB; `TP_OL
 from a fresh clone the data endpoints answer 503 and data questions end with a clean "not connected" error. CPU by
 default; see the file for the GPU option.
 
-The Ask card's agent is off by default (the site says it isn't connected). To try it locally without Docker:
+The Ask panel's agent is off by default (the site says it isn't connected). To try it locally without Docker:
 `TP_AGENT_ENABLED=true TP_AGENT_LLM=ollama uv run --group agent python tasks.py api` (`TP_AGENT_LLM=fake` needs no
 model and answers a few canned queries).
 

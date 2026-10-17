@@ -233,16 +233,34 @@
             <div class="card card--ink on-ink"><p>card--ink: the Findings band.</p></div>
           </div>
 
-          <h3>Ask card</h3>
-          <div class="ask-card">
-            <p class="eyebrow">Ask TransitPulse</p>
-            <div class="input-row">
-              <svg class="icon" aria-hidden="true"><use href="#i-search" /></svg>
-              <label class="visually-hidden" for="sg-ask">Your question</label>
-              <input id="sg-ask" type="text" placeholder="Ask about BART or Bay Wheels ridership…" />
+          <h3>Ask launcher and panel</h3>
+          <p class="caption">Fixed in the bottom-right corner on the site; the panel is a side panel from 768 px, full screen below.</p>
+          <button class="ask-launcher ask-launcher--preview" type="button">
+            <svg class="mascot" aria-hidden="true"><use href="#i-mascot" /></svg>
+            <span class="ask-launcher__label">Ask TransitPulse</span>
+          </button>
+          <div class="ask-panel ask-panel--preview">
+            <div class="ask-panel__head">
+              <svg class="mascot" aria-hidden="true"><use href="#i-mascot" /></svg>
+              <div class="ask-panel__heading">
+                <p class="ask-panel__title">Ask TransitPulse</p>
+                <p class="caption">BART and Bay Wheels data, in plain English</p>
+              </div>
+              <button class="icon-btn icon-btn--plain" type="button" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-x" /></svg></button>
             </div>
-            <div class="chip-row"><button class="chip" type="button">How close is ridership to 2019?</button></div>
-            <button class="btn btn--primary ask-card__submit" type="button">Ask</button>
+            <div class="ask-panel__body">
+              <div class="ask-panel__intro">
+                <p>Hi! I look answers up in this site's BART ridership, Bay Wheels trips and station forecast. Try one:</p>
+                <div class="chip-row"><button class="chip" type="button">How close is ridership to 2019?</button></div>
+              </div>
+            </div>
+            <div class="ask-panel__form">
+              <div class="input-row">
+                <label class="visually-hidden" for="sg-ask">Your question</label>
+                <input id="sg-ask" type="text" placeholder="Ask about BART or Bay Wheels…" />
+              </div>
+              <button class="icon-btn ask-panel__send" type="button" aria-label="Ask"><svg class="icon" aria-hidden="true"><use href="#i-send" /></svg></button>
+            </div>
           </div>
 
           <h3>Stat tiles</h3>

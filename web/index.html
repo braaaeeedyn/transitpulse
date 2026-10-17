@@ -47,6 +47,20 @@
       <symbol id="i-arrow-up-right" viewBox="0 0 24 24"><path d="M7 7h10v10" /><path d="M7 17 17 7" /></symbol>
       <symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></symbol>
       <symbol id="i-list" viewBox="0 0 24 24"><path d="M3 5h.01" /><path d="M3 12h.01" /><path d="M3 19h.01" /><path d="M8 5h13" /><path d="M8 12h13" /><path d="M8 19h13" /></symbol>
+      <symbol id="i-send" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7" /><path d="M12 19V5" /></symbol>
+      <!-- the Ask mascot: a friendly train front with its own colours (not currentColor), so it reads on ink and on white -->
+      <symbol id="i-mascot" viewBox="0 0 48 48">
+        <path d="M6 45h36" stroke="#000" stroke-width="2.5" stroke-linecap="round" fill="none" />
+        <path d="M15 40l-3 5M33 40l3 5" stroke="#000" stroke-width="2.5" stroke-linecap="round" fill="none" />
+        <rect x="8" y="4" width="32" height="36" rx="10" fill="#fff" stroke="#000" stroke-width="2.5" />
+        <rect x="13" y="9" width="22" height="13" rx="5" fill="#000" />
+        <circle cx="19.5" cy="15.5" r="2.4" fill="#fff" />
+        <circle cx="28.5" cy="15.5" r="2.4" fill="#fff" />
+        <path d="M20 27q4 3.5 8 0" stroke="#000" stroke-width="2.2" stroke-linecap="round" fill="none" />
+        <rect x="10.5" y="33.5" width="27" height="3" fill="#00a6e9" />
+        <circle cx="13.8" cy="28.5" r="2" fill="#ffd200" stroke="#000" stroke-width="1.2" />
+        <circle cx="34.2" cy="28.5" r="2" fill="#ffd200" stroke="#000" stroke-width="1.2" />
+      </symbol>
     </svg>
 
     <a class="skip-link" href="#map">Skip to map</a>
@@ -63,10 +77,10 @@
             <li><a href="#about">About</a></li>
           </ul>
         </nav>
-        <a class="btn btn--primary nav__cta-full" href="#ask" data-focus-ask>Ask a question</a>
-        <a class="icon-btn nav__cta-icon" href="#ask" data-focus-ask aria-label="Ask a question">
+        <button class="btn btn--primary nav__cta-full" type="button" data-ask-open aria-controls="ask-panel" aria-expanded="false">Ask a question</button>
+        <button class="icon-btn nav__cta-icon" type="button" data-ask-open aria-controls="ask-panel" aria-expanded="false" aria-label="Ask a question">
           <svg class="icon" aria-hidden="true"><use href="#i-search" /></svg>
-        </a>
+        </button>
         <button class="icon-btn icon-btn--plain nav__menu-btn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav-overlay" data-menu-open>
           <svg class="icon" aria-hidden="true"><use href="#i-menu" /></svg>
         </button>
@@ -88,7 +102,7 @@
           <li><a href="#findings">Findings</a></li>
           <li><a href="#about">About</a></li>
         </ul>
-        <a class="btn btn--primary" href="#ask" data-focus-ask>Ask a question</a>
+        <button class="btn btn--primary" type="button" data-ask-open aria-controls="ask-panel" aria-expanded="false">Ask a question</button>
       </nav>
     </div>
 
@@ -103,28 +117,12 @@
               Every BART train on one map, years of BART and Bay Wheels ridership, and an analyst you can ask in plain
               English.
             </p>
-          </div>
-
-          <div class="ask-card" id="ask" data-ask>
-            <p class="eyebrow">Ask TransitPulse</p>
-            <form data-ask-form>
-              <label class="visually-hidden" for="ask-input">Your question</label>
-              <div class="input-row">
-                <svg class="icon" aria-hidden="true"><use href="#i-search" /></svg>
-                <input id="ask-input" name="q" type="text" autocomplete="off" maxlength="300" placeholder="Ask about BART or Bay Wheels ridership…" />
-              </div>
-              <div class="chip-row chip-row--scroll" aria-label="Suggested questions">
-                <button class="chip" type="button" data-suggest>Which stations grew most since 2022?</button>
-                <button class="chip" type="button" data-suggest>Busiest hour on a weekday?</button>
-                <button class="chip" type="button" data-suggest>How close is ridership to 2019?</button>
-                <button class="chip" type="button" data-suggest>Bikes vs. trains last month</button>
-              </div>
-              <button class="btn btn--primary ask-card__submit" type="submit">Ask</button>
-            </form>
+            <div class="hero__actions">
+              <button class="btn btn--primary" type="button" data-ask-open aria-controls="ask-panel" aria-expanded="false">Ask TransitPulse</button>
+              <a class="btn btn--subtle" href="#map">See the live map</a>
+            </div>
           </div>
         </div>
-        <div class="container" aria-live="polite" data-ask-result></div>
-        <div class="container" data-ask-history></div>
       </section>
 
       <!-- Live map -->
@@ -192,7 +190,7 @@
               </div>
               <span class="map-controls__spacer"></span>
               <div class="segmented" role="group" aria-label="Replay speed">
-                <button type="button" data-speed="1" aria-pressed="true">1×</button>
+                <button type="button" data-speed="1" aria-pressed="false">1×</button>
                 <button type="button" data-speed="10" aria-pressed="false">10×</button>
                 <button type="button" data-speed="60" aria-pressed="false">60×</button>
               </div>
@@ -385,6 +383,48 @@
         </div>
       </div>
     </footer>
+
+    <!-- Ask TransitPulse: a launcher in the corner opens a side panel (full screen on phones) -->
+    <button class="ask-launcher" type="button" data-ask-open aria-controls="ask-panel" aria-expanded="false">
+      <svg class="mascot" aria-hidden="true"><use href="#i-mascot" /></svg>
+      <span class="ask-launcher__label">Ask TransitPulse</span>
+    </button>
+
+    <div class="ask-panel" id="ask-panel" role="dialog" aria-labelledby="ask-panel-title" hidden data-ask>
+      <div class="ask-panel__head">
+        <svg class="mascot" aria-hidden="true"><use href="#i-mascot" /></svg>
+        <div class="ask-panel__heading">
+          <h2 class="ask-panel__title" id="ask-panel-title">Ask TransitPulse</h2>
+          <p class="caption">BART and Bay Wheels data, in plain English</p>
+        </div>
+        <button class="icon-btn icon-btn--plain" type="button" aria-label="Close" data-ask-close>
+          <svg class="icon" aria-hidden="true"><use href="#i-x" /></svg>
+        </button>
+      </div>
+      <div class="ask-panel__body">
+        <div class="ask-panel__intro">
+          <p>Hi! I look answers up in this site's BART ridership, Bay Wheels trips and station forecast. Try one:</p>
+          <!-- each chip has a reviewed query in api/agent/suggested.py (tests/test_agent_graph.py checks) -->
+          <div class="chip-row" role="group" aria-label="Suggested questions">
+            <button class="chip" type="button" data-suggest>Which stations grew most since 2022?</button>
+            <button class="chip" type="button" data-suggest>Which stations had the most entries in 2025?</button>
+            <button class="chip" type="button" data-suggest>How close is ridership to 2019?</button>
+            <button class="chip" type="button" data-suggest>Bikes vs. trains in the latest month?</button>
+            <button class="chip" type="button" data-suggest>Which station has the highest peak-hour share?</button>
+            <button class="chip" type="button" data-suggest>What's the 14-day forecast for Embarcadero?</button>
+          </div>
+        </div>
+        <div aria-live="polite" data-ask-result></div>
+        <div data-ask-history></div>
+      </div>
+      <form class="ask-panel__form" data-ask-form>
+        <label class="visually-hidden" for="ask-input">Your question</label>
+        <div class="input-row">
+          <input id="ask-input" name="q" type="text" autocomplete="off" maxlength="300" placeholder="Ask about BART or Bay Wheels…" />
+        </div>
+        <button class="icon-btn ask-panel__send" type="submit" aria-label="Ask"><svg class="icon" aria-hidden="true"><use href="#i-send" /></svg></button>
+      </form>
+    </div>
 
     <div class="toast" role="status" aria-live="polite" data-toast></div>
   </body>

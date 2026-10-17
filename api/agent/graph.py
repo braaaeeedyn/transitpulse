@@ -2,6 +2,7 @@
 answer, emitting progress events as it goes (the SSE stream POST /api/ask sends).
 
     route ─┬─ refuse ──────────────────────────────────────────────► (refusal)
+           ├─ suggested: a reviewed query (api/agent/suggested.py) ─► check ─► execute ─► answer
            ├─ forecast: fixed query on forecast_station_daily ─────► answer
            └─ generate ─► check (guardrails + dry run) ─► execute ─► answer
                  ▲              │ rejected / failed once        │
@@ -27,13 +28,28 @@ from langgraph.graph import END, START, StateGraph
 from api.agent import prompts, tracing
 from api.agent.guardrails import GuardrailError, check_sql
 from api.agent.llm import LLM
+from api.agent.suggested import FORECAST_SUGGESTION, normalize, suggested_sql
 from api.warehouse import AgentQueryError, QueryTooExpensive
 
 SUGGESTIONS = [
     "Which stations had the most entries in 2025?",
     "How close is weekday ridership to 2019?",
-    "What's the 14-day forecast for Embarcadero?",
+    FORECAST_SUGGESTION,
 ]
+# A question that plainly names this site's data skips the LLM router: one model call saved, and a small model
+# refused some of them ("Bikes vs. trains last month"). One that also names something the data can't answer (live
+# times, fares, weather) still goes to the router.
+DATA_WORDS = re.compile(
+    r"\b(ridership|riders?|entries|entry|exits?|trips?|passengers?|busiest|bay ?wheels|bikes?|bike-share|"
+    r"stations?|recovery|commut\w*)\b",
+    re.I,
+)
+OFF_TOPIC_WORDS = re.compile(
+    r"\b(weather|rain|fares?|tickets?|price|parking|delays?|late|next train|arriv\w*|depart\w*|timetable|"
+    r"schedule|elevators?|escalators?|crime|clipper|plan\w*|directions?)\b",
+    re.I,
+)
+FORECAST_WORDS = re.compile(r"\b(forecast\w*|predict\w*)\b", re.I)
 REFUSAL = (
     "I can only answer questions about BART ridership, Bay Wheels trips and the station forecast in this "
     "site's data. Try one of these:"
@@ -88,6 +104,7 @@ class AgentDeps:
     row_limit: int = 200
     timeout_s: float = 20.0
     examples_k: int = 0  # retrieved examples in the SQL prompt (docs/AB_TEST.md)
+    suggested: bool = False  # reviewed queries for site suggestions; off in the eval (it measures the model)
 
 
 class AgentState(TypedDict, total=False):
@@ -160,10 +177,21 @@ def build_graph(deps: AgentDeps):
         q = state["question"]
         if BLOCKED_QUESTION.search(q):
             return {"route": "refuse"}
-        word = deps.llm.complete(prompts.route_prompt(q), config).strip().lower()
-        choice = next((w for w in ("forecast", "refuse", "sql") if w in word), "sql")
+        reviewed = suggested_sql(q) if deps.suggested else None
+        if reviewed:
+            choice = "suggested"
+        elif deps.suggested and normalize(q) == normalize(FORECAST_SUGGESTION):
+            choice = "forecast"
+        # forecast words go to the router: "how accurate is the forecast?" is SQL, not one station's forecast
+        elif DATA_WORDS.search(q) and not OFF_TOPIC_WORDS.search(q) and not FORECAST_WORDS.search(q):
+            choice = "sql"
+        else:
+            word = deps.llm.complete(prompts.route_prompt(q), config).strip().lower()
+            choice = next((w for w in ("forecast", "refuse", "sql") if w in word), "sql")
         if choice != "refuse" and wh is None:
             raise AgentStop("agent_unavailable", "The analyst isn't connected to the data right now.")
+        if reviewed:  # straight to execute; a failure still gets one LLM repair
+            return {"route": choice, "raw_sql": reviewed, "attempts": 1}
         return {"route": choice, "attempts": 0}
 
     def refuse(state: AgentState) -> AgentState:
@@ -264,7 +292,9 @@ def build_graph(deps: AgentDeps):
     g.add_node("answer", answer)
     g.add_edge(START, "route")
     g.add_conditional_edges(
-        "route", lambda s: s["route"], {"sql": "generate", "forecast": "forecast", "refuse": "refuse"}
+        "route",
+        lambda s: s["route"],
+        {"sql": "generate", "suggested": "execute", "forecast": "forecast", "refuse": "refuse"},
     )
     g.add_edge("refuse", END)
     g.add_edge("generate", "execute")
