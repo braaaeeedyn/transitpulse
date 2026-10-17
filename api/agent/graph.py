@@ -46,6 +46,7 @@ BLOCKED_QUESTION = re.compile(
     re.I,
 )
 MAX_ATTEMPTS = 2  # the first SQL plus one repair
+BUSY_MESSAGE = "The analyst is out of free questions for now. Try again later."
 
 
 @dataclass
@@ -306,7 +307,11 @@ def run_agent(
         yield "error", {"code": e.code, "message": e.message}
     except Exception as e:  # an LLM or warehouse outage: report it instead of a broken stream
         final = True
-        yield "error", {"code": "agent_error", "message": f"The analyst hit a problem ({type(e).__name__})."}
+        name = type(e).__name__  # by name: langchain_google_genai is only installed for gemini
+        if name == "GoogleRateLimitError":  # the model's free-tier quota, not a fault
+            yield "error", {"code": "agent_busy", "message": BUSY_MESSAGE}
+        else:
+            yield "error", {"code": "agent_error", "message": f"The analyst hit a problem ({name})."}
     if not final:
         yield "error", {"code": "no_answer", "message": "The analyst stopped without an answer."}
 

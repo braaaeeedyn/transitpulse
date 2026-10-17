@@ -1330,3 +1330,29 @@ moderate, 8 high) in Lighthouse's dependency tree; dev-only, never in the image,
 full backfill) and 16.9 GiB on 2026-10-15 (an ingest and rebuild). The runbook's 20 GiB per-user quota would have
 failed pipeline runs, so it is now 30 GiB (under the free tier's ≈ 33 GiB/day), raised for the day of a full backfill.
 The quota is not set yet: it is the owner's console step.
+
+## 2026-10-16 · site · front-end fixes after the owner's report; Ask on a working Gemini model
+**Fixed**
+- **List view had no way back.** `.map-list` (absolute, later in the DOM) painted over `.map-top`, so the Map/List
+  toggle could not be clicked. `.map-top` now has `z-index: 1`; the zoom buttons hide in list view (nothing to zoom).
+- **Now button unreadable on desktop.** `.btn--subtle:hover:not(:disabled)` outranks `.map-now[aria-pressed]`, so a
+  hovered, pressed Now turned light grey under white text. The pressed style now covers hover. The replay speeds use
+  the same ink pill, and only in replay: Now and a speed are never highlighted together.
+- **A straight line across the top of the phone map.** The land polygons were clipped at y = -150, which a square phone
+  view with the controls inset reaches; the clipped edge was stroked like a coastline. Clip widened; `land.json`
+  12 → 19 KB; network and timetable unchanged.
+- **Ask: "The analyst hit a problem (GoogleModelNotFoundError)".** `gemini-2.5-flash` is closed to new API keys.
+  Tried with the owner's key (eval arm B): `gemini-3.8-flash` 3/3 at 32 s a question; `gemini-3.5-flash` hit the
+  free tier's **20 requests a day** after 4 questions; `gemini-3.5-flash-lite` 3/3 on the first sample at 6 s, then
+  5/13 in-scope with 6 in-scope refusals on a 16-question sample (all 3 refusal questions right). Production now runs
+  `gemini-3.5-flash-lite` (the only one that fits a public site's free-tier traffic); a quota error (`GoogleRateLimitError`)
+  now reads "The analyst is out of free questions for now" instead of a crash.
+
+**Checked, not a bug.** The map's 54-56 trains at 5 PM on a weekday match BART's published GTFS: 55 trips are in
+motion then (Yellow 20 = two 10-minute patterns, Antioch and Pittsburg/Bay Point; no two same-line trips within a
+minute at any station). The time slider drags and clicks in Playwright Chromium, in the owner's Chrome and in Edge.
+
+**Found.** The live map's timetable comes from the static export and ends **Jan 10, 2027**; the VM's monthly GTFS
+refresh never reaches the site. Owner step 3 now says to rebuild `web/data` and re-export before then. The GCP free
+trial ends about Jan 6, 2027 (owner step 12) and can't change quotas, so the 30 GiB BigQuery quota waits for the
+upgrade.

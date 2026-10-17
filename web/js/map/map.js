@@ -147,7 +147,8 @@ export async function initMap(root) {
     btnNow.setAttribute("aria-pressed", String(state.live));
     btnPlay.setAttribute("aria-label", state.playing ? "Pause" : "Play");
     btnPlay.querySelector("use").setAttribute("href", state.playing ? "#i-pause" : "#i-play");
-    for (const b of speedBtns) b.setAttribute("aria-pressed", String(Number(b.dataset.speed) === state.speed));
+    // live has no replay speed: either Now or one speed is highlighted, never both
+    for (const b of speedBtns) b.setAttribute("aria-pressed", String(!state.live && Number(b.dataset.speed) === state.speed));
     const t = now();
     scrub.value = String(Math.min(SCRUB_MAX, Math.max(SCRUB_MIN, t.minutes)));
     scrub.setAttribute("aria-valuetext", formatClock(t.minutes));
@@ -549,6 +550,7 @@ export async function initMap(root) {
       for (const x of viewBtns) x.setAttribute("aria-pressed", String(x === b));
       listPanel.hidden = state.view !== "list";
       stage.querySelector(".map-layers").hidden = state.view === "list";
+      zoomIn.hidden = zoomOut.hidden = state.view === "list"; // nothing to zoom in the list
       if (state.view === "list") renderList(now());
       else layout();
     });

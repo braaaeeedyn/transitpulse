@@ -188,8 +188,8 @@ starts in about 1.5 s locally and uses about 76 MiB of its 512 MiB. On Cloud Run
 zero takes about 4.4 s; warm requests take 0.09–0.17 s. A Locust run against Cloud Run hasn't been done yet.
 
 ## Limitations
-The agent's 50% is llama3.1:8b on its own eval set with near-twin examples in the pool; the live agent would run
-Gemini and is off. The eBART "new riders" verdict rests on 3 treated stations and is not distinguishable from
+The agent's 50% is llama3.1:8b on its own eval set with near-twin examples in the pool; the live agent runs
+Gemini (`gemini-3.5-flash-lite`, the model the free tier allows enough requests for), unmeasured on the full set. The eBART "new riders" verdict rests on 3 treated stations and is not distinguishable from
 trend once the pre-opening drift is removed. The forecast band under-covers (73% for a nominal 80%). The map shows
 the timetable, not live positions. The full list is in
 [`docs/CURRENT_STATE.md` §7](docs/CURRENT_STATE.md#7-known-limitations-current-behaviour).

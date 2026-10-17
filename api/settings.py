@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     ollama_model: str = "llama3.1:8b"
     ollama_url: str = "http://localhost:11434"
     gemini_model: str = (
-        "gemini-2.5-flash"  # check the current model name; the key is read from GOOGLE_API_KEY
+        "gemini-3.5-flash-lite"  # check the current model name; the key is read from GOOGLE_API_KEY
     )
     agent_max_bytes: int = (
         1_000_000_000  # per agent query: BigQuery dry run must be under this, then it's the cap

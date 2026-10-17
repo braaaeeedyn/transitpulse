@@ -143,7 +143,9 @@ The agent costs money per question once it is public: BigQuery bytes and Gemini 
      a 10 GB daily byte budget. That budget is **per process and in memory**, so it resets whenever an instance
      starts (scale to zero, a new revision, a second instance). The console quota is the only hard daily cap.
 2. **Add the Gemini key as a secret version.** Use a key from Google AI Studio. Check the model name in
-   `var.gemini_model` (default `gemini-2.5-flash`) against the current model list.
+   `var.gemini_model` (default `gemini-3.5-flash-lite`) against the current model list. Free-tier keys get each model's
+   own daily request cap (20 a day for `gemini-3.5-flash` in Oct 2026; one question takes 2-4 requests); when it runs
+   out, Ask says the analyst is out of free questions for now.
    ```sh
    printf '%s' "$GEMINI_KEY" | gcloud secrets versions add transitpulse-gemini-api-key --data-file=- --project transitpulse-511002
    ```

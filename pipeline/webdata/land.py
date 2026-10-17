@@ -20,8 +20,9 @@ from pipeline.webdata.geometry import Projection
 COUNTIES_URL = "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_us_county_500k.zip"
 # California county FIPS for the nine Bay Area counties.
 BAY_AREA = {"001", "013", "041", "055", "075", "081", "085", "095", "097"}
-# Clip window in viewBox units: wide enough for the 16:9 crop of the map (DESIGN.md §6) with room to spare.
-CLIP = (-600.0, -150.0, 1600.0, 1150.0)
+# Clip window in viewBox units, well past any view: a square phone view with the controls inset reaches above
+# y = -150, and the clipped edge would draw as a straight "coastline" across the top of the map.
+CLIP = (-800.0, -700.0, 1800.0, 1500.0)
 SIMPLIFY_TOLERANCE = 0.8
 MIN_AREA = 30.0  # drop specks smaller than this (viewBox units²)
 
