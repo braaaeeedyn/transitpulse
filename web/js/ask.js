@@ -1,7 +1,7 @@
 // Ask TransitPulse (IMPLEMENTATION_PLAN F6). Sends the question to POST /api/ask and renders the streamed
 // progress events (thinking → sql → rows → answer, or a refusal/error). While the agent is off the API answers 503
 // and this shows a friendly "not connected yet" message. The last 5 answers and refusals (never errors) are kept in
-// sessionStorage and shown under the Ask card after a reload; "Show SQL" has a copy button.
+// sessionStorage and shown in the Ask panel after a reload; "Show SQL" has a copy button.
 
 import { apiUrl } from "./util/api.js";
 import { toast } from "./util/toast.js";
@@ -54,7 +54,7 @@ function esc(s) {
 
 function message(text, { error = false, chips = [] } = {}) {
   const icon = error ? "i-circle-alert" : "i-info";
-  return `<div class="message${error ? " message--error" : ""}" style="margin-top: var(--space-2xl)">
+  return `<div class="message${error ? " message--error" : ""}" style="margin-top: var(--space-lg)">
     <p class="message__text"><svg class="icon" aria-hidden="true"><use href="#${icon}"/></svg>${esc(text)}</p>
     ${chips.length ? `<div class="chip-row">${chips.map((c) => `<button class="chip" type="button" data-suggest>${esc(c)}</button>`).join("")}</div>` : ""}
   </div>`;
@@ -143,7 +143,7 @@ export function initAsk(card, result, history) {
   function showHistory(list) {
     if (!history) return;
     history.innerHTML = list.length
-      ? `<h2 class="eyebrow" style="margin-top: var(--space-2xl)">Earlier answers</h2>${list.map((e) => renderAnswer(e.question, e)).join("")}`
+      ? `<h2 class="eyebrow" style="margin-top: var(--space-lg)">Earlier answers</h2>${list.map((e) => renderAnswer(e.question, e)).join("")}`
       : "";
   }
 
@@ -152,6 +152,7 @@ export function initAsk(card, result, history) {
 
   async function ask(q) {
     if (busy || !q.trim()) return;
+    input.value = ""; // a chat box: the question is echoed above the answer
     if (isStaticSite()) {
       result.innerHTML = message(
         "The analyst needs TransitPulse's live server, which this public snapshot doesn't run. " +
@@ -161,7 +162,7 @@ export function initAsk(card, result, history) {
     }
     busy = true;
     submit.disabled = true;
-    result.innerHTML = `<div style="margin-top: var(--space-2xl)"><p class="text-body">Asking: <strong>${esc(q)}</strong></p>
+    result.innerHTML = `<div style="margin-top: var(--space-lg)"><p class="text-body">Asking: <strong>${esc(q)}</strong></p>
       <ol class="text-body" data-steps style="margin: var(--space-md) 0 0; padding-left: 1.25rem"></ol></div>`;
     const steps = result.querySelector("[data-steps]");
     const fail = (text) => {
@@ -182,7 +183,7 @@ export function initAsk(card, result, history) {
       }
       if (res.status === 503) {
         result.innerHTML = message(
-          "The analyst isn't connected yet. In the meantime, explore the live train map below.",
+          "The analyst isn't connected yet. In the meantime, explore the live train map.",
         );
         return;
       }
@@ -269,8 +270,8 @@ function renderAnswer(q, data) {
     ? `<details><summary class="btn btn--subtle">Show SQL</summary><pre class="sql-block" style="margin-top: var(--space-md)"><code>${esc(data.sql)}</code></pre>
        <button class="icon-btn" type="button" aria-label="Copy SQL" data-copy-sql style="margin-top: var(--space-sm)"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg></button></details>`
     : "";
-  // DESIGN.md §7 answer panel: the question echo in body-md-strong, the answer as a display-lg heading
-  return `<article class="card" style="margin-top: var(--space-2xl); display: grid; gap: var(--space-lg)">
+  // DESIGN.md §7 answer: the question echo in body-md-strong, the answer as a display-md heading (the panel is narrow)
+  return `<article class="card" style="margin-top: var(--space-lg); display: grid; gap: var(--space-lg)">
     <p style="font-weight: 500; line-height: var(--lh-tight)">${esc(q)}</p>
-    <h3 tabindex="-1" style="font-size: var(--type-display-lg); line-height: var(--lh-display-lg)">${esc(data.text)}</h3>${table}${sql}</article>`;
+    <h3 tabindex="-1" style="font-size: var(--type-display-md); line-height: var(--lh-display-md)">${esc(data.text)}</h3>${table}${sql}</article>`;
 }

@@ -1365,3 +1365,28 @@ upgrade.
   PC"). Track is now `mute` (#767676, 4.5:1).
 - **Ask is live** on `gemini-3.5-flash-lite` (owner applied Terraform): "average daily BART ridership in 2019" →
   324,958 in 3.3 s; "What's the weather tomorrow?" → refusal with suggestions in 0.8 s.
+
+## 2026-10-16 · Ask · a side panel with a train mascot; suggestions that always work; fewer refusals
+**Why.** The owner tapped the chip "Bikes vs. trains last month" and was refused. Two causes: every question first went
+to the model's router, and `gemini-3.5-flash-lite` called that one off-topic; and "last month" (Sep 2026) is after
+BART's data ends (Dec 2025). A second chip, "Busiest hour on a weekday?", could never work: the only hourly table,
+`fct_trips_hourly`, isn't on the agent's allowlist.
+
+**Did**
+- `api/agent/suggested.py`: the six suggestions, each with a reviewed BigQuery query (dry runs 0-3.2 MB). A
+  suggestion skips the router and the SQL writer and still goes through the guardrails, dry run and byte budget; the
+  model only writes the sentence. "Last 12 months" windows, not fixed years, where a year would go stale. Chips now:
+  grew most since 2022, most entries in 2025, how close to 2019, bikes vs. trains in the latest month, highest
+  peak-hour share, Embarcadero's forecast. `tests/local/test_suggested.py` checks each against the local warehouse
+  (the answers in owner step 6); a test checks every chip in `index.html` and every refusal suggestion is reviewed.
+- Router: plain data questions (data words, no off-topic or forecast words) skip the model's router; forecast words
+  still ask it ("how accurate is the forecast?" is SQL, not a station's forecast: the first version sent those to the
+  forecast node and the eval caught it). The router prompt now says to refuse only clear off-topic requests.
+  Reviewed queries are off in the eval (`AgentDeps.suggested`), so it still measures the model. The router shortcut
+  is on in the eval too (it is production behaviour), so runs from now on differ from the committed A/B summaries,
+  which were measured with every question routed by the model.
+- Ask moved out of the hero into a panel: a launcher in the bottom-right corner (ink pill, the mascot, "Ask
+  TransitPulse"; mascot only on phones) opens a 440 px side panel under the nav, full screen under 768 px. The nav's
+  "Ask a question" and a new hero button open it too; ✕ or Esc closes it and focus returns. The mascot is an inline
+  SVG train front in its own colours (no BART logo). Answers use `display-md` in the narrower panel; the input clears
+  after sending. Tests: launcher/Esc/focus/nav, desktop width and phone full screen at 320 px.

@@ -32,6 +32,7 @@ def get_agent() -> Agent:
         row_limit=s.agent_row_limit,
         timeout_s=s.agent_timeout_s,
         examples_k=s.agent_examples_k,
+        suggested=True,
     )
     return Agent(deps, build_graph(deps))
 

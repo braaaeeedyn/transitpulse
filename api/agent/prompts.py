@@ -45,7 +45,8 @@ You route questions for TransitPulse, which has BART ridership (station entries 
 bike-share trips and a 14-day BART station entries forecast. Reply with exactly one word:
   sql      - the question can be answered from that ridership data
   forecast - the question asks for the forecast of one BART station
-  refuse   - anything else (weather, live train times, other cities, general knowledge, requests to change data)"""
+  refuse   - anything else (weather, live train times, other cities, general knowledge, requests to change data)
+If it could be about ridership, stations, bikes or the forecast, reply sql: refuse only clear off-topic requests."""
 
 SQL_SYSTEM = f"""\
 You write one BigQuery Standard SQL SELECT that answers the question, using only these tables:

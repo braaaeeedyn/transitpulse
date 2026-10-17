@@ -176,25 +176,25 @@ secrets or billing. When an apply is needed is listed in [`infra/README.md`](../
    terraform -chdir=infra/terraform plan      # expect: 1 to add (secret accessor), 1 to change (the service env)
    terraform -chdir=infra/terraform apply
    ```
-6. **On a phone**, ask the 10 sample questions below on https://braedynthompson.com/transitpulse/. The expected
+6. **On a phone**, tap the train in the bottom-right corner and ask the 10 sample questions below on https://braedynthompson.com/transitpulse/. The expected
    answers come from the local DuckDB, which holds the same BART data as BigQuery for 2018–2025. Wording will differ;
    check the numbers and names. Also ask one off-topic question ("What's the weather tomorrow?"): it should be
    refused with three suggestion chips.
 
 | # | Question (where it comes from) | Expected answer |
 |---|---|---|
-| 1 | Which stations grew most since 2022? (chip) | Orinda +54.7% (749 → 1,159 entries a day), Milpitas +54.1%, Lafayette +53.4%: average daily entries, 2025 vs 2022. Another comparison window may reorder these |
-| 2 | Busiest hour on a weekday? (chip) | 5 PM: 5.15 million entries in that hour on 2025's service weekdays, ahead of 8 AM (4.68 million) |
+| 1 | Which stations grew most since 2022? (chip) | Orinda +54.7% (749 → 1,159 entries a day), Milpitas +54.1%, Lafayette +53.4%: average daily entries, the last 12 months of data vs 2022 |
+| 2 | Bikes vs. trains last month (typed, not a chip) | Should be answered, not refused (since 2026-10-16 it skips the model's router). Its SQL is the model's own, so check the month: BART data ends Dec 2025 |
 | 3 | How close is ridership to 2019? (chip) | 2025 averaged 149,335 entries a day against 324,958 in 2019: about 46% of 2019 |
-| 4 | Bikes vs. trains last month (chip) | BART data ends Dec 2025, so the latest month with both is Dec 2025: Bay Wheels trips at 191% of Dec 2019, BART entries at 43%. Bay Wheels in BigQuery runs to Sep 2026; an answer about a 2026 month should say BART has no data for it |
-| 5 | Which stations had the most entries in 2025? (refusal chip) | Embarcadero, 4,787,378 entries |
+| 4 | Bikes vs. trains in the latest month? (chip) | BART data ends Dec 2025, so the latest month with both is Dec 2025: Bay Wheels trips at 191% of Dec 2019, BART entries at 43%. Bay Wheels in BigQuery runs to Sep 2026; an answer about a 2026 month should say BART has no data for it |
+| 5 | Which stations had the most entries in 2025? (chip) | Embarcadero, 4,787,378 entries |
 | 6 | How close is weekday ridership to 2019? (refusal chip) | 43% of 2019 on 2025's service weekdays (the tile's Dec 2025 window: 38%) |
-| 7 | What's the 14-day forecast for Embarcadero? (refusal chip) | 14 days, Jan 1–14, 2026: weekdays about 11,000–15,000 entries (Tue Jan 6 ≈ 14,200), weekends about 3,600–5,900. Production reads the VM's run in BigQuery, so values may differ a little from these local ones |
+| 7 | What's the 14-day forecast for Embarcadero? (chip) | 14 days, Jan 1–14, 2026: weekdays about 11,000–15,000 entries (Tue Jan 6 ≈ 14,200), weekends about 3,600–5,900. Production reads the VM's run in BigQuery, so values may differ a little from these local ones |
 | 8 | What was the average daily BART ridership in 2019? (eval k02) | 324,958 entries a day |
-| 9 | Which station has the highest peak-hour share? (eval s09) | Montgomery Street, 22.3% of its weekday entries in its peak hour |
+| 9 | Which station has the highest peak-hour share? (chip; eval s09) | Montgomery Street, 22.3% of its weekday entries in its peak hour |
 | 10 | Which origin and destination had the most trips in 2019? (eval o04) | Balboa Park → Montgomery Street, 725,547 trips |
 
-Then tap **Show SQL → Copy SQL** on one answer, reload, and check the answers are still listed under the Ask card.
+Then tap **Show SQL → Copy SQL** on one answer, reload, open the panel again (the train in the corner), and check the answers are still listed.
 
 ## 7. Looker Studio
 

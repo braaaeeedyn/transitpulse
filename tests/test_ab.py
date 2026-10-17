@@ -93,7 +93,8 @@ def test_arm_b_prompt_has_five_examples_and_arm_a_none():
         events = list(run_agent(q["question"], deps, exclude_examples=[q["id"]]))
         assert events[-1][0] == "answer", events
         sent[arm] = next(p for p in llm.prompts if p.task == "sql")
-        assert next(p for p in llm.prompts if p.task == "route") == prompts.route_prompt(q["question"])
+        # router prompts (when the question isn't a plain data one) never carry examples
+        assert all(p == prompts.route_prompt(q["question"]) for p in llm.prompts if p.task == "route")
     assert sent["A"] == prompts.sql_prompt(q["question"])  # arm A: exactly today's prompt
     assert sent["B"].system == sent["A"].system
     shown = re.findall(r"^SQL: (.+)$", sent["B"].user, flags=re.M)

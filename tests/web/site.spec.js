@@ -139,6 +139,7 @@ test("phone menu opens, traps focus and closes with Escape", async ({ page }) =>
 
 test("asking a question while the agent is offline shows a friendly message", async ({ page }) => {
   await open(page);
+  await page.locator(".ask-launcher").click();
   await page.locator("[data-suggest]").first().click();
   await expect(page.locator("[data-ask-result]")).toContainText("isn't connected yet");
 });

@@ -94,7 +94,7 @@ layout:
 
 elevation:
   level-0: "none"
-  level-1: "0 4px 16px rgba(0, 0, 0, 0.12)"   # ask card, open combobox list
+  level-1: "0 4px 16px rgba(0, 0, 0, 0.12)"   # open combobox list
   level-2: "0 4px 16px rgba(0, 0, 0, 0.16)"   # modal sheet, toast
   level-3: "0 2px 8px rgba(0, 0, 0, 0.16)"    # floating map controls, tooltips
 
@@ -131,7 +131,8 @@ components:
   card:             { background: "{colors.canvas}", border: "1px {colors.hairline}", rounded: "{rounded.xl}", padding: "clamp(16px, 2.5vw, 24px)" }
   card-soft:        { background: "{colors.canvas-soft}", rounded: "{rounded.xl}", padding: "clamp(16px, 2.5vw, 24px)" }
   card-ink:         { background: "{colors.ink}", text: "{colors.on-ink}", rounded: "{rounded.xl}", padding: "clamp(24px, 4vw, 48px)" }
-  ask-card:         { background: "{colors.canvas}", rounded: "{rounded.xl}", shadow: "{elevation.level-1}", padding: "{spacing.lg}", maxWidth: 520px }
+  ask-launcher:     { background: "{colors.ink}", text: "{colors.on-ink}", rounded: "{rounded.pill}", shadow: "{elevation.level-3}", position: "fixed, bottom-right", content: "mascot 44px + label (label hidden < 640px)" }
+  ask-panel:        { background: "{colors.canvas}", rounded: "{rounded.xl}", shadow: "{elevation.level-3}", width: "440px side panel from 768px; full screen below" }
   stat-tile:        { background: "{colors.canvas-soft}", rounded: "{rounded.xl}", padding: "{spacing.xl}", value: "{typography.stat}", label: "{typography.body-sm}", delta: "{typography.body-sm-strong}" }
   map-card:         { background: "{colors.map-water}", rounded: "{rounded.xl}", overflow: hidden }
   map-controls:     { background: "{colors.canvas}", rounded: "{rounded.pill}", shadow: "{elevation.level-3}" }
@@ -245,10 +246,10 @@ Fluid sizing does most of the work. Breakpoints only change **layout**:
 
 | Name | Width | What changes |
 |---|---|---|
-| Phone | < 600 px | Nav = logo + "Ask" icon + menu button. Hero stacks (headline, then Ask card full width). Map 1:1. 1-column grids. Answer panel opens as a full-screen sheet. |
+| Phone | < 600 px | Nav = logo + "Ask" icon + menu button. Hero stacks (headline, then its two buttons). The Ask panel is full screen. Map 1:1. 1-column grids. Answer panel opens as a full-screen sheet. |
 | Large phone / small tablet | 600–767 px | Chips scroll horizontally in one row. KPI grid 2-up. |
 | Tablet | 768–1119 px | Map 4:3, all station labels. Hero still stacked. Forecast chart beside its picker. |
-| Desktop | ≥ 1120 px | Full nav row. Hero is 2 columns (headline left, Ask card right). Map 16:9. KPI grid 4-up. |
+| Desktop | ≥ 1120 px | Full nav row. Hero is the headline and its buttons; the Ask panel opens beside the page. Map 16:9. KPI grid 4-up. |
 
 - Use **container queries** for component internals (stat tile, chart card, map labels, tables) so they respond to their own width.
 - Use `auto-fit` grids such as `repeat(auto-fit, minmax(min(100%, 220px), 1fr))` before reaching for a media query.
@@ -256,7 +257,7 @@ Fluid sizing does most of the work. Breakpoints only change **layout**:
 - **No horizontal page scroll at any width ≥ 320 px.** Wide content (tables, SQL) scrolls inside its own card.
 
 ### Page order
-Nav · Hero + Ask · Live map · KPI tiles · Trends · Forecast explorer · **Findings (ink band)** · How it's built (FAQ) · Footer (ink).
+Nav · Hero · Live map · KPI tiles · Trends · Forecast explorer · **Findings (ink band)** · How it's built (FAQ) · Footer (ink).
 
 ## 5. Shape, elevation, motion
 
@@ -269,7 +270,7 @@ tooltips, SQL block, table wrapper and toast. Nothing else.
 | Level | Shadow | Used on |
 |---|---|---|
 | 0 | none | Cards (they use a 1 px hairline border instead). |
-| 1 | `0 4px 16px rgb(0 0 0 / .12)` | Ask card in the hero, open combobox list. |
+| 1 | `0 4px 16px rgb(0 0 0 / .12)` | Open combobox list. |
 | 2 | `0 4px 16px rgb(0 0 0 / .16)` | Phone answer sheet, nav overlay, toast. |
 | 3 | `0 2px 8px rgb(0 0 0 / .16)` | Floating map controls, tooltips, segmented thumb. |
 
@@ -327,11 +328,16 @@ Tokens for each are in the front matter. Behaviour:
   on-ink (white pill inside ink bands). Hover darkens one step (`ink-elevated` / `pressed`); disabled = 40% opacity, no pointer.
 - **Chips:** suggestion questions and popular stations. Pressing one fills the field and submits.
 - **Segmented control:** speed, Map/List, chart ranges (1M / 1Y / All). The thumb slides with `duration-base`.
-- **Ask card:** eyebrow "ASK TRANSITPULSE"; one `text-input` row with a search icon and the placeholder
-  "Ask about BART or Bay Wheels ridership…"; 4 chips; primary pill "Ask". Enter submits; Shift+Enter is not needed (single line).
-- **Answer panel:** below the hero on tablet/desktop; a full-screen sheet on phones. Contents in order:
+- **Ask launcher and panel:** a fixed ink pill in the bottom-right corner with the mascot (a friendly train front:
+  white body, ink windshield with two eyes, a smile, yellow headlights, a BART-blue stripe; drawn in its own colours,
+  not BART's logo) and "Ask TransitPulse" (mascot only under 640 px). It, the nav's "Ask a question" and the hero's
+  button open the **Ask panel**: a 440 px side panel under the nav from 768 px (not modal: the page stays usable),
+  full screen below. Head: mascot, title, caption, ✕. Body (scrolls): a greeting, 6 suggestion chips (each backed by a
+  reviewed query), the answer, earlier answers. Foot: one `text-input` row and an ink round send button. Esc or ✕
+  closes it and focus returns to the opener.
+- **Answer:** inside the Ask panel. Contents in order:
   question echo (body-md-strong) → progress steps (each a row with spinner → check: "Writing SQL", "Running query",
-  "Drawing chart") → answer (display-lg heading + body) → chart card → `data-table` → "Show SQL" disclosure with `sql-block`
+  "Drawing chart") → answer (display-md heading + body) → chart card → `data-table` → "Show SQL" disclosure with `sql-block`
   and a Copy icon button. Refusals and errors replace the answer with an **inline message**: error icon + `error` text
   + one plain-English next step + chips with example questions.
 - **Stat tile:** eyebrow label, `stat` value, delta line ("▲ 4.2 pts vs 2019"), ⓘ button revealing the metric definition.

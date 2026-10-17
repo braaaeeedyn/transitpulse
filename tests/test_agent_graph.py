@@ -35,7 +35,7 @@ def test_sql_question_streams_thinking_sql_rows_answer(fixture_warehouse):
     assert answer["rows"] == [["EMBR", 420], ["MONT", 420], ["POWL", 420]]
     assert answer["sql"] == sql  # the payload always carries the SQL that ran
     assert answer["text"]
-    assert [p.task for p in llm.prompts] == ["route", "sql", "answer"]
+    assert [p.task for p in llm.prompts] == ["sql", "answer"]  # names stations and entries: no router call
 
 
 def test_out_of_scope_question_is_refused(fixture_warehouse):
@@ -168,3 +168,56 @@ def test_model_rate_limit_reads_as_busy_not_as_a_crash(fixture_warehouse):
         "error",
         {"code": "agent_busy", "message": "The analyst is out of free questions for now. Try again later."},
     )
+
+
+def test_suggested_question_runs_its_reviewed_query_without_router_or_sql_writer(fixture_warehouse):
+    from api.agent.suggested import SUGGESTED_SQL
+
+    q = "Which stations had the most entries in 2025?"
+    llm = FakeLLM()
+    events = _run(fixture_warehouse, llm, q, suggested=True)
+    assert [e for e, _ in events] == ["thinking", "sql", "rows", "answer"]
+    assert [p.task for p in llm.prompts] == ["answer"]  # the model only writes the sentence
+    assert "SUM(f.entries)" in SUGGESTED_SQL[q] and events[-1][1]["rows"][0][1] == 420
+    # typed differently, still the reviewed query; with suggestions off (the eval) the model writes the SQL
+    llm = FakeLLM()
+    _run(fixture_warehouse, llm, "which stations had the most entries in 2025", suggested=True)
+    assert [p.task for p in llm.prompts] == ["answer"]
+    llm = FakeLLM()
+    _run(fixture_warehouse, llm, q)
+    assert [p.task for p in llm.prompts] == ["sql", "answer"]
+
+
+def test_router_is_skipped_only_for_plain_data_questions(fixture_warehouse):
+    asked_router = []
+
+    def router(question):
+        asked_router.append(question)
+        return "refuse"
+
+    for q in [
+        "How many riders used Embarcadero station in 2025?",  # data words: no router call
+        "Bikes vs. trains last month",  # the chip a small model refused
+        "What's the weather at Embarcadero station?",  # data word + off-topic word: router
+        "How accurate is the latest forecast?",  # forecast words: router (SQL, or one station's forecast)
+        "Who won the World Series?",  # no data words: router
+    ]:
+        _run(fixture_warehouse, FakeLLM(route=router), q)
+    assert asked_router == [
+        "What's the weather at Embarcadero station?",
+        "How accurate is the latest forecast?",
+        "Who won the World Series?",
+    ]
+
+
+def test_site_chips_and_refusal_suggestions_are_all_reviewed():
+    import re
+
+    from api.agent.graph import SUGGESTIONS
+    from api.agent.suggested import FORECAST_SUGGESTION, normalize, suggested_sql
+
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    chips = re.findall(r"data-suggest>([^<]+)<", html)
+    assert len(chips) >= 4
+    for q in [*chips, *SUGGESTIONS]:
+        assert suggested_sql(q) or normalize(q) == normalize(FORECAST_SUGGESTION), q

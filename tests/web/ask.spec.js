@@ -24,8 +24,12 @@ async function mockAsk(page, { status = 200, body = "", contentType = "text/even
   return requests;
 }
 
+// the Ask panel opens from the corner launcher
+const openPanel = (page) => page.locator(".ask-launcher").click();
+
 async function ask(page, question) {
   await page.goto("/");
+  await openPanel(page);
   await page.locator("#ask-input").fill(question);
   await page.locator("[data-ask-form] [type=submit]").click();
 }
@@ -118,6 +122,7 @@ test("ask: history keeps the last 5 answers across a reload", async ({ page }) =
     await route.fulfill({ status: 200, contentType: "text/event-stream", body: sse([["answer", answer]]) });
   });
   await page.goto("/");
+  await openPanel(page);
   for (let i = 1; i <= 6; i++) {
     await page.locator("#ask-input").fill(`Question ${i}`);
     await page.locator("[data-ask-form] [type=submit]").click();
@@ -127,6 +132,7 @@ test("ask: history keeps the last 5 answers across a reload", async ({ page }) =
   await expect(page.locator("[data-ask-history] h3")).toHaveText(["Answer 5.", "Answer 4.", "Answer 3.", "Answer 2."]);
 
   await page.reload();
+  await openPanel(page);
   await expect(result(page)).toBeEmpty();
   const history = page.locator("[data-ask-history]");
   await expect(history.locator("article")).toHaveCount(5);
@@ -161,4 +167,44 @@ test("ask: copy SQL puts the query on the clipboard", async ({ page, context }) 
   await result(page).getByRole("button", { name: "Copy SQL" }).click();
   await expect(page.locator("[data-toast]")).toHaveText("Copied");
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(ANSWER.sql);
+});
+
+test("ask panel: the launcher opens it with the input focused; Esc closes it and focus goes back", async ({ page }) => {
+  await page.goto("/");
+  const launcher = page.locator(".ask-launcher");
+  const panel = page.locator("#ask-panel");
+  await expect(panel).toBeHidden();
+  await expect(launcher).toHaveAttribute("aria-expanded", "false");
+  await launcher.click();
+  await expect(panel).toBeVisible();
+  await expect(page.locator("#ask-input")).toBeFocused();
+  await expect(launcher).toBeHidden(); // the panel covers its corner while open
+  await expect(page.locator(".nav__cta-full")).toHaveAttribute("aria-expanded", "true");
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  await expect(launcher).toBeFocused();
+  // the nav's button opens it too, and the panel's close button shuts it
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.locator(".nav__cta-full").click();
+  await expect(panel).toBeVisible();
+  await page.locator("[data-ask-close]").click();
+  await expect(panel).toBeHidden();
+  await expect(page.locator(".nav__cta-full")).toBeFocused();
+});
+
+test("ask panel: a side panel on desktop, full screen on a phone, never wider than the screen", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await openPanel(page);
+  const desk = await page.locator("#ask-panel").boundingBox();
+  expect(desk.width).toBeLessThanOrEqual(440);
+  expect(desk.x + desk.width).toBeLessThan(1440);
+
+  await page.setViewportSize({ width: 320, height: 640 });
+  const phone = await page.locator("#ask-panel").boundingBox();
+  expect([phone.x, phone.y, phone.width, phone.height]).toEqual([0, 0, 320, 640]);
+  await expect(page.locator("#ask-panel [data-suggest]")).toHaveCount(6);
+  const fits = await page.locator("#ask-panel").evaluate((el) => el.scrollWidth <= el.clientWidth);
+  expect(fits).toBe(true);
+  await expect(page.locator(".ask-launcher__label")).toHaveCSS("width", "1px"); // icon-only launcher on a phone
 });

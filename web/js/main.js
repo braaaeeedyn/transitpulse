@@ -56,27 +56,41 @@ menu.addEventListener("keydown", (e) => {
   }
 });
 menu.addEventListener("click", (e) => {
-  if (e.target.closest("a")) closeMenu({ restoreFocus: false });
+  if (e.target.closest("a, [data-ask-open]")) closeMenu({ restoreFocus: false });
 });
 matchMedia("(min-width: 1120px)").addEventListener("change", (e) => {
   if (e.matches && !menu.hidden) closeMenu({ restoreFocus: false });
 });
 
-// --- "Ask a question" links scroll to and focus the input ------------------------------------------
-for (const a of document.querySelectorAll("[data-focus-ask]")) {
-  a.addEventListener("click", (e) => {
-    e.preventDefault();
-    const input = document.getElementById("ask-input");
-    input.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
-    input.focus({ preventScroll: true });
-  });
+// --- Ask panel: the corner launcher, the nav and hero buttons open it; ✕ or Esc closes it ----------
+// Not modal: on a wide screen the page stays usable beside it (a phone's full-screen panel locks the page scroll).
+const askPanel = document.querySelector("[data-ask]");
+const askOpeners = [...document.querySelectorAll("[data-ask-open]")];
+let askOpener = null;
+
+function openAsk(from) {
+  askOpener = from;
+  askPanel.hidden = false;
+  document.body.classList.add("is-ask-open");
+  for (const b of askOpeners) b.setAttribute("aria-expanded", "true");
+  document.getElementById("ask-input").focus();
 }
 
-initAsk(
-  document.querySelector("[data-ask]"),
-  document.querySelector("[data-ask-result]"),
-  document.querySelector("[data-ask-history]"),
-);
+function closeAsk() {
+  askPanel.hidden = true;
+  document.body.classList.remove("is-ask-open");
+  for (const b of askOpeners) b.setAttribute("aria-expanded", "false");
+  // back to whatever opened it, or the launcher when that was in the (now closed) nav menu
+  (askOpener?.checkVisibility?.() ? askOpener : document.querySelector(".ask-launcher")).focus();
+}
+
+for (const b of askOpeners) b.addEventListener("click", () => (askPanel.hidden ? openAsk(b) : closeAsk()));
+askPanel.querySelector("[data-ask-close]").addEventListener("click", closeAsk);
+askPanel.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeAsk();
+});
+
+initAsk(askPanel, document.querySelector("[data-ask-result]"), document.querySelector("[data-ask-history]"));
 initMap(document.querySelector("[data-map]"));
 initTrends(document.querySelector("[data-trends]"));
 initDashboard(document.querySelector("[data-dashboard]"));
