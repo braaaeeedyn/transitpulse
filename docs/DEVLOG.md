@@ -1573,3 +1573,14 @@ second `h1`.
 
 **Docs.** `SKILLS_MAP.md` still said Bay Wheels and the VM weren't on BigQuery; both have been for a while
 (`CURRENT_STATE.md`), so it is corrected. 75 Playwright and 52 node tests pass.
+
+## 2026-10-18 · deploy · closures live, the site re-exported, Langfuse wiring for Cloud Run
+- Built the closure seed and marts on BigQuery (`dbt build --select bart_closure_candidates+`, dev target): PASS=15.
+  `/api/closures` on Cloud Run answers with the same 15 verdicts as local data (strong 6, mixed 7, weak 2; 12.6% and
+  24.1% of weekday trips).
+- Re-exported the pages to the portfolio (live mode). Checked on braedynthompson.com/transitpulse/: 15 station cards,
+  "Close the first 10" leaves 40 of 50 markers, the status line has the live share, no console errors.
+- Terraform: optional Langfuse tracing, bound like the Gemini key (`langfuse_public_key`, `langfuse_base_url`, secret
+  `transitpulse-langfuse-secret-key`; on only with the agent and a key). Not applied: `terraform plan` shows the new
+  secret plus a service-level `scaling` block (`min_instance_count` 0 → null) that `gcloud run deploy` set, which
+  Terraform would clear; harmless, left for the owner's next apply.

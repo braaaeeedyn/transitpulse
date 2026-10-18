@@ -468,7 +468,9 @@ Configuration: environment variables with prefix `TP_` (`api/settings.py`).
   `GOOGLE_API_KEY`). A Gemini quota error (`GoogleRateLimitError`, the free tier's per-model daily cap) ends the
   stream with `agent_busy`, "The analyst is out of free questions for now".
 - **Tracing** (`tracing.py`): Langfuse v4 callback only when `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are set;
-  otherwise langfuse isn't imported.
+  otherwise langfuse isn't imported. On Cloud Run, Terraform sets them only with `agent_enabled` and a non-empty
+  `langfuse_public_key` (the secret key comes from Secret Manager `transitpulse-langfuse-secret-key`; `LANGFUSE_BASE_URL`
+  from `var.langfuse_base_url`, US cloud by default). Off today: no key is set.
 - **Eval** (`eval/`): `questions.yaml` has 66 in-scope questions (tags kpi, station, trend, bikes, forecast, od) with
   BigQuery-dialect gold SQL and 10 that must be refused (sha256 frozen in `eval/ab.py`).
   - `python -m eval.run_eval --llm fake|ollama|gemini --warehouse duckdb [--arm A|B] [--duckdb-path] [--ids]

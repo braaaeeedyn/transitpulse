@@ -154,6 +154,19 @@ The agent costs money per question once it is public: BigQuery bytes and Gemini 
    `TP_GEMINI_MODEL`, `GOOGLE_API_KEY` from the secret). The running image is kept.
 4. Ask a question on the site, then try an off-topic one to see the refusal.
 
+**Optional: Langfuse traces of each question** (route, SQL, tokens, latency). Free Hobby plan at langfuse.com.
+1. Make a project and an API key pair (Settings → API Keys). Note the region in its URL (US or EU).
+2. `terraform apply` once so the empty secret `transitpulse-langfuse-secret-key` exists, then add the secret key:
+   ```sh
+   printf '%s' "$LANGFUSE_SECRET_KEY" | gcloud secrets versions add transitpulse-langfuse-secret-key --data-file=- --project transitpulse-511002
+   ```
+3. Set `langfuse_public_key = "pk-lf-..."` in `terraform.tfvars` (and `langfuse_base_url = "https://cloud.langfuse.com"`
+   for EU), plan and apply: **1 to add** (the secret accessor) and **1 to change** (the service's env).
+4. Ask a question; its trace appears in Langfuse within a minute. Traces are sent in the background, and Cloud Run
+   throttles CPU between requests, so one can arrive late (on the next request or at shutdown).
+
+Set `langfuse_public_key = ""` and apply to turn it off.
+
 To turn the agent off, set `agent_enabled = false` and apply. The site's Ask card then says the analyst isn't
 connected. The secret version can stay; disabled or not, it costs nothing at this size.
 

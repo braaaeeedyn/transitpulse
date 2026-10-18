@@ -238,6 +238,17 @@ def test_agent_off_by_default(tf, service):
     assert "secretmanager.googleapis.com" in str(tf["locals"]["services"])
 
 
+def test_langfuse_off_without_a_key(tf, service):
+    assert tf["variable"]["langfuse_public_key"]["default"] == ""
+    assert "var.agent_enabled && var.langfuse_public_key" in tf["locals"]["langfuse_on"]
+    access = resources(tf, "google_secret_manager_secret_iam_member")["agent_langfuse_key"]
+    assert access["count"] == "${local.langfuse_on ? 1 : 0}"
+    (template,) = service["template"]
+    (container,) = template["containers"]
+    key_env = [d["env"] for d in container["dynamic"] if "LANGFUSE_SECRET_KEY" in str(d["env"]["content"])]
+    assert len(key_env) == 1 and key_env[0]["for_each"].startswith("${local.langfuse_on ?")
+
+
 def test_deploy_workflow_smoke_tests_image_before_push():
     wf = yaml.safe_load(DEPLOY_WORKFLOW.read_text(encoding="utf-8"))
     (job,) = wf["jobs"].values()
