@@ -15,6 +15,7 @@ const SCRUB_MIN = 240; // 4:00 AM
 const SCRUB_MAX = 1590; // 2:30 AM next day
 const ZOOMS = [1, 1.5, 2.25, 3.4, 5];
 const SUMMARY_EVERY_MS = 60_000;
+const BOARD_EVERY_MS = 10_000; // the hero's departure board
 const LIST_EVERY_MS = 5_000;
 const REDUCED_MOTION_EVERY_MS = 30_000;
 
@@ -109,6 +110,7 @@ export async function initMap(root) {
   let lastDraw = 0;
   let lastList = 0;
   let lastSummary = 0;
+  let lastBoard = 0;
   let busiest = ""; // the screen-reader summary's busiest-station sentence, from the Trends band's /api/kpis
   let tooltipHTML = "";
   let raf = 0;
@@ -228,6 +230,10 @@ export async function initMap(root) {
     if (force || ms - lastSummary > SUMMARY_EVERY_MS) {
       updateSummary(t);
       lastSummary = ms;
+    }
+    if (force || ms - lastBoard > BOARD_EVERY_MS) {
+      publishBoard(t);
+      lastBoard = ms;
     }
     syncControls();
   }
@@ -595,6 +601,25 @@ export async function initMap(root) {
         return tr;
       }),
     );
+  }
+
+  // --- departure board: the six soonest arrivals, for the hero (tp:arrivals) -----------------------------
+  function publishBoard(t) {
+    const rows = placed
+      .filter((tr) => tr.next !== null)
+      .map((tr) => {
+        const pattern = schedule.patterns[tr.entry.pattern];
+        return {
+          line: pattern.line,
+          lineName: lineName[pattern.line],
+          dest: network.stations[pattern.stops[pattern.stops.length - 1]].short,
+          next: network.stations[pattern.stops[tr.next]].short,
+          mins: Math.max(0, Math.ceil(tr.nextAt - (t.minutes + tr.dayOffset))),
+        };
+      })
+      .sort((a, b) => a.mins - b.mins || a.next.localeCompare(b.next))
+      .slice(0, 6);
+    document.dispatchEvent(new CustomEvent("tp:arrivals", { detail: { rows, clock: formatClock(t.minutes), live: state.live } }));
   }
 
   // --- screen-reader summary -------------------------------------------------------------------------

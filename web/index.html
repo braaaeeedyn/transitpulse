@@ -140,6 +140,16 @@
               <a class="btn btn--subtle" href="#map">See the live map</a>
             </div>
           </div>
+
+          <!-- a departure board of the next arrivals anywhere on the system, fed by the map (web/js/fx.js) -->
+          <aside class="board" data-board aria-label="Next arrivals" hidden>
+            <div class="board__head">
+              <span class="board__title">Arriving next</span>
+              <span class="board__clock"><span class="board__dot" aria-hidden="true"></span><span data-board-clock>—</span></span>
+            </div>
+            <ol class="board__rows" data-board-rows></ol>
+            <p class="board__foot">From BART's timetable · <a href="#map">see them on the map</a></p>
+          </aside>
         </div>
       </section>
 
@@ -369,6 +379,10 @@
 
     <footer class="footer">
       <div class="container">
+        <div class="footer__hello">
+          <svg class="mascot mascot--lg" aria-hidden="true"><use href="#i-mascot" /></svg>
+          <p>Thanks for riding along. The map, the numbers and the analyst all come from BART's own published data.</p>
+        </div>
         <div class="footer__grid">
           <div>
             <h2>Data sources</h2>

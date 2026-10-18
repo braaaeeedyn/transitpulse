@@ -168,3 +168,27 @@ export function initTheme(button) {
   });
   sync();
 }
+
+// --- the hero's departure board ---------------------------------------------------------------------
+// The map publishes the six soonest arrivals (tp:arrivals). Rows keep their place between ticks, so the board
+// reads like a station display: the minutes tick down and a train that arrives slides off.
+export function initBoard(board) {
+  if (!board) return;
+  const rows = board.querySelector("[data-board-rows]");
+  const clock = board.querySelector("[data-board-clock]");
+  const esc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  document.addEventListener("tp:arrivals", (e) => {
+    const { rows: next, clock: now, live } = e.detail;
+    clock.textContent = live ? now : `${now} (replay)`;
+    board.hidden = next.length === 0;
+    rows.innerHTML = next
+      .map(
+        (r) => `<li class="board__row">
+          <span class="swatch" style="background: var(--line-${esc(r.line)})" title="${esc(r.lineName)}"></span>
+          <span class="board__dest"><strong>${esc(r.next)}</strong><span class="board__to">to ${esc(r.dest)}</span></span>
+          <span class="board__eta num">${r.mins < 1 ? "now" : `${r.mins} min`}</span>
+        </li>`,
+      )
+      .join("");
+  });
+}

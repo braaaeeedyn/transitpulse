@@ -4,7 +4,7 @@
 import { initAsk } from "./ask.js";
 import { formatDate } from "./chart.js";
 import { initFindings } from "./findings.js";
-import { initCounts, initHeroLive, initMascotHello, initReveal, initScrollSpy, initTheme } from "./fx.js";
+import { initBoard, initCounts, initHeroLive, initMascotHello, initReveal, initScrollSpy, initTheme } from "./fx.js";
 import { initForecast } from "./forecast.js";
 import { initMap } from "./map/map.js";
 import { getKpis, initDashboard, initTrends } from "./trends.js";
@@ -101,6 +101,7 @@ initFindings(document.querySelector("[data-findings]"));
 // motion: live hero numbers, count-ups, sections rising in, the nav's current section, the mascot's hello
 initTheme(document.querySelector("[data-theme-toggle]"));
 initCounts();
+initBoard(document.querySelector("[data-board]"));
 initHeroLive(document.querySelector("[data-hero-live]"));
 initReveal();
 initScrollSpy();
