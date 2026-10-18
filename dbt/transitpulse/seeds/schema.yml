@@ -1,0 +1,17 @@
+version: 2
+
+seeds:
+  - name: bart_closure_candidates
+    description: >
+      The 15 stations named in BART staff's February 2026 presentation, as reported by the press (docs/STATION_CLOSURES.md):
+      closure_group 1 = the 10 lowest-ridership stations, 2 = the 5 more that close whole line-end segments.
+      The list isn't final; edit this file if the board votes on one.
+    columns:
+      - name: station_code
+        data_tests: [not_null, unique]
+      - name: closure_group
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2]
+                quote: false

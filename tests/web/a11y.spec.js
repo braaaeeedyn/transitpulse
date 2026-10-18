@@ -15,6 +15,7 @@ async function mockLoaded(page) {
   await page.route("**/api/trends/bikes-vs-trains", json(fixture("bikes-vs-trains")));
   await page.route("**/api/forecast/*", json(fixture("forecast-EMBR")));
   await page.route("**/api/findings", json(fixture("findings")));
+  await page.route("**/api/closures", json(fixture("closures")));
 }
 
 async function contrastViolations(page) {
@@ -32,6 +33,7 @@ for (const width of [390, 1440]) {
     await expect(page.locator("[data-bikes-card] .chart__svg")).toHaveCount(1);
     await expect(page.locator("[data-fc-title]")).toHaveText("Embarcadero");
     await expect(page.locator("[data-findings-verdict]")).toBeVisible();
+    await expect(page.locator("[data-closure-station]")).toHaveCount(15);
     await expect(page.locator("main .skeleton")).toHaveCount(0);
     await expect(page.locator("[data-map-summary]")).toContainText("trains running");
     expect(await contrastViolations(page)).toEqual([]);

@@ -84,23 +84,6 @@ function tileHTML(t) {
   </div>`;
 }
 
-/** A 72×22 polyline of the last 12 monthly values, with a dot on the latest. Nulls break the line. */
-export function sparklineHTML(values, label) {
-  const pts = values.slice(-12);
-  const nums = pts.filter((v) => v !== null && v !== undefined);
-  if (nums.length < 2) return "";
-  const [w, h, pad] = [72, 22, 2];
-  const lo = Math.min(...nums);
-  const hi = Math.max(...nums);
-  const x = (i) => pad + (i * (w - 2 * pad)) / (pts.length - 1);
-  const y = (v) => (hi === lo ? h / 2 : pad + ((hi - v) * (h - 2 * pad)) / (hi - lo));
-  const d = pts.map((v, i) => (v === null || v === undefined ? "M" : i === 0 ? "M" : "L") + `${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(" ").replace(/M(?= M|$)/g, "");
-  const last = pts.length - 1;
-  return `<svg class="sparkline" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="${esc(label)}">
-    <path d="${d}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
-    <circle cx="${x(last).toFixed(1)}" cy="${y(pts[last]).toFixed(1)}" r="2.2" fill="currentColor"/></svg>`;
-}
-
 // --- line charts ---------------------------------------------------------------------------------
 
 const MARGIN = { top: 8, right: 8, bottom: 24, left: 44 };
@@ -337,12 +320,6 @@ export function initTrends(root) {
     root.querySelector("[data-trends-through]").textContent =
       `Data through ${formatDate(through)}. Tiles cover the ${kpis.window?.days ?? 28} days to that date.`;
     root.querySelector("[data-kpi-tiles]").innerHTML = kpis.tiles.map(tileHTML).join("");
-    // the monthly series behind two of the tiles, as sparklines next to their deltas
-    const spark = { recovery: "avg_service_weekday_recovery", entries: "avg_daily_entries" };
-    for (const [id, key] of Object.entries(spark)) {
-      const tile = root.querySelector(`[data-tile="${id}"] .stat-tile__delta`);
-      if (tile) tile.insertAdjacentHTML("afterend", sparklineHTML(trend.rows.map((r) => r[key]), "Last 12 months"));
-    }
     root.querySelector("[data-kpi-source]").textContent = `Source: ${kpis.source}`;
 
     const rows = trend.rows;

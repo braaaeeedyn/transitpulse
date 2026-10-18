@@ -16,8 +16,8 @@
 
 | Part | State | How to run |
 |---|---|---|
-| Website (static, `web/`) | **Working**: live train map, ridership tiles + charts, forecast explorer, Ask panel with a train mascot (history, Copy SQL), Findings band, an optional Looker Studio card, Open Graph tags, and a style guide at `/styleguide.html` | `uv run python tasks.py api` → http://localhost:8000 |
-| API (`api/`) | **Working**: serves the site; data endpoints read the local DuckDB or BigQuery marts when a warehouse is configured; `POST /api/ask` streams the agent's answer when `TP_AGENT_ENABLED=true`, 503 otherwise (the default) | same as above |
+| Website (static, `web/`) | **Working**: live train map, ridership tiles + charts, forecast explorer, Ask panel with a train mascot (history, Copy SQL), Findings band, a Station closures band, an optional Looker Studio card, Open Graph tags, and a style guide at `/styleguide.html` | `uv run python tasks.py api` → http://localhost:8000 |
+| API (`api/`) | **Working**: serves the site; data endpoints (incl. `GET /api/closures`) read the local DuckDB or BigQuery marts when a warehouse is configured; `POST /api/ask` streams the agent's answer when `TP_AGENT_ENABLED=true`, 503 otherwise (the default) | same as above |
 | Ask TransitPulse agent (`api/agent/`) | **Working** locally: LangGraph text-to-SQL with guardrails, 5 retrieved example queries in the SQL prompt (the M5 A/B winner), fake / Ollama / Gemini LLM, optional Langfuse | `TP_AGENT_ENABLED=true TP_AGENT_LLM=ollama uv run --group agent python tasks.py api` |
 | Agent eval + A/B (`eval/`) | **Working**: 66 in-scope questions with gold SQL + 10 out-of-scope; arms A (no examples) and B (5 examples), compared by `eval.ab` ([`AB_TEST.md`](AB_TEST.md)) | `uv run python tasks.py eval --llm ollama --arm A\|B`, then `uv run --group agent python -m eval.ab` |
 | Map data build (`pipeline/webdata/`) | **Working** | `uv run python tasks.py web-data` |
@@ -125,9 +125,10 @@ S3 baywheels-data ──► data/raw/baywheels/*.zip ─► DuckDB clean ─► 
 4. **Trends** (`web/js/trends.js`, see below).
 5. **Forecast** explorer (`web/js/forecast.js`, see below).
 6. **Findings** (black band, `web/js/findings.js`, see below).
-7. **About**: three FAQ rows (`<details>`).
-8. **Footer**: data sources with licences (Bay Wheels links its Data License Agreement); links to GitHub, the eBART
-   and A/B write-ups and the style guide; credits; "Data through Dec 31, 2025." from the KPIs (left out without them).
+7. **Station closures** (`#closures`, `web/js/closures.js`, see below).
+8. **About**: three FAQ rows (`<details>`).
+9. **Footer**: data sources with licences (Bay Wheels links its Data License Agreement); links to GitHub, the eBART,
+   A/B and station closures write-ups and the style guide; credits; "Data through Dec 31, 2025." from the KPIs (left out without them).
 
 **`<head>`:** title, description, favicon, and Open Graph tags: `og:title`, `og:description`, `og:type` website,
 `og:url` `https://braedynthompson.com/transitpulse/`, `og:image` `https://braedynthompson.com/transitpulse/img/og.png`
@@ -168,6 +169,50 @@ number comes from the JSON:
 - **States:** skeletons of the loaded size while loading; 404 → "The analysis is in progress."; any other error →
   an error message with Retry.
 
+### Station closures band
+A white band after Findings (`<section id="closures" data-accent="beige">`, nav link "Closures" in both nav lists,
+so the desktop nav has 6 links), about the stations BART could close from July 2027 if the Connect Bay Area measure
+fails. Write-up: [`STATION_CLOSURES.md`](STATION_CLOSURES.md).
+- **Static copy** (in `index.html`, shown with or without data): the context (the Connect Bay Area measure, SB 63,
+  on the November 3, 2026 ballot in five counties; the BART board's Alternative Service Plan adopted 8–1 on
+  February 26, 2026; it applies only if the measure fails and no other money is found; up to 15 closures from July
+  2027); `[data-closures-status]` (the stations are the ones named in BART staff's February 2026 presentation as
+  reported by the press; the list "isn't final" because the board "still has to vote" on stations or segments);
+  `[data-closures-neutral]` (TransitPulse "doesn't take a position on the measure"; the verdicts weigh ridership,
+  recovery and distance); `[data-closures-cost]` "What closing would cost" (left border in the band's accent): a
+  data line `[data-closures-cost-data]` (hidden until the API answers; `costSentence`: the share of weekday trips at
+  the 15, how many grew on the previous year, how many meet Distance and the farthest one's miles) and three cited
+  findings: the 2003 Los Angeles transit strike (peak-hour highway delay +47%, Anderson 2014), the 2013 BART strike
+  (Bay Bridge travel times and volumes nearly doubled on the worst day, roads parallel to BART as bad as a typical
+  week's worst day, regional freeways little changed; Moylan, Foti and Skabardonis 2016) and the Bay Area Council
+  Economic Institute's ~$73M a day in lost productivity, with a caption that these were whole-system shutdowns;
+  `[data-closures-caveats]` "What the data can't see" (cost, who rides, parking/bus/shuttle links,
+  transfers such as Caltrain at Millbrae and air travellers at OAK, whether riders switch or stop riding;
+  `[data-closures-sfo]`: SFO isn't on the list and the sources don't say how it would be served, the page counts it as
+  still open, so it is the nearest open station for San Bruno and Millbrae, and if it lost service both would meet the
+  Distance rule; distances are straight lines; a link to the write-up);
+  `[data-closures-sources]` (13 links with publisher and date); a caption naming BART's ridership data.
+- **From `GET /api/closures`** (`web/js/closures.js`, every number from the API; strings escaped with `esc`):
+  - `[data-closures-summary]`: three `stat-tile`s with sentences built from the data: "9 of the first 10 are among
+    the 10 least-used stations in 2025. Also among them: Milpitas, which isn't on the list."; "12.6% of weekday trips
+    in 2025 start or end at the first 10. The press reported about 12%."; "24.1% … at one of all 15."
+  - `[data-closures-rules]`: "How the verdicts work": the four rules (Riders, Recovery, Distance, Growing) and the
+    verdict mapping, as text from the API (the page never states a threshold itself), and a line saying the first three
+    were set before the section was built and Growing was added afterwards.
+  - Two groups (`[data-closures-group]`, h3): "The first 10: lowest ridership" and "The next 5: line-end segments"
+    (closing those as well would close all the listed stations on the three named segments, listed from the data).
+  - One `card` per station (`[data-closure-station=CODE]`, `data-verdict`, in an `auto-fit` grid, min 280 px):
+    name (h4) and segment; a **verdict pill** "Case to keep: strong / mixed / weak" (ink / outlined / soft grey,
+    never green/red); weekday trips and rank of 50 from the fewest; % of 2019 with BART's %; change vs 2024 (▲/▼);
+    the nearest station still open and its miles; the top 3 destinations with shares; each rule as "Met" / "Not met"
+    (with a decorative ✓/✗).
+  - Locally: strong 6 (Pittsburg Center, Orinda, San Bruno, Antioch, Pittsburg/Bay Point, Dublin/Pleasanton),
+    mixed 7, weak 2 (Oakland International Airport, North Concord/Martinez).
+- **States:** skeletons (3 tiles, a rules card, 3 cards) while loading; 503 → "Ridership data isn't connected yet.";
+  404 → "This data hasn't been loaded yet."; other errors → an error message with Retry.
+- **Styles:** `web/css/fx.css` (closures section: the band layout, station cards, `.verdict-pill`, the beige accent),
+  tokens only, so dark mode needs nothing extra.
+
 ### Live map: v1.1 additions
 - **Legend filter:** each legend entry is a toggle (`[data-legend-line]`, `aria-pressed`). One pressed line sets
   `data-focus-line` on the map card: other lines' track paths (`data-line`) fade to 15% and `drawTrains` paints
@@ -207,8 +252,6 @@ number comes from the JSON:
   URL yet (owner step, `bi/README.md`).
 
 ### Trends band: v1.1 additions
-- The recovery and entries tiles carry a 72×22 **sparkline** of the last 12 months (`sparklineHTML`), absolutely
-  positioned in the tile's corner so the skeletons' reserved height still holds.
 - Both line charts have a **crosshair readout** (`renderLineChart`'s `readout` option, `attachReadout`): a dashed
   rule at the nearest month, a dot per series and an ink box with the month and values; pointer events are assigned
   (not added) so a resize redraw doesn't stack handlers. The hidden tables remain the accessible version.
@@ -249,7 +292,7 @@ MutationObserver catches ones rendered later); `.band` children and section head
 fade) when below the fold and `.is-in` when they enter; an IntersectionObserver marks the nav's current section; the
 Ask launcher's mascot bobs and shows "Ask me anything about BART" once per session (`sessionStorage` `tp-hello`);
 the footer mascot hops when clicked; `/` outside a field opens Ask. Section accents: `data-accent` on each `<section>`
-sets `--accent` (map blue, trends green, forecast orange, findings yellow, about red), drawn as a dot before the
+sets `--accent` (map blue, trends green, forecast orange, findings yellow, closures beige, about red), drawn as a dot before the
 eyebrow; the Findings band has a line-colour top border.
 
 ### Live map: how it works
@@ -296,10 +339,12 @@ eyebrow; the Findings band has a line-colour top border.
 - **Failure**: if the map data can't load, the map area shows an error message with Retry.
 
 ### Design system
-`web/css/tokens.css` mirrors `docs/DESIGN.md` **v1.1**: the v1.0.1 base (black/white interface, Inter 400/500/700,
+`web/css/tokens.css` mirrors `docs/DESIGN.md` **v1.1.3**: sizes are in rem on a fluid root size (`html` in
+`base.css`: 16px up to ~1500px wide, 20px at 2560px, so large screens scale up rather than leaving a 1200px strip;
+only hairlines, focus rings and the map's stroke tokens are px); the v1.0.1 base (black/white interface, Inter 400/500/700,
 pills for controls, 16 px cards) plus a **dark palette** under `:root[data-theme="dark"]` and the v1.1
 motion/delight layer in `web/css/fx.css` + `web/js/fx.js` (pulse stripe, live hero strip, departure board,
-count-ups, scroll reveal, scroll-spy, section accents, legend filter, station cards, sparklines, chart readout,
+count-ups, scroll reveal, scroll-spy, section accents, legend filter, station cards, chart readout,
 forecast badges, mascot, dark-mode toggle; see DESIGN.md's changelog). Chart, trends, forecast and dashboard
 styles are in `web/css/charts.css`. Deviations awaiting v1.1 are the numbered "v1.1 list" in `DESIGN_BACKLOG.md` (19 items).
 - **Style guide** (`web/styleguide.html` + `web/js/styleguide.js`, linked from the footer, `noindex`): each text
@@ -327,6 +372,8 @@ styles are in `web/css/charts.css`. Deviations awaiting v1.1 are the numbered "v
 | GET | `/api/stations/{code}/summary` | `{code, name, data_through, entries, recovery_ratio, avg_weekday_entries_28d, peak_hour, peak_hour_share}` for the station's latest day |
 | GET | `/api/forecast/{code}` | `{code, name, data_through, forecast_start, forecast_end, generated_at, forecast:[{date,p10,p50,p90,lo,hi}] ×14, actuals:[{date,entries}] ×28, model:{mae, baseline_mae, mae_diff_ci, interval_coverage, interval:{method, nominal, coverage, coverage_ci, calibrated}}}`; 404 `forecast_not_available` if there's no forecast for a known station. Reads both forecast-table schemas (see Forecast below); every run-log column is optional (missing → `null`, `mae_diff_ci` is `null` unless both bounds exist) |
 | GET | `/api/findings` | the eBART study's `api/data/findings.json` (path: `TP_FINDINGS_PATH`), read once per process and returned unchanged, `Cache-Control: public, max-age=86400`. Never touches the warehouse (works with `TP_WAREHOUSE=none`); a missing or invalid file → **404** `findings_not_available`. Included in the static export (`pipeline/webexport.py`) |
+| GET | `/api/closures` | `{period_year, baseline_year, data_through, system:{stations, recovery_pct, share_first_10, share_all_15, lowest_10:[{code,name,listed}], first_10_in_lowest_10}, rules:[{id,text}] ×4, verdicts:{strong,mixed,weak}, stations:[{code, name, group, segment, weekday_trips, weekday_entries, weekday_exits, rank_lowest, share_of_trips, recovery_pct, change_vs_prev_year, nearest_open:{code,name,miles}, destinations:[{code,name,share}] ×3, criteria:{riders,recovery,distance,growing}, points, verdict}] ×15, source}` from `mart_station_closures`, `mart_closure_destinations` and `mart_closure_scenarios`; stations ordered by group, then weekday trips. The rules are module constants in `api/routes/data.py` (`CLOSURE_RULES`): **riders** = `rank_lowest > 10`; **recovery** = whole-percent recovery (half up) ≥ BART's whole-percent recovery, null = not met; **distance** = nearest open station ≥ 3.0 mi (rounded to 0.1, half up); **growing** = change vs the previous year,
+rounded half up to 0.1%, above 0. 3–4 met = strong, 2 = mixed, 0–1 = weak. Cached an hour; 503 without a warehouse; **404** `data_not_available` when a mart is missing or no listed station has data. Locally ~11 KB, ~140 ms cold, ~3 ms warm. In the static export |
 | POST | `/api/ask` | body `{"question": str (1–300)}`. Agent off (default): **503** `agent_unavailable`. On: `text/event-stream` (below); **429** `rate_limited` (with `Retry-After: 60`) or `agent_busy` before the stream starts; 422 for an empty/too-long question |
 | GET | `/api/docs` | OpenAPI UI |
 
@@ -461,7 +508,8 @@ Local mode needs ~4 GB driver memory for two years.
 | staging | `stg_bart_od`, `stg_bart_stations`, `stg_baywheels_trips` | views |
 | snapshot | `snap_bart_stations` (SCD2, check strategy on name/lat/lon) | snapshot |
 | core | `dim_station` (SCD2, first version back-dated to 1900), `dim_date` (incl. `iso_week` with its `iso_year`), `fct_trips_hourly` (incremental: re-processes the last 35 days, anything newer, and any date not loaded yet, so a backfilled older year is picked up), `fct_station_daily`, `fct_bike_trips_daily` | tables |
-| marts | `mart_recovery`, `mart_peak_load`, `mart_od_flows`, `mart_kpis_daily`, `mart_ridership_monthly`, `mart_bikes_vs_trains` | tables |
+| seed | `bart_closure_candidates` (15 rows: `station_code`, `closure_group` 1 = the first 10 / 2 = the next 5, `closure_segment`; schema `staging`). The one place the closure list lives | seed |
+| marts | `mart_recovery`, `mart_peak_load`, `mart_od_flows`, `mart_kpis_daily`, `mart_ridership_monthly`, `mart_bikes_vs_trains`, `mart_station_closures`, `mart_closure_destinations`, `mart_closure_scenarios` | tables |
 
 73 data tests (incl. a singular test that every staged OD date is in `fct_trips_hourly`). KPI definitions:
 `docs/METRICS.md`:
@@ -469,10 +517,26 @@ Local mode needs ~4 GB driver memory for two years.
   (2018-12-31 → 2019-12-29); `mart_recovery` leaves out ISO-year-2019 days.
 - `mart_kpis_daily.rolling_28d_avg_entries` averages the days present in the calendar window [d − 27, d], and
   `rolling_28d_days` counts them (28 without gaps; locally 26–27 around BART's four missing 2020 days).
+- **Closure marts** (all on service weekdays of the *period year*, the latest calendar year whose data reaches
+  Dec 31; locally 2025):
+  - `mart_station_closures`: one row per station with data that year (50 locally): average weekday entries, exits
+    and trips (entries + exits), `rank_lowest` (`rank()` from the fewest) and `stations_ranked`, share of systemwide
+    weekday trips, the calendar-2019 baseline (null with fewer than 200 baseline weekdays: Milpitas, Berryessa),
+    `recovery_ratio` and `system_recovery_ratio`, change vs the year before, and the nearest current station **not
+    in the seed** (haversine, Earth radius 3958.8 mi). Group and segment from the seed (null when not listed).
+  - `mart_closure_destinations`: each listed station's top 3 destinations (other stations; ties by code), average
+    weekday trips and share of all trips starting there.
+  - `mart_closure_scenarios`: `first_10` and `all_15`: weekday trips starting or ending at a listed station (a trip
+    between two listed stations counts once) and their share of all weekday trips.
+  - Portable SQL only (no `filter`, `radians`, `make_date` or `string_agg`); built on DuckDB, not yet on BigQuery.
+    On the CI fixture (no full year) they build empty.
 
 Targets:
-- `local` (DuckDB, default): 88/88 pass, ~2.3 min. Needs the Bay Wheels Parquet: the source glob fails with no files.
-- `dev` (BigQuery): all models, built by the VM's `warehouse` runs.
+- `local` (DuckDB, default): 88/88 pass in the last full run, ~2.3 min; the closures subset (`dbt build --select
+  bart_closure_candidates+`: the seed, 3 marts, 11 tests) 15/15 in under 1 s. Needs the Bay Wheels Parquet: the
+  source glob fails with no files.
+- `dev` (BigQuery): all models, built by the VM's `warehouse` runs; the closures seed and marts only after the VM
+  pulls this code and runs a dbt build (owner step 4). Until then `/api/closures` answers 404 there.
 - `ci`: never run.
 
 On BigQuery, facts are partitioned by `trip_date` (and the BART facts clustered by station), and queries are capped
@@ -740,14 +804,14 @@ the nearby legacy stations, and did it bring new riders or only move them? The w
 
 | Suite | Command | Count | Status |
 |---|---|---|---|
-| Python unit (map data, API data endpoints, Bay Wheels cleaning, dbt build on a generated fixture, dbt regressions (backfill, ISO year, rolling window), forecast + calibration, Dagster definitions and schedules, VM files, agent guardrails / graph / `/api/ask` / eval, the M5 A/B (McNemar, bootstrap, power, BM25 retrieval, arm prompts, examples pool, default k, AB_TEST.md), Cloud Run Terraform + deploy workflow, cross-origin, causal study (prereg + amendment, synthetic data, inference, monthly parser, FINDINGS.md vs findings.json, the post-hoc trend adjustment), `/api/findings`, gzip never on the Ask stream, the docs deliverables (BI guide, README diagram + screenshots, design backlog v1.1 list, owner steps), the compose file) | `uv run --group dbt --group ml --group pipeline --group agent pytest -m "not spark and not gcp and not localdata and not docker"` | 167 (37 in `tests/test_causal.py`, 8 in `tests/test_ab.py`, 10 in `tests/test_api_findings.py`, 4 in `tests/test_docs_deliverables.py`, 4 in `tests/test_compose.py`) | pass (~50 s) |
-| Local warehouse (real data, incl. every gold SQL of the agent eval) | `uv run --group dbt --group ml --group agent pytest -m localdata tests/local` | 13 (4 in `test_causal_local.py`: the committed weekly CSV equals a fresh build, the opening date, the monthly cross-check, new-station trips recorded through; 1 in `test_bi_week.py`: the BI guide's check-week values) | pass (needs `data/transitpulse.duckdb` with Bay Wheels + forecast) |
+| Python unit (map data, API data endpoints, Bay Wheels cleaning, dbt build on a generated fixture, dbt regressions (backfill, ISO year, rolling window), forecast + calibration, Dagster definitions and schedules, VM files, agent guardrails / graph / `/api/ask` / eval, the M5 A/B (McNemar, bootstrap, power, BM25 retrieval, arm prompts, examples pool, default k, AB_TEST.md), Cloud Run Terraform + deploy workflow, cross-origin, causal study (prereg + amendment, synthetic data, inference, monthly parser, FINDINGS.md vs findings.json, the post-hoc trend adjustment), `/api/findings`, `/api/closures` (shape, rule edges, system block, 503/404, cache, static export), gzip never on the Ask stream, the docs deliverables (BI guide, README diagram + screenshots, design backlog v1.1 list, owner steps, the station closures write-up and docs), the compose file) | `uv run --group dbt --group ml --group pipeline --group agent pytest -m "not spark and not gcp and not localdata and not docker"` | 180 (37 in `tests/test_causal.py`, 8 in `tests/test_ab.py`, 10 in `tests/test_api_findings.py`, 7 in `tests/test_api_closures.py`, 6 in `tests/test_docs_deliverables.py`, 4 in `tests/test_compose.py`) | pass (~55 s) |
+| Local warehouse (real data, incl. every gold SQL of the agent eval) | `uv run --group dbt --group ml --group agent pytest -m localdata tests/local` | 25 (4 in `test_causal_local.py`: the committed weekly CSV equals a fresh build, the opening date, the monthly cross-check, new-station trips recorded through; 1 in `test_bi_week.py`: the BI guide's check-week values; 6 in `test_suggested.py`; 6 in `test_closures_local.py`: the 15 stations in the mart, the marts against an independent Python recomputation, the API's verdicts, the write-up's verdicts and every other column of its results table against the API, the write-up's SFO assumption recomputed without SFO) | pass (needs `data/transitpulse.duckdb` with Bay Wheels + forecast) |
 | Spark job | in Docker: `docker run --rm -v "$PWD:/app" transitpulse-spark python -m pytest tests/spark -m spark` | 1 | pass (auto-skipped on Windows outside Docker) |
-| Browser maths (schedule, timetable range, chart helpers, station search, forecast wording, SSE parser, findings wording) | `node --test tests/web/` | 37 | pass |
-| Browser (Playwright, Chromium; API mocked for data, Ask and Findings tests): layout, map, Trends, forecast, map → forecast, busiest station, dashboard slot, Ask (incl. history, escaping, Copy SQL), Findings, Open Graph, style guide, axe contrast | `npx playwright test` | 57 (4 in `styleguide.spec.js`, 3 in `a11y.spec.js`) | pass |
+| Browser maths (schedule, timetable range, chart helpers, station search, forecast wording, SSE parser, findings wording, closures wording and escaping) | `node --test tests/web/` | 45 | pass |
+| Browser (Playwright, Chromium; API mocked for data, Ask and Findings tests): layout, map, Trends, forecast, map → forecast, busiest station, dashboard slot, Ask (incl. history, escaping, Copy SQL), Findings, Station closures (15 cards, notes without data, 404/Retry, no sideways scroll at 320/390/1120 px, axe in light and dark, the nav link), Open Graph, style guide, axe contrast | `npx playwright test` | 69 (4 in `styleguide.spec.js`, 3 in `a11y.spec.js`, 9 in `closures.spec.js`) | pass |
 | Lighthouse (mobile, local server; not in CI) | `uv run python tasks.py lighthouse --runs 3 --assert` | — | 98 / 100 / 100 (gate 90 / 95 / 95) |
 | README and Open Graph images | `uv run python tasks.py screenshots` (fails if a file is over its size limit) | — | og 104 KB, phone 68 KB, desktop 203 KB |
-| dbt data tests | `uv run python tasks.py dbt` | 73 (+15 models/snapshot) | pass (incremental ~2.3 min) |
+| dbt data tests | `uv run python tasks.py dbt` | 84 (+18 models/snapshot, 1 seed) | pass (incremental ~2.3 min; the 11 closures tests checked with `--select bart_closure_candidates+`) |
 | Shellcheck (VM bootstrap) | `docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:stable deploy/oracle/bootstrap.sh` | — | clean |
 | ARM wheels (pipeline, dbt, ml groups) | `uv pip compile pyproject.toml --group pipeline --group dbt --group ml --python-platform aarch64-manylinux_2_28 --python-version 3.12 --only-binary :all:` | — | resolves |
 | Container (marker `docker`; needs the built image `transitpulse-api:loop`) | `docker build -t transitpulse-api:loop . && uv run pytest -m docker tests/deploy` | 6 (incl. `/api/findings` served from the image) | pass |
@@ -797,3 +861,11 @@ the nearby legacy stations, and did it bring new riders or only move them? The w
 - The load-test numbers are from this PC on a tiny fixture warehouse, not from Cloud Run or BigQuery.
 - Static assets have no hashed names: JS/CSS are served `no-cache` (revalidated), fonts are cached a year, and map
   data a day. The timetable is part of the image, so refreshing it means deploying a new image.
+- **Station closures:** the list is the one reported from BART staff's February 2026 presentation, not a board
+  decision; the analysis assumes all 15 close (the nearest open station excludes all of them) and counts every other
+  station as open, including SFO, which the sources don't cover: it is the nearest open station for San Bruno and
+  Millbrae, and if it lost service too both would meet Distance (San Bruno strong, Millbrae mixed; the write-up's
+  "The SFO assumption"); distances are straight lines, not travel by road or rail; the period is 2025 only (BART
+  hasn't published 2026); the verdicts weigh ridership only (no cost, equity or travel-time data); the context copy
+  describes the November 3, 2026 measure as upcoming and goes stale after the election (owner step 3). The closure
+  marts' SQL has run on DuckDB only, not yet on BigQuery.

@@ -25,6 +25,14 @@ models:
       +schema: marts
       +materialized: table
 
+seeds:
+  transitpulse:
+    +schema: staging
+    # the stations BART staff named in Feb 2026 (docs/STATION_CLOSURES.md); edit the CSV if the board votes a final list
+    bart_closure_candidates:
+      +column_types:
+        closure_group: integer
+
 snapshots:
   transitpulse:
     +target_schema: "{{ 'ci' if target.name == 'ci' else 'staging' }}"

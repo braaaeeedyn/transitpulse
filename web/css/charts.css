@@ -85,8 +85,8 @@
 /* ⓘ: a 20 px icon with a 44 px hit area in the tile's top-right corner */
 .stat-tile__info {
   position: absolute;
-  top: calc(var(--space-xl) - 12px);
-  right: calc(var(--space-xl) - 12px);
+  top: calc(var(--space-xl) - 0.75rem);
+  right: calc(var(--space-xl) - 0.75rem);
   display: grid;
   place-items: center;
   width: var(--touch-target);
@@ -175,8 +175,8 @@
 }
 
 .chart-key {
-  width: 24px;
-  height: 8px;
+  width: 1.5rem;
+  height: 0.5rem;
   overflow: visible;
 }
 
@@ -200,7 +200,7 @@
 
 @media (min-width: 768px) {
   .forecast {
-    grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+    grid-template-columns: minmax(13.75rem, 18.75rem) minmax(0, 1fr);
   }
 }
 
@@ -229,7 +229,7 @@
   top: calc(100% + var(--space-xs));
   left: 0;
   right: 0;
-  max-height: calc(6 * 44px + 2 * var(--space-xs)); /* 6 visible rows */
+  max-height: calc(6 * 2.75rem + 2 * var(--space-xs)); /* 6 visible rows */
   margin: 0;
   padding: var(--space-xs);
   overflow-y: auto;
@@ -245,7 +245,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-sm);
-  min-height: 44px;
+  min-height: 2.75rem;
   padding: 0 var(--space-md);
   border-radius: var(--radius-sm);
   font-size: var(--type-body-md);

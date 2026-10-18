@@ -1416,3 +1416,130 @@ height check; they now sit absolutely in the tile's corner. The local server was
 **Not done.** The style guide doesn't yet show the v1.1 pieces (board, badge, mascot, legend toggle, readout); the
 components test only requires `components.css` blocks, which are unchanged. Dark mode isn't covered by the axe test
 (light only). Nothing is published: the owner is reviewing locally.
+
+## 2026-10-17 · analysis · BART station closures: what the ridership says
+**Why.** The owner: "I know there is a vote to remove some bart stations, i want this project to add a part that
+relates … use the existing technology to add a segment that talks about whether or not they should be removed."
+The vote is the Connect Bay Area measure (SB 63) on the November 3, 2026 ballot; if it fails, BART's Alternative
+Service Plan (adopted 8–1 on February 26, 2026) allows up to 15 station closures from July 2027. The board hasn't
+voted on which stations; the 15 are the ones the press reported from BART staff's February presentation.
+
+**Did**
+- dbt: a seed `bart_closure_candidates` (15 stations, group 1 = the first 10, group 2 = the next 5, and the line-end
+  segment), and three marts on the core facts: `mart_station_closures` (one row per station: 2025 service-weekday
+  trips = entries + exits, rank from the fewest, recovery vs 2019, change vs 2024, nearest station still open if all
+  15 close), `mart_closure_destinations` (top 3 destinations of each listed station) and `mart_closure_scenarios`
+  (trips touching the first 10 / all 15). Portable SQL (haversine with `asin`/`power`/`acos(-1)`), 11 schema tests.
+  Dagster picks them up through dagster-dbt with no code change.
+- API: `GET /api/closures`, cached an hour, in the static export. The three rules and the verdict mapping are
+  constants in `api/routes/data.py`; the response carries their text, so the page never states a threshold.
+- Site: a "Station closures" band after Findings with a "Closures" nav link: static context, not-final and
+  no-position notes, "What the data can't see" and 10 sources; from the API, three summary tiles, the rules card and
+  15 station cards with a verdict pill ("Case to keep: strong / mixed / weak": ink / outlined / soft, never
+  green/red) and each rule as Met / Not met. DESIGN v1.1.2.
+- Write-up `docs/STATION_CLOSURES.md`; tests: 7 API unit, 4 localdata (incl. an independent Python recomputation of
+  the marts and the write-up's table against the API), 8 node, 9 Playwright (incl. axe in light and dark), 2 docs.
+
+**Decided**
+- The verdict is a "case to keep" from three rules fixed in the build plan before the section was built and not
+  adjusted afterwards (rough numbers had been seen while checking feasibility, so it isn't called a blind
+  pre-registration): **Riders** (not among the 10 least used, BART staff's own cut), **Recovery** (whole-percent
+  recovery vs 2019 at or above BART's), **Distance** (nearest open station ≥ 3.0 mi). 3 met = strong, 2 = mixed,
+  0–1 = weak. The rules compare the rounded numbers the page shows.
+- Neutral on the measure: the copy says TransitPulse doesn't take a position on it, the verdicts weigh ridership
+  only, and the list isn't final. The Ask agent is unchanged (its prompt and eval are frozen).
+- Top destinations leave out trips back to the same station; their share is of all trips starting there.
+
+**Measured** (local warehouse, 2025 service weekdays)
+- Claim checks: 9 of the first 10 are in our 10 least-used stations (San Bruno is 12th; Milpitas, 5th, isn't
+  listed); 12.6% of weekday trips start or end at the first 10 (press: ~12%); 24.1% at all 15. South San
+  Francisco's 2025 average weekday exits are 1,409 vs BART's 1,538 for January 2026 (ratio 0.92, inside 0.75–1.25).
+- Verdicts: strong 2 (Antioch, Pittsburg/Bay Point), mixed 4 (Pittsburg Center, Orinda, San Bruno,
+  Dublin/Pleasanton), weak 9. BART's systemwide recovery: 43%.
+- Close calls (named in the write-up): San Bruno (43.05% rounds to BART's 43%, Recovery met), South Hayward (rank
+  10; 2.94 mi), Oakland Airport (2.88 mi), South San Francisco (3.19 mi, Distance met).
+- `/api/closures`: 11,059 bytes, ~140 ms cold, ~3 ms warm (cache). `dbt build --select bart_closure_candidates+`:
+  15 nodes in 0.75 s on DuckDB.
+
+**Not done.** The marts haven't run on BigQuery (no access from the loop): the live band says "This data hasn't been
+loaded yet." until the VM pulls this code and runs a dbt build (owner step 4). No map overlay, no per-station cost,
+equity or travel-time data, and no summary of the arguments for and against the measure. The copy needs a
+post-election edit after November 3, 2026.
+
+## 2026-10-17 · analysis · BART station closures: the SFO assumption (revision 2)
+**Why.** Final review found that the closures section counts San Francisco International Airport (SFO) as open
+without saying so. SFO isn't on the reported list, so under the rule "the nearest open station is any station not in
+the seed" it is the nearest open station for San Bruno (2.0 mi) and Millbrae (1.1 mi), and both fail Distance
+because of it. The copy also said closing group 2 would end or lose BART service on the three line-end segments,
+which contradicts SFO staying open on the Peninsula segment. And the write-up said its whole results table was
+checked against the warehouse, when the test only checked the Verdict column.
+
+**Did** (copy and tests only; no change to the rules, marts, API, verdicts or fixture)
+- Page: a `[data-closures-sfo]` note in "What the data can't see": SFO isn't on the list, the sources don't say how
+  it would be served, the page counts it as still open, so it is the nearest open station for San Bruno and Millbrae,
+  and if it lost service both would meet Distance and their case to keep would be stronger (names only, no numbers).
+  The group-2 intro now says closing those stations "would close all the listed stations on 3 line-end segments".
+- Write-up: the line-ends sentence reworded the same way; a new "The SFO assumption" section after "Close calls"; a
+  "What the data can't see" bullet pointing to it. CURRENT_STATE §3 and the §7 limitation updated.
+- Tests (localdata, appended to `tests/local/test_closures_local.py`): every column of the write-up's results table
+  against the API (group, weekday trips, rank, % of 2019, change vs 2024, nearest open station and miles, rules
+  met), and the SFO section recomputed in Python from `dim_station` and the seed with SFO excluded too, re-applying
+  `closure_criteria`.
+
+**Decided.** Disclose, don't apply. Changing the nearest-open rule after seeing which verdicts it moves would be
+tuning, so the table keeps the plan's rule and the alternative is reported beside it.
+
+**Measured** (local warehouse). Without SFO, the nearest open station for both is Daly City: 5.5 mi from San Bruno
+(Riders, Recovery, Distance → strong instead of mixed) and 8.6 mi from Millbrae (Riders, Distance → mixed instead of
+weak). No other listed station has SFO as its nearest open station. Alternative counts: strong 3, mixed 4, weak 8
+(as applied: strong 2, mixed 4, weak 9). Local closures tests: 6 pass.
+
+## 2026-10-17 · analysis · BART station closures: a fourth rule and the cost of closing (owner's request)
+**Why.** The owner asked for the closures band to lean "slightly more in favor of keeping", citing traffic. Their
+"traffic would exponentially increase" isn't supported; the evidence is that traffic rises noticeably when rail stops,
+so the page cites that instead. Offered three tilts (a fourth rule with 3+ = strong; the same with only 4 = strong; a
+facts card only); the owner chose the first.
+
+**Changed.**
+- A fourth rule, **Growing**: weekday trips up on the previous year, rounded half up to 0.1% (`closure_criteria`'s new
+  `change_pct`, `_change_pct` in `api/routes/data.py`). Verdicts: 3–4 met = strong, 2 = mixed, 0–1 = weak. 14 of the
+  15 meet it (only Oakland International Airport fell, −17.9%). Counts went from strong 2 / mixed 4 / weak 9 to
+  strong 6 / mixed 7 / weak 2. The page and the write-up say the rule was added afterwards, at the owner's request,
+  and the write-up gives the old counts.
+- A "What closing would cost" card above the summary tiles: our numbers (24.1% of weekday trips touch the 15; 14
+  growing; 8 meet Distance; Antioch 13.6 mi from Concord) and three cited findings (LA 2003 strike +47% peak highway
+  delay, Anderson 2014; the 2013 BART strike nearly doubling Bay Bridge travel times on the worst day while regional
+  freeways barely changed, Moylan, Foti and Skabardonis 2016; ~$73M a day in lost productivity, Bay Area Council
+  Economic Institute), captioned as whole-system shutdowns that didn't measure station closures. Three sources added
+  (13 in all).
+- The neutral note keeps "doesn't take a position on the measure".
+- Tests follow the new rule: the API fixture gains a +0.04% edge (rounds to 0.0, not met); the docs test now requires
+  the "added afterwards at the owner's request" disclosure in place of "not adjusted afterwards"; the web fixture was
+  regenerated from the local API; a node test covers `costSentence`.
+
+**Not done.** BigQuery still hasn't built the closure marts (owner step 4). The SFO assumption now moves Millbrae from
+mixed to strong (strong 7, mixed 6, weak 2 if SFO lost service).
+
+## 2026-10-17 · site · sizes scale across screens (owner: "make sure everything is dynamic")
+**Why.** The owner found the text "strict on the sizing". An audit (a Playwright script at 320, 390, 768, 1024,
+1440, 1920 and 2560 px, flagging boxes past the viewport, content wider than its box, and text under 12px) found:
+- no fixed-size text on phones;
+- the map's view/zoom group running 8–35px off a 320px card;
+- each legend entry overflowing its row by 8px, and "Blue line" and "Airport connector" breaking mid-name;
+- the footer mascot shrinking to ~12px at 320px;
+- on large screens the page frozen at a 1200px column of 16px text (1920 and 2560 looked like a strip in the
+  middle).
+
+**Changed.**
+- A fluid root size: `html { font-size: clamp(1rem, 0.646rem + 0.377vw, 1.25rem) }`, which keeps the reader's own
+  default as the floor.
+- The spacing tokens, the container (75rem), the nav height and touch targets in rem.
+- Every component length above 2px in the six stylesheets converted from px to rem (78 values, mechanically:
+  px ÷ 16, outside comments and media/container conditions). Up to 1440px wide every size is identical; at 1920px the
+  container is 1318px and body text 17.6px, at 2560px 1499px and 20px.
+- The map top bar wraps, with the pill group kept right (`margin-left: auto`).
+- Legend toggles wrap the name and description as one span, left-aligned, with the hover pill bleeding left only.
+- `.mascot--lg { flex: none }`.
+
+**Checked.** The audit shows no overflow at any of the seven widths. 69 Playwright and 46 node tests pass, including
+the styleguide's 320–2560 no-scroll test, the skeleton layout-stability test and axe.

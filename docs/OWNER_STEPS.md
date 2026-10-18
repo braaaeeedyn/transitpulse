@@ -76,6 +76,21 @@ git push origin main
 smoke-tests, pushes and deploys the image. The live agent stays off (Terraform still says so), so the new default of
 5 examples changes nothing visible yet.
 
+**Station closures (2026-10-17 build loop).** A new band about the BART stations named for possible closure
+([`STATION_CLOSURES.md`](STATION_CLOSURES.md)). One commit for it, after the commits above. It also carries your
+uncommitted UI tweaks of the same day (map shoreline and water colours, the tile sparklines removed), which share
+`web/css/fx.css` and the docs with it:
+
+```sh
+git add dbt/transitpulse api/routes/data.py pipeline/webexport.py web tests README.md docs
+git commit -m "Station closures: which BART stations could close, and what the ridership says"
+git push origin main
+```
+
+**Expect:** the push deploys `GET /api/closures` to Cloud Run. Until the VM's dbt build (step 4) has made the seed and
+the three marts in BigQuery, it answers 404 and the live band says "This data hasn't been loaded yet." (the
+not-final, no-position, caveat and source notes show either way).
+
 ## 2. Watch CI and the deploy
 
 ```sh
@@ -122,6 +137,15 @@ git add web/data && git commit -m "Map: BART timetable from <date>" && git push
 
 then run the export above again.
 
+**Station closures.** The band is new website code, so re-export as above after the push (commit message e.g.
+"TransitPulse: station closures band"). Then check https://braedynthompson.com/transitpulse/#closures: the notes and
+sources show at once; the 15 station cards show once step 4's dbt build is done.
+
+**After Nov 3, 2026: revisit the closures copy.** The band and `docs/STATION_CLOSURES.md` describe the measure as
+upcoming. After the election, edit the context paragraph in `web/index.html` and the status line of the write-up,
+then re-export. If the BART board votes on a final list, edit `dbt/transitpulse/seeds/bart_closure_candidates.csv`
+(and the station lists in the write-up and its tests), run the VM's dbt build again (step 4) and re-export.
+
 ## 4. Oracle VM: update only if pipeline code changed
 
 The rule, every time you pull new code:
@@ -135,6 +159,20 @@ git diff --stat f441638 -- pipeline dbt ml deploy pyproject.toml uv.lock
 - **Empty:** nothing to do.
 
 This run changed none of those paths (the loop's guard check proved it), so **no VM update is needed now**.
+
+**Station closures run (2026-10-17): this one did change `dbt/`** (a seed, three marts and the seed config), so update
+the VM once the push is in:
+
+```sh
+ssh <user>@<vm> sudo bash /opt/transitpulse/deploy/oracle/bootstrap.sh
+```
+
+then, in the Dagster UI, materialize `bart_closure_candidates` and everything downstream of it (or the whole `warehouse`
+group), which runs `dbt build` on BigQuery. The two `fct_trips_hourly` marts read about one year of it (~0.5 GB), well
+under the 20 GB per-query cap. **Verify:**
+`curl -s https://transitpulse-api-etumz4pfva-uw.a.run.app/api/closures | head -c 200` answers with `"period_year":2025`
+(the API caches for an hour, so a 404 seen just before the build can last that long). If you set up CI's BigQuery
+identity (step 9), `dbt build --target ci` is the real BigQuery check of the new SQL, which was only run on DuckDB here.
 
 ## 5. Decided: `deploy.yml` skips `terraform apply` (Terraform stays manual)
 

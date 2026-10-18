@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: mart_station_closures
+    description: >
+      One row per station with data in the latest full calendar year: service-weekday trips (entries + exits), rank
+      from the least used, recovery vs 2019, change vs the year before, and the nearest station still open if every
+      station in bart_closure_candidates closes. Read by GET /api/closures.
+    columns:
+      - name: station_code
+        data_tests: [not_null, unique]
+      - name: closure_group
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2]
+                quote: false # integer column: BigQuery won't compare INT64 to quoted strings
+      - name: avg_weekday_trips
+        data_tests: [not_null, non_negative]
+
+  - name: mart_closure_destinations
+    description: Top 3 destinations (by average service-weekday trips in the period year) of each listed station.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            columns: [origin_code, destination_rank]
+
+  - name: mart_closure_scenarios
+    description: Share of service-weekday trips that start or end at the first 10 and at all 15 listed stations.
+    columns:
+      - name: scenario
+        data_tests:
+          - unique
+          - accepted_values:
+              arguments:
+                values: [first_10, all_15]

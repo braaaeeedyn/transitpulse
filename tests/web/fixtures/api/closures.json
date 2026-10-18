@@ -1,0 +1,735 @@
+{
+  "period_year": 2025,
+  "baseline_year": 2019,
+  "data_through": "2025-12-31",
+  "system": {
+    "stations": 50,
+    "recovery_pct": 43,
+    "share_first_10": 0.12556698857302834,
+    "share_all_15": 0.24122394425685068,
+    "lowest_10": [
+      {
+        "code": "OAKL",
+        "name": "Oakland International Airport",
+        "listed": true
+      },
+      {
+        "code": "PCTR",
+        "name": "Pittsburg Center",
+        "listed": true
+      },
+      {
+        "code": "NCON",
+        "name": "North Concord / Martinez",
+        "listed": true
+      },
+      {
+        "code": "WARM",
+        "name": "Warm Springs / South Fremont",
+        "listed": true
+      },
+      {
+        "code": "MLPT",
+        "name": "Milpitas",
+        "listed": false
+      },
+      {
+        "code": "CAST",
+        "name": "Castro Valley",
+        "listed": true
+      },
+      {
+        "code": "WDUB",
+        "name": "West Dublin / Pleasanton",
+        "listed": true
+      },
+      {
+        "code": "ORIN",
+        "name": "Orinda",
+        "listed": true
+      },
+      {
+        "code": "SSAN",
+        "name": "South San Francisco",
+        "listed": true
+      },
+      {
+        "code": "SHAY",
+        "name": "South Hayward",
+        "listed": true
+      }
+    ],
+    "first_10_in_lowest_10": 9
+  },
+  "rules": [
+    {
+      "id": "riders",
+      "text": "Busier than BART's 10 least-used stations: its weekday trips (entries plus exits) rank above the bottom 10."
+    },
+    {
+      "id": "recovery",
+      "text": "Recovering at least as well as BART overall: its weekday trips as a share of 2019 are at or above BART's systemwide share (whole percentages)."
+    },
+    {
+      "id": "distance",
+      "text": "Hard to replace: the nearest station that stays open if every listed station closes is at least 3.0 miles away in a straight line."
+    },
+    {
+      "id": "growing",
+      "text": "Riders coming back: its weekday trips in the latest year are up on the year before (to 0.1%)."
+    }
+  ],
+  "verdicts": {
+    "strong": "Three or four rules met",
+    "mixed": "Two rules met",
+    "weak": "One rule or none met"
+  },
+  "stations": [
+    {
+      "code": "OAKL",
+      "name": "Oakland International Airport",
+      "group": 1,
+      "segment": null,
+      "weekday_trips": 1085,
+      "weekday_entries": 570,
+      "weekday_exits": 515,
+      "rank_lowest": 1,
+      "share_of_trips": 0.0061532308529278915,
+      "recovery_pct": 41,
+      "change_vs_prev_year": -0.17938725846266068,
+      "nearest_open": {
+        "code": "SANL",
+        "name": "San Leandro",
+        "miles": 2.9
+      },
+      "destinations": [
+        {
+          "code": "EMBR",
+          "name": "Embarcadero",
+          "share": 0.08241696510076539
+        },
+        {
+          "code": "DBRK",
+          "name": "Downtown Berkeley",
+          "share": 0.08000842637455235
+        },
+        {
+          "code": "POWL",
+          "name": "Powell Street",
+          "share": 0.06047328137069026
+        }
+      ],
+      "criteria": {
+        "riders": false,
+        "recovery": false,
+        "distance": false,
+        "growing": false
+      },
+      "points": 0,
+      "verdict": "weak"
+    },
+    {
+      "code": "PCTR",
+      "name": "Pittsburg Center",
+      "group": 1,
+      "segment": "Concord to Antioch",
+      "weekday_trips": 1121,
+      "weekday_entries": 571,
+      "weekday_exits": 550,
+      "rank_lowest": 2,
+      "share_of_trips": 0.006357401423711932,
+      "recovery_pct": 46,
+      "change_vs_prev_year": 0.14905908736269802,
+      "nearest_open": {
+        "code": "CONC",
+        "name": "Concord",
+        "miles": 8.2
+      },
+      "destinations": [
+        {
+          "code": "CONC",
+          "name": "Concord",
+          "share": 0.12597426264438713
+        },
+        {
+          "code": "POWL",
+          "name": "Powell Street",
+          "share": 0.08073763597622519
+        },
+        {
+          "code": "EMBR",
+          "name": "Embarcadero",
+          "share": 0.07613967702141976
+        }
+      ],
+      "criteria": {
+        "riders": false,
+        "recovery": true,
+        "distance": true,
+        "growing": true
+      },
+      "points": 3,
+      "verdict": "strong"
+    },
+    {
+      "code": "NCON",
+      "name": "North Concord / Martinez",
+      "group": 1,
+      "segment": "Concord to Antioch",
+      "weekday_trips": 1382,
+      "weekday_entries": 710,
+      "weekday_exits": 672,
+      "rank_lowest": 3,
+      "share_of_trips": 0.007837445191274788,
+      "recovery_pct": 34,
+      "change_vs_prev_year": 0.07226863484151846,
+      "nearest_open": {
+        "code": "CONC",
+        "name": "Concord",
+        "miles": 2.1
+      },
+      "destinations": [
+        {
+          "code": "EMBR",
+          "name": "Embarcadero",
+          "share": 0.16078544093693817
+        },
+        {
+          "code": "MONT",
+          "name": "Montgomery Street",
+          "share": 0.11422033602173264
+        },
+        {
+          "code": "CIVC",
+          "name": "Civic Center / UN Plaza",
+          "share": 0.08889189478608345
+        }
+      ],
+      "criteria": {
+        "riders": false,
+        "recovery": false,
+        "distance": false,
+        "growing": true
+      },
+      "points": 1,
+      "verdict": "weak"
+    },
+    {
+      "code": "WARM",
+      "name": "Warm Springs / South Fremont",
+      "group": 1,
+      "segment": null,
+      "weekday_trips": 2443,
+      "weekday_entries": 1276,
+      "weekday_exits": 1167,
+      "rank_lowest": 4,
+      "share_of_trips": 0.013857912984671959,
+      "recovery_pct": 28,
+      "change_vs_prev_year": 0.02821145265120717,
+      "nearest_open": {
+        "code": "FRMT",
+        "name": "Fremont",
+        "miles": 4.3
+      },
+      "destinations": [
+        {
+          "code": "EMBR",
+          "name": "Embarcadero",
+          "share": 0.0968887746336692
+        },
+        {
+          "code": "MONT",
+          "name": "Montgomery Street",
+          "share": 0.0754073999761736
+        },
+        {
+          "code": "BERY",
+          "name": "Berryessa / North San Jose",
+          "share": 0.06849461084602507
+        }
+      ],
+      "criteria": {
+        "riders": false,
+        "recovery": false,
+        "distance": true,
+        "growing": true
+      },
+      "points": 2,
+      "verdict": "mixed"
+    },
+    {
+      "code": "CAST",
+      "name": "Castro Valley",
+      "group": 1,
+      "segment": "Bay Fair to Dublin/Pleasanton",
+      "weekday_trips": 2549,
+      "weekday_entries": 1271,
+      "weekday_exits": 1278,
+      "rank_lowest": 6,
+      "share_of_trips": 0.014458580171801887,
+      "recovery_pct": 45,
+      "change_vs_prev_year": 0.05069909325765365,
+      "nearest_open": {
+        "code": "HAYW",
+        "name": "Hayward",
+        "miles": 1.6
+      },
+      "destinations": [
+        {
+          "code": "EMBR",
+          "name": "Embarcadero",
+          "share": 0.20946005488833497
+        },
+        {
+          "code": "MONT",
+          "name": "Montgomery Street",
+          "share": 0.15693846463730896
+        },
+        {
+          "code": "CIVC",
+          "name": "Civic Center / UN Plaza",
+          "share": 0.08918095525845356
+        }
+      ],
+      "criteria": {
+        "riders": false,
+        "recovery": true,
+        "distance": false,
+        "growing": true
+      },
+      "points": 2,
+      "verdict": "mixed"
+    },
+    {
+      "code": "WDUB",
+      "name": "West Dublin / Pleasanton",
+      "group": 1,
+      "segment": "Bay Fair to Dublin/Pleasanton",
+      "weekday_trips": 2573,
+      "weekday_entries": 1280,
+      "weekday_exits": 1292,
+      "rank_lowest": 7,
+      "share_of_trips": 0.014594406470614212,
+      "recovery_pct": 37,
+      "change_vs_prev_year": 0.023538560052749125,
+      "nearest_open": {
+        "code": "HAYW",
+        "name": "Hayward",
+        "miles": 8.9
+      },
+      "destinations": [
+        {
+          "code": "EMBR",
+          "name": "Embarcadero",
+          "share": 0.2451312394174357
+        },
+        {
+          "code": "MONT",
+          "name": "Montgomery Street",
+          "share": 0.15747792891015988
+        },
+        {
+          "code": "POWL",
+          "name": "Powell Street",
+          "share": 0.07093363990228115
+        }
+      ],
+      "criteria": {
+        "riders": false,
+        "recovery": false,
+        "distance": true,
+        "growing": true
+      },
+      "points": 2,
+      "verdict": "mixed"
+    },
+    {
+      "code": "ORIN",
+      "name": "Orinda",
+      "group": 1,
+      "segment": null,
+      "weekday_trips": 2761,
+      "weekday_entries": 1413,
+      "weekday_exits": 1349,
+      "rank_lowest": 8,
+      "share_of_trips": 0.015664883800896343,
+      "recovery_pct": 47,
+      "change_vs_prev_year": 0.08781320702600226,
+      "nearest_open": {
+        "code": "LAFY",
+        "name": "Lafayette",
+        "miles": 3.4
+      },
+      "destinations": [
+        {
+          "code": "EMBR",
+          "name": "Embarcadero",
+          "share": 0.31259415315958183
+        },
+        {
+          "code": "MONT",
+          "name": "Montgomery Street",
+          "share": 0.19330988707284197
+        },
+        {
+          "code": "CIVC",
+          "name": "Civic Center / UN Plaza",
+          "share": 0.06406945529919467
+        }
+      ],
+      "criteria": {
+        "riders": false,
+        "recovery": true,
+        "distance": true,
+        "growing": true
+      },
+      "points": 3,
+      "verdict": "strong"
+    },
+    {
+      "code": "SSAN",
+      "name": "South San Francisco",
+      "group": 1,
+      "segment": "Daly City to Millbrae",
+      "weekday_trips": 2839,
+      "weekday_entries": 1430,
+      "weekday_exits": 1409,
+      "rank_lowest": 9,
+      "share_of_trips": 0.016106784430593966,
+      "recovery_pct": 41,
+      "change_vs_prev_year": 0.032042922059679624,
+      "nearest_open": {
+        "code": "DALY",
+        "name": "Daly City",
+        "miles": 3.2
+      },
+      "destinations": [
+        {
+          "code": "MONT",
+          "name": "Montgomery Street",
+          "share": 0.16225606481067048
+        },
+        {
+          "code": "CIVC",
+          "name": "Civic Center / UN Plaza",
+          "share": 0.13056407215110555
+        },
+        {
+          "code": "EMBR",
+          "name": "Embarcadero",
+          "share": 0.1286618252618387
+        }
+      ],
+      "criteria": {
+        "riders": false,
+        "recovery": false,
+        "distance": true,
+        "growing": true
+      },
+      "points": 2,
+      "verdict": "mixed"
+    },
+    {
+      "code": "SHAY",
+      "name": "South Hayward",
+      "group": 1,
+      "segment": null,
+      "weekday_trips": 2959,
+      "weekday_entries": 1501,
+      "weekday_exits": 1457,
+      "rank_lowest": 10,
+      "share_of_trips": 0.016782693850744552,
+      "recovery_pct": 49,
+      "change_vs_prev_year": 0.05163294525504547,
+      "nearest_open": {
+        "code": "HAYW",
+        "name": "Hayward",
+        "miles": 2.9
+      },
+      "destinations": [
+        {
+          "code": "EMBR",
+          "name": "Embarcadero",
+          "share": 0.11367288367296362
+        },
+        {
+          "code": "MONT",
+          "name": "Montgomery Street",
+          "share": 0.08339262539938869
+        },
+        {
+          "code": "POWL",
+          "name": "Powell Street",
+          "share": 0.05603033621932468
+        }
+      ],
+      "criteria": {
+        "riders": false,
+        "recovery": true,
+        "distance": false,
+        "growing": true
+      },
+      "points": 2,
+      "verdict": "mixed"
+    },
+    {
+      "code": "SBRN",
+      "name": "San Bruno",
+      "group": 1,
+      "segment": "Daly City to Millbrae",
+      "weekday_trips": 3114,
+      "weekday_entries": 1546,
+      "weekday_exits": 1568,
+      "rank_lowest": 12,
+      "share_of_trips": 0.017665474030379255,
+      "recovery_pct": 43,
+      "change_vs_prev_year": 0.05589308268706272,
+      "nearest_open": {
+        "code": "SFIA",
+        "name": "San Francisco International Airport",
+        "miles": 2.0
+      },
+      "destinations": [
+        {
+          "code": "MONT",
+          "name": "Montgomery Street",
+          "share": 0.14611209421212215
+        },
+        {
+          "code": "EMBR",
+          "name": "Embarcadero",
+          "share": 0.1102754752517256
+        },
+        {
+          "code": "CIVC",
+          "name": "Civic Center / UN Plaza",
+          "share": 0.10371198244905984
+        }
+      ],
+      "criteria": {
+        "riders": true,
+        "recovery": true,
+        "distance": false,
+        "growing": true
+      },
+      "points": 3,
+      "verdict": "strong"
+    },
+    {
+      "code": "COLM",
+      "name": "Colma",
+      "group": 2,
+      "segment": "Daly City to Millbrae",
+      "weekday_trips": 3340,
+      "weekday_entries": 1664,
+      "weekday_exits": 1676,
+      "rank_lowest": 13,
+      "share_of_trips": 0.01894583997810442,
+      "recovery_pct": 38,
+      "change_vs_prev_year": 0.06322226534458575,
+      "nearest_open": {
+        "code": "DALY",
+        "name": "Daly City",
+        "miles": 1.5
+      },
+      "destinations": [
+        {
+          "code": "MONT",
+          "name": "Montgomery Street",
+          "share": 0.16262922536904362
+        },
+        {
+          "code": "EMBR",
+          "name": "Embarcadero",
+          "share": 0.1349184978602683
+        },
+        {
+          "code": "CIVC",
+          "name": "Civic Center / UN Plaza",
+          "share": 0.11369187863634178
+        }
+      ],
+      "criteria": {
+        "riders": true,
+        "recovery": false,
+        "distance": false,
+        "growing": true
+      },
+      "points": 2,
+      "verdict": "mixed"
+    },
+    {
+      "code": "ANTC",
+      "name": "Antioch",
+      "group": 2,
+      "segment": "Concord to Antioch",
+      "weekday_trips": 3704,
+      "weekday_entries": 1860,
+      "weekday_exits": 1844,
+      "rank_lowest": 16,
+      "share_of_trips": 0.021012210434827042,
+      "recovery_pct": 61,
+      "change_vs_prev_year": 0.035329475159993295,
+      "nearest_open": {
+        "code": "CONC",
+        "name": "Concord",
+        "miles": 13.6
+      },
+      "destinations": [
+        {
+          "code": "EMBR",
+          "name": "Embarcadero",
+          "share": 0.13416574908815634
+        },
+        {
+          "code": "MONT",
+          "name": "Montgomery Street",
+          "share": 0.11148578900282155
+        },
+        {
+          "code": "CIVC",
+          "name": "Civic Center / UN Plaza",
+          "share": 0.08783591975775927
+        }
+      ],
+      "criteria": {
+        "riders": true,
+        "recovery": true,
+        "distance": true,
+        "growing": true
+      },
+      "points": 4,
+      "verdict": "strong"
+    },
+    {
+      "code": "MLBR",
+      "name": "Millbrae",
+      "group": 2,
+      "segment": "Daly City to Millbrae",
+      "weekday_trips": 3830,
+      "weekday_entries": 1971,
+      "weekday_exits": 1859,
+      "rank_lowest": 18,
+      "share_of_trips": 0.021726852813893874,
+      "recovery_pct": 31,
+      "change_vs_prev_year": 0.0536946244101868,
+      "nearest_open": {
+        "code": "SFIA",
+        "name": "San Francisco International Airport",
+        "miles": 1.1
+      },
+      "destinations": [
+        {
+          "code": "SFIA",
+          "name": "San Francisco International Airport",
+          "share": 0.21095342096503122
+        },
+        {
+          "code": "MONT",
+          "name": "Montgomery Street",
+          "share": 0.10062354364399555
+        },
+        {
+          "code": "EMBR",
+          "name": "Embarcadero",
+          "share": 0.08204713924996143
+        }
+      ],
+      "criteria": {
+        "riders": true,
+        "recovery": false,
+        "distance": false,
+        "growing": true
+      },
+      "points": 2,
+      "verdict": "mixed"
+    },
+    {
+      "code": "PITT",
+      "name": "Pittsburg / Bay Point",
+      "group": 2,
+      "segment": "Concord to Antioch",
+      "weekday_trips": 4572,
+      "weekday_entries": 2225,
+      "weekday_exits": 2347,
+      "rank_lowest": 23,
+      "share_of_trips": 0.02593338375803369,
+      "recovery_pct": 58,
+      "change_vs_prev_year": 0.09393046208934064,
+      "nearest_open": {
+        "code": "CONC",
+        "name": "Concord",
+        "miles": 5.6
+      },
+      "destinations": [
+        {
+          "code": "EMBR",
+          "name": "Embarcadero",
+          "share": 0.15822592505362174
+        },
+        {
+          "code": "MONT",
+          "name": "Montgomery Street",
+          "share": 0.11842448279519822
+        },
+        {
+          "code": "POWL",
+          "name": "Powell Street",
+          "share": 0.11341918804194812
+        }
+      ],
+      "criteria": {
+        "riders": true,
+        "recovery": true,
+        "distance": true,
+        "growing": true
+      },
+      "points": 4,
+      "verdict": "strong"
+    },
+    {
+      "code": "DUBL",
+      "name": "Dublin / Pleasanton",
+      "group": 2,
+      "segment": "Bay Fair to Dublin/Pleasanton",
+      "weekday_trips": 6240,
+      "weekday_entries": 3130,
+      "weekday_exits": 3110,
+      "rank_lowest": 32,
+      "share_of_trips": 0.03539793089304952,
+      "recovery_pct": 38,
+      "change_vs_prev_year": 0.047870214289059465,
+      "nearest_open": {
+        "code": "UCTY",
+        "name": "Union City",
+        "miles": 10.0
+      },
+      "destinations": [
+        {
+          "code": "EMBR",
+          "name": "Embarcadero",
+          "share": 0.2582432817493327
+        },
+        {
+          "code": "MONT",
+          "name": "Montgomery Street",
+          "share": 0.16930847794614667
+        },
+        {
+          "code": "POWL",
+          "name": "Powell Street",
+          "share": 0.07504021814269486
+        }
+      ],
+      "criteria": {
+        "riders": true,
+        "recovery": false,
+        "distance": true,
+        "growing": true
+      },
+      "points": 3,
+      "verdict": "strong"
+    }
+  ],
+  "source": "BART hourly origin-destination ridership reports."
+}
