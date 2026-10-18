@@ -4,7 +4,7 @@
 /* --- the pulse stripe: the six BART line colours under the nav, with a light sweeping along like a train -------- */
 .pulse-stripe {
   position: relative;
-  height: 4px;
+  height: 0.25rem;
   overflow: hidden;
   background: linear-gradient(
     90deg,
@@ -58,8 +58,8 @@
 }
 
 .hero__live-dot {
-  width: 8px;
-  height: 8px;
+  width: 0.5rem;
+  height: 0.5rem;
   align-self: center;
   border-radius: var(--radius-pill);
   background: var(--line-green);
@@ -69,7 +69,7 @@
 /* --- sections rise in as they scroll into view (the class is added by JS, so nothing moves without it) ----------
    A slide only, no fade: text mid-fade reads as low-contrast to axe (tests/web/a11y.spec.js). */
 .reveal {
-  transform: translateY(28px);
+  transform: translateY(1.75rem);
   transition: transform 640ms var(--ease-standard);
 }
 
@@ -111,7 +111,7 @@
   white-space: nowrap;
   box-shadow: var(--shadow-2);
   opacity: 0;
-  transform: translateY(6px);
+  transform: translateY(0.375rem);
   transition:
     opacity var(--duration-base) var(--ease-standard),
     transform var(--duration-base) var(--ease-standard);
@@ -135,20 +135,25 @@
   }
 }
 
-/* --- round 2: legend toggles, tile sparklines, the dice chip ---------------------------------------------------- */
+/* --- round 2: legend toggles, the dice chip ---------------------------------------------------- */
 .legend__toggle {
   display: inline-flex;
   align-items: center;
   gap: var(--space-sm);
-  margin: calc(-1 * var(--space-xs)) calc(-1 * var(--space-sm));
+  margin: calc(-1 * var(--space-xs)) 0 calc(-1 * var(--space-xs)) calc(-1 * var(--space-sm));
   padding: var(--space-xs) var(--space-sm);
   border: 0;
   border-radius: var(--radius-pill);
   background: transparent;
   font: inherit;
+  text-align: start;
   color: inherit;
   cursor: pointer;
   transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.legend__toggle .swatch {
+  flex: none;
 }
 
 .legend__toggle:hover,
@@ -174,19 +179,6 @@
   opacity: 0.15;
 }
 
-/* in the tile's corner, out of the flow: the tiles keep the height their skeletons reserved */
-.stat-tile {
-  position: relative;
-}
-
-.sparkline {
-  position: absolute;
-  right: var(--space-xl);
-  bottom: var(--space-xl);
-  color: var(--color-ink);
-  overflow: visible;
-}
-
 .chip--dice {
   background: var(--color-ink);
   color: var(--color-on-ink);
@@ -197,7 +189,7 @@
 
 /* --- round 3: station card, section accents, the hero highlight, dark-mode toggle ----------------------------- */
 .tooltip:has(.tooltip__stats) {
-  max-width: 320px;
+  max-width: 20rem;
   padding: var(--space-md) var(--space-lg);
 }
 
@@ -250,8 +242,8 @@
 [data-accent] .section-head .eyebrow::before {
   content: "";
   display: inline-block;
-  width: 10px;
-  height: 10px;
+  width: 0.625rem;
+  height: 0.625rem;
   margin-right: var(--space-sm);
   border-radius: var(--radius-pill);
   background: var(--accent);
@@ -260,7 +252,7 @@
 
 /* the Findings band opens with the line colours */
 .band--ink {
-  border-top: 4px solid transparent;
+  border-top: 0.25rem solid transparent;
   border-image: linear-gradient(
       90deg,
       var(--line-yellow) 0 16.66%,
@@ -330,8 +322,8 @@
 }
 
 .board__dot {
-  width: 8px;
-  height: 8px;
+  width: 0.5rem;
+  height: 0.5rem;
   border-radius: var(--radius-pill);
   background: var(--line-green);
   animation: live-pulse 2s var(--ease-standard) infinite;
@@ -347,10 +339,10 @@
 
 .board__row {
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr) auto;
+  grid-template-columns: 1.25rem minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-md);
-  min-height: 40px;
+  min-height: 2.5rem;
   padding: var(--space-xs) 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   animation: board-in 420ms var(--ease-standard) both;
@@ -365,8 +357,8 @@
 }
 
 .board__row .swatch {
-  width: 20px;
-  height: 8px;
+  width: 1.25rem;
+  height: 0.5rem;
   border-radius: var(--radius-pill);
 }
 
@@ -414,14 +406,15 @@
   display: flex;
   align-items: center;
   gap: var(--space-lg);
-  max-width: 560px;
+  max-width: 35rem;
   margin-bottom: var(--space-4xl);
   font-size: var(--type-body-md);
 }
 
 .mascot--lg {
-  width: 56px;
-  height: 56px;
+  flex: none;
+  width: 3.5rem;
+  height: 3.5rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -484,7 +477,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-sm);
-  min-height: 28px;
+  min-height: 1.75rem;
   margin-top: var(--space-sm);
 }
 
@@ -492,7 +485,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
-  min-height: 28px;
+  min-height: 1.75rem;
   padding: 0 var(--space-md);
   border-radius: var(--radius-pill);
   background: var(--color-canvas-soft);
@@ -506,8 +499,8 @@
 
 .badge::before {
   content: "";
-  width: 8px;
-  height: 8px;
+  width: 0.5rem;
+  height: 0.5rem;
   border-radius: var(--radius-pill);
 }
 
@@ -542,4 +535,218 @@
   60% {
     transform: translateY(0) rotate(4deg);
   }
+}
+
+/* --- station closures band (v1.1.2): context notes, summary tiles, rules, station cards, the verdict pill ------- */
+[data-accent="beige"] {
+  --accent: var(--line-beige);
+}
+
+.closures__context {
+  display: grid;
+  gap: var(--space-md);
+  margin-bottom: var(--space-2xl);
+}
+
+.closures {
+  display: grid;
+  gap: var(--space-grid);
+}
+
+.closures__cost {
+  display: grid;
+  gap: var(--space-md);
+  margin-bottom: var(--space-grid);
+  border-left: 0.25rem solid var(--accent);
+}
+
+.closures__cost ul {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+  padding-left: var(--space-xl);
+}
+
+.closures__tile-text {
+  font-size: var(--type-body-sm);
+  line-height: var(--lh-body-sm);
+  color: var(--color-body);
+}
+
+.closures__rules {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.closures__rule-list {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+  padding-left: var(--space-xl);
+}
+
+.closures__verdicts {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.closures__verdicts li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.closures__group {
+  display: grid;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+}
+
+.closures__group > p {
+  color: var(--color-body);
+}
+
+.closures__cards {
+  display: grid;
+  gap: var(--space-grid);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17.5rem), 1fr));
+}
+
+.closure-card {
+  display: grid;
+  gap: var(--space-md);
+  align-content: start;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* the loading cards hold roughly a loaded card's height */
+.closures__cards > .closure-card[aria-hidden="true"] {
+  min-height: 26.25rem;
+}
+
+.closure-card__head {
+  display: grid;
+  gap: var(--space-xxs);
+}
+
+.closure-card h4 {
+  font-size: var(--type-display-sm);
+  font-weight: 700;
+  line-height: var(--lh-display-sm);
+  letter-spacing: var(--tracking-display-sm);
+}
+
+.closure-card__segment,
+.closure-card__label,
+.closure-card__facts dt {
+  font-size: var(--type-body-sm);
+  line-height: var(--lh-body-sm);
+  color: var(--color-body);
+}
+
+.closure-card__facts {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.closure-card__facts dd {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.closure-card__dests,
+.closure-card__rules {
+  display: grid;
+  gap: var(--space-xxs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--type-body-sm);
+  line-height: var(--lh-body-sm);
+}
+
+.closure-card__dests li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.closure-card__share {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.closure-card__rules {
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-hairline);
+}
+
+.closure-card__mark {
+  display: inline-block;
+  width: 1.25em;
+}
+
+/* the verdict, never colour alone and never green/red (DESIGN.md §2): ink for strong, outlined for mixed, soft for weak */
+.verdict-pill {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-self: start;
+  min-height: 1.75rem;
+  padding: 0 var(--space-md);
+  border: 1px solid var(--color-ink);
+  border-radius: var(--radius-pill);
+  font-size: var(--type-body-sm);
+  font-weight: 500;
+  color: var(--color-ink);
+}
+
+.verdict-pill--strong {
+  background: var(--color-ink);
+  color: var(--color-on-ink);
+}
+
+.verdict-pill--mixed {
+  background: var(--color-canvas);
+}
+
+.verdict-pill--weak {
+  border-color: transparent;
+  background: var(--color-canvas-soft);
+}
+
+.closures__notes {
+  display: grid;
+  gap: var(--space-grid);
+  margin-top: var(--space-grid);
+}
+
+@media (min-width: 768px) {
+  .closures__notes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.closures__notes .card {
+  display: grid;
+  gap: var(--space-md);
+  align-content: start;
+  overflow-wrap: anywhere;
+}
+
+.closures__notes ul {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+  padding-left: var(--space-xl);
+}
+
+.closures__source {
+  margin-top: var(--space-md);
 }

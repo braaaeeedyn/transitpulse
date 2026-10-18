@@ -10,11 +10,11 @@ through GitHub Pages, which only serves files). Two modes:
 Live mode copies web/ and adds <meta name="tp-api-base" content="URL"> to index.html; web/js/util/api.js sends every
 `api/...` request there, and the API allows the pages' origin through CORS (TP_CORS_ORIGINS, set by Terraform).
 
-Static mode calls the five GET endpoints the page reads (KPIs, ridership trend, bikes vs trains, and per-station
-summaries and forecasts) through the real FastAPI app and saves them at the same relative paths without a file
-extension (`api/kpis`, `api/forecast/EMBR`, ...), so `fetch("api/...")` works unchanged on a static host. index.html
-gets <meta name="tp-mode" content="static">, which tells the Ask box there is no server. A 404 (e.g. a station
-without a forecast) is left out, so the static host answers 404 too, as the API would.
+Static mode calls the GET endpoints the page reads (KPIs, ridership trend, bikes vs trains, per-station summaries
+and forecasts, findings and station closures) through the real FastAPI app and saves them at the same relative paths
+without a file extension (`api/kpis`, `api/forecast/EMBR`, ...), so `fetch("api/...")` works unchanged on a static
+host. index.html gets <meta name="tp-mode" content="static">, which tells the Ask box there is no server. A 404 (e.g.
+a station without a forecast) is left out, so the static host answers 404 too, as the API would.
 """
 
 import argparse
@@ -82,6 +82,7 @@ def _paths(network: dict) -> list[str]:
         *(f"api/stations/{c}/summary" for c in codes),
         *(f"api/forecast/{c}" for c in codes),
         "api/findings",
+        "api/closures",
     ]
 
 

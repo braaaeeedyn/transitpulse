@@ -64,3 +64,55 @@ def test_owner_steps_complete_and_ordered():
     assert first("Looker Studio") < first("tp-looker-url"), "the dashboard before its URL"
     steps = [int(n) for n in re.findall(r"^## (\d+)\. ", text, flags=re.M)]
     assert steps == list(range(len(steps))) and len(steps) >= 14, "steps 0..13 in order"
+
+
+CLOSURE_SOURCES = (
+    "https://www.cbsnews.com/sanfrancisco/news/bart-could-close-15-stations-lay-off-1200-without-sales-tax-measure/",
+    "https://www.cbsnews.com/sanfrancisco/news/bart-board-approves-station-closures-if-2026-sales-tax-measure-rejected/",
+    "https://www.bart.gov/node/44936",
+    "https://www.bart.gov/sites/default/files/2026-02/Proposed%20Alternative%20Service%20Framework%20from%20Feb%2012%202026.pdf",
+    "https://sfstandard.com/2026/02/26/bart-doomsday-scenario-less-doomy/",
+    "https://www.kron4.com/news/bay-area/these-are-the-bart-stations-that-could-close-under-transit-systems-worst-case-scenario/",
+    "https://news.medill.northwestern.edu/chicago/several-stations-on-chopping-block-as-bart-heads-for-financial-cliff/",
+    "https://localnewsmatters.org/2026/07/02/connect-bay-area-transit-tax-ballot-november-2026/",
+    "https://stanforddaily.com/2026/10/07/bay-area-to-vote-on-transit-measure/",
+    "https://antiochherald.com/2026/02/bart-board-votes-8-1-to-close-up-to-15-stations-if-proposed-nov-tax-measure-fails/",
+)
+CLOSURE_STATIONS = ("Castro Valley", "North Concord", "Oakland International Airport", "Orinda", "Pittsburg Center",
+                    "San Bruno", "South Hayward", "South San Francisco", "Warm Springs", "West Dublin", "Colma",
+                    "Millbrae", "Dublin/Pleasanton", "Pittsburg/Bay Point", "Antioch")  # fmt: skip
+
+
+def test_station_closures_doc():
+    text = (ROOT / "docs" / "STATION_CLOSURES.md").read_text(encoding="utf-8")
+    flat = re.sub(r"\s+", " ", text)
+    for name in CLOSURE_STATIONS:
+        assert name in flat, name
+    for url in CLOSURE_SOURCES:
+        assert url in text, url
+    for needle in ("isn't final", "still has to vote", "doesn't take a position on", "November 3, 2026",
+                   "first three were set in the build plan before the section was built",
+                   "added afterwards at the owner's request"):  # fmt: skip
+        assert needle in flat, needle
+    assert re.search(r"doesn't take a position on [^.]*measure", flat), "neutral on the measure"
+    for rule in ("Riders", "Recovery", "Distance", "Growing"):
+        assert re.search(rf"\*\*{rule}\*\*", text), rule
+    assert "## Claim checks" in text
+    claims = text.split("## Claim checks", 1)[1].split("\n## ", 1)[0]
+    for needle in ("Milpitas", "12%", "all 15", "1,538"):
+        assert needle in claims, needle
+    for heading in ("## Close calls", "## What the data can't see", "## Reproduce", "## Sources"):
+        assert heading in text, heading
+
+
+def test_station_closures_running_and_current_docs():
+    devlog = (ROOT / "docs" / "DEVLOG.md").read_text(encoding="utf-8")
+    entries = devlog.split("\n## ")[1:]
+    assert any(e.startswith("2026-10-17") and "closures" in e.lower() for e in entries), "a closures entry"
+    current = (ROOT / "docs" / "CURRENT_STATE.md").read_text(encoding="utf-8")
+    for needle in ("/api/closures", "mart_station_closures", "bart_closure_candidates", "web/js/closures.js"):
+        assert needle in current, needle
+    assert "](docs/STATION_CLOSURES.md)" in (ROOT / "README.md").read_text(encoding="utf-8")
+    design = (ROOT / "docs" / "DESIGN.md").read_text(encoding="utf-8")
+    order = design.split("### Page order", 1)[1].split("\n## ", 1)[0]
+    assert re.search(r"[Cc]losures", order), "the page order includes the closures band"

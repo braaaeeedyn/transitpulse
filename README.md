@@ -78,6 +78,7 @@ also writes the Open Graph image `web/img/og.png`. Every component and token is 
 | Forecast (14-day, per station, 6 walk-forward folds) | MAE **283.1** vs **548.5** for the seasonal-naive baseline; improvement 265.4 entries/day, 95% CI [199.6, 339.9]. The p10–p90 band holds 73% of days (nominal 80%), so the site calls it the "model range" |
 | Ask agent A/B (llama3.1:8b, local) | Execution accuracy **0.27** (18/66 gold-SQL questions) without examples → **0.50** (33/66) with 5 retrieved example queries: +22.7 points, 95% CI [+9.1, +36.4], exact McNemar p = 0.004 (b = 5, c = 20). Refusal accuracy 1.0 (10 off-topic questions) in both; p50 1.7 s. [`docs/AB_TEST.md`](docs/AB_TEST.md) |
 | eBART study | See [Findings](#findings-the-ebart-causal-study) below |
+| BART stations at risk of closing (2025 ridership, the 15 named in BART staff's Feb 2026 presentation, list not final) | 9 of the first 10 are among BART's 10 least-used stations; 12.6% of weekday trips start or end at the first 10 (press: ~12%), 24.1% at all 15. "Case to keep" from four ridership rules: strong 6, mixed 7, weak 2. No position on the Nov 3 measure ([`docs/STATION_CLOSURES.md`](docs/STATION_CLOSURES.md)) |
 | Cloud Run | Cold start about **4.4 s** to the first byte; warm requests 0.09–0.17 s (measured 2026-10-15) |
 | GCP cost | $0 expected (every service inside its free tier); the month-end bill is to be confirmed ([`docs/OWNER_STEPS.md`](docs/OWNER_STEPS.md) §12) |
 | Lighthouse (mobile, local server, median of 3) | Performance **98**, accessibility **100**, best practices **100**; LCP 2.3 s, CLS 0 (`tasks.py lighthouse --runs 3 --assert`, 2026-10-14). axe finds 0 contrast violations at 390 and 1440 px |
@@ -206,6 +207,7 @@ the timetable, not live positions. The full list is in
 | [`docs/METRICS.md`](docs/METRICS.md) | KPI definitions, the website tile windows, bikes vs trains, forecast coverage, agent eval, causal estimates |
 | [`docs/FINDINGS.md`](docs/FINDINGS.md) | The eBART causal study: pre-registration, design, results, limitations |
 | [`docs/AB_TEST.md`](docs/AB_TEST.md) | The M5 A/B test of the Ask agent: power analysis, pre-registered design, results, decision |
+| [`docs/STATION_CLOSURES.md`](docs/STATION_CLOSURES.md) | The BART stations at risk of closing: the list as reported, the three ridership rules, results per station, claim checks, sources |
 | [`bi/README.md`](bi/README.md) | Looker Studio and Power BI build guide, DAX measures and the check week |
 | [`docs/OWNER_STEPS.md`](docs/OWNER_STEPS.md) | The owner's remaining steps, in order: commit and push, re-export, the live agent, BI, CI identity, devices, bill, M6 |
 | [`docs/ORACLE_VM.md`](docs/ORACLE_VM.md) | Runbook: Dagster on the Oracle VM (systemd) |

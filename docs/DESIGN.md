@@ -29,9 +29,9 @@ colors:
   line-blue: "#00a6e9"     # Dublin/Pleasanton–Daly City
   line-beige: "#b5a97b"    # Oakland Airport connector
   line-casing: "rgba(0, 0, 0, 0.25)"
-  map-water: "#efefef"
+  map-water: "#e3ecf3"
   map-land: "#ffffff"
-  map-shoreline: "#d4d4d4"
+  map-shoreline: "#a3a3a3"
   seq-0: "#f3f3f3"
   seq-1: "#d4d4d4"
   seq-2: "#a3a3a3"
@@ -40,7 +40,7 @@ colors:
   seq-5: "#000000"
   series-primary: "#000000"   # BART in comparisons, actuals in forecasts
   series-secondary: "#8a8a8a" # Bay Wheels in comparisons (dashed)
-  interval-fill: "rgba(0, 0, 0, 0.08)"
+  interval-fill: "rgba(0, 0, 0, 0.16)"
   gridline: "#ececec"
 
 typography:
@@ -73,24 +73,25 @@ rounded:
   pill-tab: 36px  # segmented control
   pill: 999px  # every button, chip, toggle
 
-spacing:          # 4 px base
-  xxs: 4px
-  xs: 6px
-  sm: 8px
-  md: 12px
-  lg: 16px
-  xl: 20px
-  2xl: 24px
-  3xl: 32px
-  4xl: 48px
-  5xl: 64px
-  gutter: "clamp(16px, 4vw, 32px)"
-  section: "clamp(48px, 6vw, 96px)"   # vertical padding of page bands
+spacing:          # 4 px base, in rem (1rem = 16px up to ~1500px wide; see root-size)
+  xxs: 0.25rem
+  xs: 0.375rem
+  sm: 0.5rem
+  md: 0.75rem
+  lg: 1rem
+  xl: 1.25rem
+  2xl: 1.5rem
+  3xl: 2rem
+  4xl: 3rem
+  5xl: 4rem
+  gutter: "clamp(1rem, 4vw, 2rem)"
+  section: "clamp(3rem, 6vw, 6rem)"   # vertical padding of page bands
 
 layout:
-  container: 1200px
+  root-size: "clamp(1rem, 0.646rem + 0.377vw, 1.25rem)"   # 16px to ~1500px wide, 20px at 2560px
+  container: 75rem   # 1200px at 16px
   breakpoints: { sm: 600px, md: 768px, lg: 1120px }
-  touch-target-min: 44px
+  touch-target-min: 2.75rem   # 44px at 16px
 
 elevation:
   level-0: "none"
@@ -257,7 +258,7 @@ Fluid sizing does most of the work. Breakpoints only change **layout**:
 - **No horizontal page scroll at any width ≥ 320 px.** Wide content (tables, SQL) scrolls inside its own card.
 
 ### Page order
-Nav · Hero · Live map · KPI tiles · Trends · Forecast explorer · **Findings (ink band)** · How it's built (FAQ) · Footer (ink).
+Nav · Hero · Live map · KPI tiles · Trends · Forecast explorer · **Findings (ink band)** · Station closures · How it's built (FAQ) · Footer (ink).
 
 ## 5. Shape, elevation, motion
 
@@ -398,6 +399,24 @@ During frontend work:
 - Everything else waits for v1.1 after launch.
 
 ### Changelog
+- **v1.1.4 (2026-10-17):** light-mode `interval-fill` rgba(0,0,0,0.08) → 0.16; the forecast's calibrated range was
+  nearly invisible on a white card (dark mode's 0.12 white already read clearly).
+- **v1.1.3 (2026-10-17), sizes scale with the screen:** the root font size is fluid
+  (`clamp(1rem, 0.646rem + 0.377vw, 1.25rem)`: 16px, or the reader's default, up to ~1500px wide, 20px at 2560px), and
+  spacing, the container (75rem), the nav height, touch targets and every component length above 2px are in rem, so
+  a large monitor gets the same proportions as a laptop instead of a 1200px strip. Hairlines, focus rings and the
+  map's stroke tokens stay in px. Up to 1440px wide nothing moves. Narrow-screen fixes: the map's view/zoom group
+  wraps under the clock instead of running off a 320px card; legend entries wrap as one left-aligned run; the
+  footer mascot no longer shrinks.
+- **v1.1.2 (2026-10-17), the station closures band:** a white band after Findings (`#closures`, beige accent dot,
+  a "Closures" nav link, so the desktop nav has 6 links): static context, not-final and no-position notes; three
+  summary `stat-tile`s; a rules card; the 15 stations as 16 px `card`s in an `auto-fit` grid (min 280 px); "What the
+  data can't see" and sources as `card--soft`. New **verdict pill** (`.verdict-pill` in `fx.css`): "Case to keep:
+  strong / mixed / weak" in text, styled ink (strong), outlined (mixed) and soft grey (weak), never green/red; each
+  rule on a card reads "Met" / "Not met" with a decorative ✓/✗. Tokens only, so dark mode works unchanged.
+- **v1.1.1 (2026-10-17), owner tweaks:** light-mode `map-shoreline` #d4d4d4 → #a3a3a3 (the coastline was nearly
+  invisible against the water); `map-water` gets a slight blue tint (light #efefef → #e3ecf3, dark #161616 →
+  #121b24) so water reads as water; the trend tiles' sparklines are removed.
 - **v1.1 (2026-10-17), the redesign the owner asked for ("a fun user experience"), as an additive layer**
   (`web/css/fx.css`, `web/js/fx.js`; tokens and components unchanged, so v1.0.1 still describes the base):
   a 4 px **pulse stripe** of the six line colours under the nav with a light sweeping along it; the hero's
@@ -407,7 +426,7 @@ During frontend work:
   section**; a line-colour **dot before each section's eyebrow** and a line-colour top border on the Findings band;
   the headline's last word on a line-colour stripe; the map **legend as a line filter** (one line in colour, the
   rest at 15% with grey trains); **station cards** in the map tooltip (latest day, % of 2019, 28-day weekday
-  average, peak hour); **sparklines** in the recovery and entries tiles; a **crosshair readout** on the line charts;
+  average, peak hour); a **crosshair readout** on the line charts;
   **busiest/quietest** badges on the forecast card; a 🎲 "Surprise me" station chip; a **mascot** (train front) on
   the Ask launcher that bobs and says hello once, and in the footer, where it hops when poked; `/` opens Ask;
   and **dark mode** (`:root[data-theme="dark"]` in `tokens.css`: every chrome role inverted, the map's water/land

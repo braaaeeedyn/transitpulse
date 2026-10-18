@@ -6,7 +6,10 @@
   box-sizing: border-box;
 }
 
+/* The root size is 16px (or the reader's own default) up to ~1500px wide, then grows to 20px at 2560px, so every
+   rem-based size (type, spacing, the container) scales with big screens instead of leaving a narrow strip. */
 html {
+  font-size: clamp(1rem, 0.646rem + 0.377vw, 1.25rem);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   scroll-behavior: smooth;
@@ -157,8 +160,8 @@ table {
 }
 
 .icon {
-  width: 20px;
-  height: 20px;
+  width: 1.25rem;
+  height: 1.25rem;
   flex: none;
   fill: none;
   stroke: currentColor;

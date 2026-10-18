@@ -73,7 +73,7 @@ export async function initMap(root) {
   legend.replaceChildren(
     ...network.lines.map((l) => {
       const li = document.createElement("li");
-      li.innerHTML = `<button type="button" class="legend__toggle" data-legend-line="${l.id}" aria-pressed="false"><span class="swatch" style="background:var(--line-${l.id})"></span>${l.name} <span class="text-body">· ${l.desc}</span></button>`;
+      li.innerHTML = `<button type="button" class="legend__toggle" data-legend-line="${l.id}" aria-pressed="false"><span class="swatch" style="background:var(--line-${l.id})"></span><span>${l.name} <span class="text-body">· ${l.desc}</span></span></button>`;
       return li;
     }),
   );

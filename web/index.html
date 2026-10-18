@@ -83,6 +83,7 @@
             <li><a href="#trends">Trends</a></li>
             <li><a href="#forecast">Forecast</a></li>
             <li><a href="#findings">Findings</a></li>
+            <li><a href="#closures">Closures</a></li>
             <li><a href="#about">About</a></li>
           </ul>
         </nav>
@@ -113,6 +114,7 @@
           <li><a href="#trends">Trends</a></li>
           <li><a href="#forecast">Forecast</a></li>
           <li><a href="#findings">Findings</a></li>
+          <li><a href="#closures">Closures</a></li>
           <li><a href="#about">About</a></li>
         </ul>
         <button class="btn btn--primary" type="button" data-ask-open aria-controls="ask-panel" aria-expanded="false">Ask a question</button>
@@ -339,6 +341,110 @@
         </div>
       </section>
 
+      <!-- Station closures: the notes are static, so they show without data; web/js/closures.js fills [data-closures]
+           from GET /api/closures (the skeletons stand in for the loaded summary, rules and station cards) -->
+      <section class="band" id="closures" data-accent="beige" aria-labelledby="closures-title">
+        <div class="container">
+          <div class="section-head">
+            <p class="eyebrow">Station closures</p>
+            <h2 id="closures-title">Which BART stations could close, and what the ridership says</h2>
+            <p>BART's own ridership data for each station named so far: how many people use it, how well it is recovering, and how far away the next open station is.</p>
+          </div>
+          <div class="closures__context">
+            <p>
+              The Connect Bay Area measure (SB 63), a regional sales tax for transit, is on the November 3, 2026 ballot in
+              Alameda, Contra Costa, San Francisco, San Mateo and Santa Clara counties. On February 26, 2026 the BART board
+              adopted an Alternative Service Plan, 8–1. It applies only if the measure fails and no other money is found,
+              and from July 2027 it allows up to 15 station closures.
+            </p>
+            <p data-closures-status>
+              The stations below are the ones named in BART staff's February 2026 presentation, as reported by the press.
+              The list isn't final: the board still has to vote on which stations or segments would close.
+            </p>
+            <p data-closures-neutral>
+              TransitPulse doesn't take a position on the measure. The verdicts below weigh ridership, recovery and distance;
+              they can't see cost, fairness or what riders would do instead.
+            </p>
+          </div>
+          <div class="card closures__cost" data-closures-cost>
+            <h3>What closing would cost</h3>
+            <p data-closures-cost-data hidden></p>
+            <ul>
+              <li>
+                <strong>Traffic.</strong> When a 35-day strike stopped Los Angeles transit in 2003, peak-hour delays on the
+                freeways rose 47%, most on the roads running alongside busy transit lines (Anderson, American Economic
+                Review, 2014).
+              </li>
+              <li>
+                <strong>The Bay Bridge.</strong> During the 2013 BART strike, travel times and traffic on the Bay Bridge nearly
+                doubled on the worst day, and roads alongside BART were as bad as the worst day of a normal week, though
+                freeways across the region changed little (Moylan, Foti and Skabardonis, 2016).
+              </li>
+              <li>
+                <strong>Lost work time.</strong> The Bay Area Council Economic Institute, a business group, put the 2013
+                strike's cost at about $73 million a day, counting lost productivity only.
+              </li>
+            </ul>
+            <p class="caption">
+              Those were shutdowns of a whole system. Closing 15 stations would be smaller, and none of these studies measured
+              station closures.
+            </p>
+          </div>
+          <div class="closures" data-closures aria-busy="true" aria-live="polite">
+            <div class="grid-auto" data-closures-summary>
+              <div class="stat-tile" aria-hidden="true"><span class="skeleton skeleton--label"></span><span class="skeleton skeleton--stat"></span><span class="skeleton skeleton--body"></span></div>
+              <div class="stat-tile" aria-hidden="true"><span class="skeleton skeleton--label"></span><span class="skeleton skeleton--stat"></span><span class="skeleton skeleton--body"></span></div>
+              <div class="stat-tile" aria-hidden="true"><span class="skeleton skeleton--label"></span><span class="skeleton skeleton--stat"></span><span class="skeleton skeleton--body"></span></div>
+            </div>
+            <div class="card closures__rules" aria-hidden="true"><span class="skeleton skeleton--label"></span><span class="skeleton skeleton--body"></span><span class="skeleton skeleton--body"></span><span class="skeleton skeleton--body"></span></div>
+            <div class="closures__cards">
+              <div class="card closure-card" aria-hidden="true"><span class="skeleton skeleton--label"></span><span class="skeleton skeleton--body"></span><span class="skeleton skeleton--body"></span><span class="skeleton skeleton--body"></span></div>
+              <div class="card closure-card" aria-hidden="true"><span class="skeleton skeleton--label"></span><span class="skeleton skeleton--body"></span><span class="skeleton skeleton--body"></span><span class="skeleton skeleton--body"></span></div>
+              <div class="card closure-card" aria-hidden="true"><span class="skeleton skeleton--label"></span><span class="skeleton skeleton--body"></span><span class="skeleton skeleton--body"></span><span class="skeleton skeleton--body"></span></div>
+            </div>
+          </div>
+          <div class="closures__notes">
+            <div class="card card--soft" data-closures-caveats>
+              <h3>What the data can't see</h3>
+              <ul>
+                <li>What each station costs to run, and what closing it would save.</li>
+                <li>Who rides: income, disability and access to a car.</li>
+                <li>Parking, bus and shuttle links at each station.</li>
+                <li>Transfers to other systems, such as Caltrain at Millbrae and air travellers at Oakland International Airport.</li>
+                <li>Whether riders would switch to another station or stop riding.</li>
+              </ul>
+              <p data-closures-sfo>
+                San Francisco International Airport isn't on the list as reported, and the sources don't say how it would be
+                served if the stations around it closed. This page counts it as still open, so it is the nearest open station
+                for San Bruno and Millbrae. If it lost service along with the stations around it, both would meet the Distance
+                rule and their case to keep would be stronger.
+              </p>
+              <p>Distances are straight lines, not the trip by road or rail.</p>
+              <p><a href="https://github.com/braaaeeedyn/transitpulse/blob/main/docs/STATION_CLOSURES.md">Read the write-up</a></p>
+            </div>
+            <div class="card card--soft" data-closures-sources>
+              <h3>Sources</h3>
+              <ul>
+                <li><a href="https://www.cbsnews.com/sanfrancisco/news/bart-could-close-15-stations-lay-off-1200-without-sales-tax-measure/">BART could close 15 stations, lay off 1,200 without sales tax measure</a>, CBS News Bay Area, Feb 9, 2026</li>
+                <li><a href="https://www.cbsnews.com/sanfrancisco/news/bart-board-approves-station-closures-if-2026-sales-tax-measure-rejected/">BART board approves plan to close stations if voters reject sales tax measure</a>, CBS News Bay Area, Feb 2026</li>
+                <li><a href="https://www.bart.gov/node/44936">BART Board to discuss and adopt an Alternative Service Plan</a>, BART, Feb 26, 2026</li>
+                <li><a href="https://www.bart.gov/sites/default/files/2026-02/Proposed%20Alternative%20Service%20Framework%20from%20Feb%2012%202026.pdf">Proposed Alternative Service Framework (PDF)</a>, BART, Feb 12, 2026</li>
+                <li><a href="https://sfstandard.com/2026/02/26/bart-doomsday-scenario-less-doomy/">BART won't close stations in January after vote</a>, The San Francisco Standard, Feb 26, 2026</li>
+                <li><a href="https://www.kron4.com/news/bay-area/these-are-the-bart-stations-that-could-close-under-transit-systems-worst-case-scenario/">These are the BART stations that could close under the worst-case scenario</a>, KRON4, 2026</li>
+                <li><a href="https://news.medill.northwestern.edu/chicago/several-stations-on-chopping-block-as-bart-heads-for-financial-cliff/">Several stations on chopping block as BART heads for financial cliff</a>, Medill Reports, Feb 18, 2026</li>
+                <li><a href="https://localnewsmatters.org/2026/07/02/connect-bay-area-transit-tax-ballot-november-2026/">Connect Bay Area transit tax certified for the November 2026 ballot</a>, Local News Matters, Jul 2, 2026</li>
+                <li><a href="https://stanforddaily.com/2026/10/07/bay-area-to-vote-on-transit-measure/">Bay Area to vote on transit measure</a>, The Stanford Daily, Oct 7, 2026</li>
+                <li><a href="https://antiochherald.com/2026/02/bart-board-votes-8-1-to-close-up-to-15-stations-if-proposed-nov-tax-measure-fails/">BART board votes 8-1 to close up to 15 stations if proposed Nov. tax measure fails</a>, Antioch Herald, Feb 2026</li>
+                <li><a href="https://www.nber.org/papers/w18757">Subways, Strikes, and Slowdowns: The Impacts of Public Transit on Traffic Congestion</a>, Michael L. Anderson, American Economic Review, 2014</li>
+                <li><a href="https://doi.org/10.1080/03081060.2015.1127539">Observed and simulated traffic impacts from the 2013 Bay Area Rapid Transit strike</a>, Moylan, Foti and Skabardonis, Transportation Planning and Technology, 2016</li>
+                <li><a href="https://www.cbsnews.com/sanfrancisco/news/bart-strike-economic-impact-put-at-73-million-no-new-talks-set">BART strike economic impact put at $73 million</a>, CBS News Bay Area, Jul 2013</li>
+              </ul>
+            </div>
+          </div>
+          <p class="caption closures__source">Ridership: BART hourly origin-destination ridership reports, service weekdays. Data provided by BART.</p>
+        </div>
+      </section>
+
       <!-- About / how it's built -->
       <section class="band" id="about" data-accent="red" aria-labelledby="about-title">
         <div class="container">
@@ -399,6 +505,7 @@
               <li><a href="https://github.com/braaaeeedyn/transitpulse">Source on GitHub</a></li>
               <li><a href="https://github.com/braaaeeedyn/transitpulse/blob/main/docs/FINDINGS.md">eBART study write-up</a></li>
               <li><a href="https://github.com/braaaeeedyn/transitpulse/blob/main/docs/AB_TEST.md">Ask A/B test write-up</a></li>
+              <li><a href="https://github.com/braaaeeedyn/transitpulse/blob/main/docs/STATION_CLOSURES.md">Station closures write-up</a></li>
               <li><a href="styleguide.html">Style guide</a></li>
             </ul>
           </div>

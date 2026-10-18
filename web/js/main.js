@@ -1,8 +1,9 @@
 // Page bootstrap: nav behaviour, the Ask card, the live map, the Trends band (and its optional dashboard), the
-// Forecast explorer and Findings.
+// Forecast explorer, Findings and Station closures.
 
 import { initAsk } from "./ask.js";
 import { formatDate } from "./chart.js";
+import { initClosures } from "./closures.js";
 import { initFindings } from "./findings.js";
 import { initBoard, initCounts, initHeroLive, initMascotHello, initMascotHop, initReveal, initScrollSpy, initTheme } from "./fx.js";
 import { initForecast } from "./forecast.js";
@@ -104,6 +105,7 @@ initTrends(document.querySelector("[data-trends]"));
 initDashboard(document.querySelector("[data-dashboard]"));
 initForecast(document.querySelector("[data-forecast]"));
 initFindings(document.querySelector("[data-findings]"));
+initClosures(document.querySelector("[data-closures]"));
 
 // motion: live hero numbers, count-ups, sections rising in, the nav's current section, the mascot's hello
 initTheme(document.querySelector("[data-theme-toggle]"));

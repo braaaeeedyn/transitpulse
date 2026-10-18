@@ -49,9 +49,9 @@
   --line-blue: #00a6e9;
   --line-beige: #b5a97b;
   --line-casing: rgba(0, 0, 0, 0.25);
-  --map-water: #efefef;
+  --map-water: #e3ecf3; /* a slight blue tint: reads as water against the white land */
   --map-land: #ffffff;
-  --map-shoreline: #d4d4d4;
+  --map-shoreline: #a3a3a3; /* light mode: dark enough to read the coast against #efefef water */
   --seq-0: #f3f3f3;
   --seq-1: #d4d4d4;
   --seq-2: #a3a3a3;
@@ -60,7 +60,7 @@
   --seq-5: #000000;
   --series-primary: #000000;
   --series-secondary: #8a8a8a;
-  --interval-fill: rgba(0, 0, 0, 0.08);
+  --interval-fill: rgba(0, 0, 0, 0.16); /* light: 0.08 was too faint to see on a white card */
   --gridline: #ececec;
 
   /* --- typography -------------------------------------------------------- */
@@ -106,27 +106,27 @@
   --radius-pill-tab: 36px;
   --radius-pill: 999px;
 
-  /* --- spacing (4 px base) ----------------------------------------------- */
-  --space-xxs: 4px;
-  --space-xs: 6px;
-  --space-sm: 8px;
-  --space-md: 12px;
-  --space-lg: 16px;
-  --space-xl: 20px;
-  --space-2xl: 24px;
-  --space-3xl: 32px;
-  --space-4xl: 48px;
-  --space-5xl: 64px;
-  --space-gutter: clamp(16px, 4vw, 32px);
-  --space-section: clamp(48px, 6vw, 96px);
-  --space-card: clamp(16px, 2.5vw, 24px);
-  --space-card-ink: clamp(24px, 4vw, 48px);
-  --space-grid: clamp(12px, 2vw, 24px);
+  /* --- spacing (4 px base, in rem so it grows with the root size on large screens; 1rem = 16px up to ~1500px) -- */
+  --space-xxs: 0.25rem;
+  --space-xs: 0.375rem;
+  --space-sm: 0.5rem;
+  --space-md: 0.75rem;
+  --space-lg: 1rem;
+  --space-xl: 1.25rem;
+  --space-2xl: 1.5rem;
+  --space-3xl: 2rem;
+  --space-4xl: 3rem;
+  --space-5xl: 4rem;
+  --space-gutter: clamp(1rem, 4vw, 2rem);
+  --space-section: clamp(3rem, 6vw, 6rem);
+  --space-card: clamp(1rem, 2.5vw, 1.5rem);
+  --space-card-ink: clamp(1.5rem, 4vw, 3rem);
+  --space-grid: clamp(0.75rem, 2vw, 1.5rem);
 
   /* --- layout ------------------------------------------------------------ */
-  --container: 1200px;
-  --touch-target: 44px;
-  --nav-height: 64px;
+  --container: 75rem; /* 1200px at 16px; ~1500px on a 2560px screen */
+  --touch-target: 2.75rem;
+  --nav-height: 4rem;
   --measure: 68ch;
 
   /* --- elevation --------------------------------------------------------- */
@@ -188,7 +188,7 @@
   --color-error: #ff7070;
   --color-focus: #ffffff;
   --line-casing: rgba(255, 255, 255, 0.3);
-  --map-water: #161616;
+  --map-water: #121b24;
   --map-land: #0d0d0d;
   --map-shoreline: #3a3a3a;
   --seq-0: #1c1c1c;

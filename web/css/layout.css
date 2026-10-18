@@ -38,7 +38,7 @@
 .grid-auto {
   display: grid;
   gap: var(--space-grid);
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13.75rem), 1fr));
 }
 
 .grid-2 {
@@ -87,8 +87,8 @@
 }
 
 .wordmark__mark {
-  width: 22px;
-  height: 10px;
+  width: 1.375rem;
+  height: 0.625rem;
   border-radius: var(--radius-pill);
   background: var(--color-ink);
 }
@@ -177,7 +177,7 @@
 .nav-overlay__links a {
   display: flex;
   align-items: center;
-  min-height: 56px;
+  min-height: 3.5rem;
   font-size: var(--type-display-md);
   font-weight: 700;
   text-decoration: none;
@@ -185,7 +185,7 @@
 
 /* --- hero --------------------------------------------------------------- */
 .hero {
-  padding-top: clamp(32px, 6vw, 80px);
+  padding-top: clamp(2rem, 6vw, 5rem);
 }
 
 .hero__grid {
@@ -208,7 +208,7 @@
 
 @media (min-width: 1120px) {
   .hero__grid {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 27.5rem);
     gap: var(--space-5xl);
   }
 }
@@ -225,7 +225,7 @@
 .footer__grid {
   display: grid;
   gap: var(--space-3xl);
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13.75rem), 1fr));
 }
 
 .footer h2 {

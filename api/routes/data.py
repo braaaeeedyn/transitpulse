@@ -6,6 +6,7 @@ state. Date windows are computed here in Python and passed as parameters, so the
 """
 
 import datetime as dt
+import math
 import re
 from collections import Counter
 from collections.abc import Callable
@@ -403,3 +404,169 @@ def forecast(code: str) -> dict:
     wh = _warehouse()
     _check_code(code)
     return _cached(wh, ("forecast", code), 6 * HOUR, lambda: _forecast(wh, code))
+
+
+# --- station closures --------------------------------------------------------------------------------
+
+# The "case to keep" rules (docs/STATION_CLOSURES.md). The first three were fixed in the build plan before the section
+# was built; "growing" was added afterwards at the owner's request. Each met rule is a point for keeping the station;
+# the page shows this text and never restates a threshold itself.
+CLOSURE_LOWEST_N = 10  # BART staff's cut: "the 10 lowest-ridership stations"
+CLOSURE_MILES = 3.0  # beyond a short bike ride or walk
+CLOSURE_RULES = [
+    {
+        "id": "riders",
+        "text": f"Busier than BART's {CLOSURE_LOWEST_N} least-used stations: its weekday trips (entries plus exits) "
+        f"rank above the bottom {CLOSURE_LOWEST_N}.",
+    },
+    {
+        "id": "recovery",
+        "text": f"Recovering at least as well as BART overall: its weekday trips as a share of {BASELINE_YEAR} are at or "
+        "above BART's systemwide share (whole percentages).",
+    },
+    {
+        "id": "distance",
+        "text": f"Hard to replace: the nearest station that stays open if every listed station closes is at least "
+        f"{CLOSURE_MILES:.1f} miles away in a straight line.",
+    },
+    {
+        "id": "growing",
+        "text": "Riders coming back: its weekday trips in the latest year are up on the year before (to 0.1%).",
+    },
+]
+CLOSURE_VERDICTS = {
+    "strong": "Three or four rules met",
+    "mixed": "Two rules met",
+    "weak": "One rule or none met",
+}
+
+
+# rounded half up (round() goes to even): the rules compare the rounded numbers the page shows
+def _pct(ratio: float | None) -> int | None:
+    return None if ratio is None else math.floor(ratio * 100 + 0.5)
+
+
+def _miles(miles: float | None) -> float | None:
+    return None if miles is None else math.floor(miles * 10 + 0.5) / 10
+
+
+def _change_pct(ratio: float | None) -> float | None:
+    return None if ratio is None else math.floor(ratio * 1000 + 0.5) / 10
+
+
+def closure_verdict(points: int) -> str:
+    return "strong" if points >= 3 else "mixed" if points == 2 else "weak"
+
+
+def closure_criteria(
+    rank_lowest: int,
+    recovery_pct: int | None,
+    system_pct: int | None,
+    miles: float | None,
+    change_pct: float | None = None,
+) -> dict:
+    return {
+        "riders": rank_lowest > CLOSURE_LOWEST_N,
+        "recovery": recovery_pct is not None and system_pct is not None and recovery_pct >= system_pct,
+        "distance": miles is not None and miles >= CLOSURE_MILES,
+        "growing": change_pct is not None and change_pct > 0,
+    }
+
+
+def _closures(wh: Warehouse) -> dict:
+    try:
+        rows = wh.query(
+            "select station_code, station_name, closure_group, closure_segment, period_year, avg_weekday_entries, "
+            "avg_weekday_exits, avg_weekday_trips, rank_lowest, stations_ranked, share_of_weekday_trips, "
+            "recovery_ratio, system_recovery_ratio, change_vs_prev_year, nearest_open_code, nearest_open_name, "
+            f"nearest_open_miles from {wh.table('mart_station_closures')} order by rank_lowest, station_code"
+        )
+        dests = wh.query(
+            "select origin_code, destination_code, destination_name, share_of_origin_trips "
+            f"from {wh.table('mart_closure_destinations')} order by origin_code, destination_rank"
+        )
+        scenarios = wh.query(
+            f"select scenario, share_of_weekday_trips from {wh.table('mart_closure_scenarios')}"
+        )
+        through = _max_date_kpis(wh)
+    except TableNotFound as e:
+        raise HTTPException(status_code=404, detail=NOT_AVAILABLE) from e
+    listed = [r for r in rows if r["closure_group"] is not None]
+    if not listed:
+        raise HTTPException(status_code=404, detail=NOT_AVAILABLE)
+
+    system_pct = _pct(rows[0]["system_recovery_ratio"])
+    shares = {s["scenario"]: s["share_of_weekday_trips"] for s in scenarios}
+    lowest = [r for r in rows if r["rank_lowest"] <= CLOSURE_LOWEST_N]
+    by_origin: dict[str, list] = {}
+    for d in dests:
+        by_origin.setdefault(d["origin_code"], []).append(
+            {
+                "code": d["destination_code"],
+                "name": d["destination_name"],
+                "share": d["share_of_origin_trips"],
+            }
+        )
+
+    stations = []
+    for r in sorted(listed, key=lambda r: (r["closure_group"], r["avg_weekday_trips"], r["station_code"])):
+        recovery_pct = _pct(r["recovery_ratio"])
+        miles = _miles(r["nearest_open_miles"])
+        criteria = closure_criteria(
+            int(r["rank_lowest"]), recovery_pct, system_pct, miles, _change_pct(r["change_vs_prev_year"])
+        )
+        points = sum(criteria.values())
+        stations.append(
+            {
+                "code": r["station_code"],
+                "name": r["station_name"],
+                "group": int(r["closure_group"]),
+                "segment": r["closure_segment"],
+                "weekday_trips": round(r["avg_weekday_trips"]),
+                "weekday_entries": round(r["avg_weekday_entries"]),
+                "weekday_exits": round(r["avg_weekday_exits"]),
+                "rank_lowest": int(r["rank_lowest"]),
+                "share_of_trips": r["share_of_weekday_trips"],
+                "recovery_pct": recovery_pct,
+                "change_vs_prev_year": r["change_vs_prev_year"],
+                "nearest_open": {
+                    "code": r["nearest_open_code"],
+                    "name": r["nearest_open_name"],
+                    "miles": miles,
+                },
+                "destinations": by_origin.get(r["station_code"], []),
+                "criteria": criteria,
+                "points": points,
+                "verdict": closure_verdict(points),
+            }
+        )
+    return {
+        "period_year": int(listed[0]["period_year"]),
+        "baseline_year": BASELINE_YEAR,
+        "data_through": through,
+        "system": {
+            "stations": int(rows[0]["stations_ranked"]),
+            "recovery_pct": system_pct,
+            "share_first_10": shares.get("first_10"),
+            "share_all_15": shares.get("all_15"),
+            "lowest_10": [
+                {
+                    "code": r["station_code"],
+                    "name": r["station_name"],
+                    "listed": r["closure_group"] is not None,
+                }
+                for r in lowest
+            ],
+            "first_10_in_lowest_10": sum(r["closure_group"] == 1 for r in lowest),
+        },
+        "rules": CLOSURE_RULES,
+        "verdicts": CLOSURE_VERDICTS,
+        "stations": stations,
+        "source": BART_SOURCE,
+    }
+
+
+@router.get("/closures")
+def closures() -> dict:
+    wh = _warehouse()
+    return _cached(wh, ("closures",), HOUR, lambda: _closures(wh))
