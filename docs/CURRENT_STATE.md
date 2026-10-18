@@ -85,9 +85,16 @@ S3 baywheels-data ──► data/raw/baywheels/*.zip ─► DuckDB clean ─► 
 ## 3. The website
 
 ### Page (single page, `web/index.html`)
-1. **Nav**: sticky; links + "Ask a question" pill. Below 1120 px the links move into a full-screen menu
+1. **Nav**: sticky; links (the one for the section on screen is underlined, `aria-current`), a sun/moon theme
+   toggle (`[data-theme-toggle]`, `localStorage` `tp-theme`, default = system preference; an inline `<script>` in
+   `<head>` applies it before paint; the map re-reads its colours on `tp:theme`) and the "Ask a question" pill; a
+   4 px pulse stripe of the line colours underneath. Below 1120 px the links move into a full-screen menu
    (focus trapped, Esc closes, body scroll locked). Below 600 px the CTA becomes a search icon.
-2. **Hero**: headline, lead, "Ask TransitPulse" (opens the panel) and "See the live map".
+2. **Hero**: headline (last word on a line-colour stripe), lead, a live strip (`[data-hero-live]`: trains moving
+   now from the map's summary, % of 2019 and the data date from `/api/kpis`, counted up), "Ask TransitPulse"
+   (opens the panel) and "See the live map"; in the second column from 1120 px (below the copy otherwise) a
+   **departure board** (`[data-board]`): the six soonest arrivals anywhere, which the map publishes every 10 s as
+   `tp:arrivals` (line swatch, next stop, destination, minutes; hidden when nothing is running).
    **Ask panel** (`#ask-panel`, at the end of `<body>`): opened by the corner launcher (`.ask-launcher`, the mascot
    symbol `#i-mascot`), the nav's "Ask a question" buttons and the hero button (all `[data-ask-open]`, with
    `aria-expanded`); ✕ or Esc closes it and focus returns to the opener (`web/js/main.js`). A 440 px side panel under
@@ -128,6 +135,11 @@ S3 baywheels-data ──► data/raw/baywheels/*.zip ─► DuckDB clean ─► 
 `summary_large_image`. `web/img/og.png` is the train map at 8:00 AM on a Wednesday (104 KB), written by
 `tasks.py screenshots`. `<meta name="tp-looker-url" content="">` holds the dashboard URL (see Trends band).
 
+### Forecast explorer: v1.1 additions
+- Under the caption, two **badges** (`[data-fc-badges]`, height reserved): the fortnight's busiest and quietest
+  expected days (max/min p50) with their values.
+- A 🎲 **"Surprise me"** chip (`[data-fc-random]`) loads a random station other than the one on screen.
+
 ### Findings band
 `web/js/findings.js` reads `GET /api/findings` (through `apiUrl`, so the exported pages call Cloud Run). Every
 number comes from the JSON:
@@ -155,6 +167,14 @@ number comes from the JSON:
   - The x axis is "weeks since opening". Each card has a visually hidden table of the bins.
 - **States:** skeletons of the loaded size while loading; 404 → "The analysis is in progress."; any other error →
   an error message with Retry.
+
+### Live map: v1.1 additions
+- **Legend filter:** each legend entry is a toggle (`[data-legend-line]`, `aria-pressed`). One pressed line sets
+  `data-focus-line` on the map card: other lines' track paths (`data-line`) fade to 15% and `drawTrains` paints
+  their trains grey (`focusLine`/`dim`). Pressing it again clears.
+- **Station card:** the station tooltip shows, when `/api/stations/{code}/summary` has answered, a 2×2 grid
+  (`.tooltip__stats`): entries on the latest day, % of 2019, the 28-day weekday average and the peak hour with its
+  share, then "See its forecast →". The old one-line sentence stays as visually-hidden text (`[data-station-entries]`).
 
 ### Trends band
 - Loads `/api/kpis`, `/api/trends/ridership` and (in parallel, optional) `/api/trends/bikes-vs-trains`. `/api/kpis` is
@@ -186,6 +206,13 @@ number comes from the JSON:
   4:3 `aspect-ratio`, a title); narrower cards show an "Open dashboard" pill link instead. The live pages have no
   URL yet (owner step, `bi/README.md`).
 
+### Trends band: v1.1 additions
+- The recovery and entries tiles carry a 72×22 **sparkline** of the last 12 months (`sparklineHTML`), absolutely
+  positioned in the tile's corner so the skeletons' reserved height still holds.
+- Both line charts have a **crosshair readout** (`renderLineChart`'s `readout` option, `attachReadout`): a dashed
+  rule at the nearest month, a dot per series and an ink box with the month and values; pointer events are assigned
+  (not added) so a resize redraw doesn't stack handlers. The hidden tables remain the accessible version.
+
 ### Forecast explorer
 - **Station picker:** an ARIA combobox matching names or codes ("mac" → MacArthur, "12" → 12th St Oakland). A
   click or tap on a station on the live map picks it too (a `tp:station` event on `document`), without scrolling.
@@ -215,6 +242,15 @@ number comes from the JSON:
   - 503 → "Forecasts will appear here once the forecasting model has run."
   - 404 → "There's no forecast for X yet." + "Try another station", which focuses the search box.
   - Other errors → Retry.
+
+### Motion layer (`web/js/fx.js`, `web/css/fx.css`)
+Decoration only, off under `prefers-reduced-motion`: `[data-count]` numbers count up when scrolled into view (a
+MutationObserver catches ones rendered later); `.band` children and section heads get `.reveal` (a 28 px slide, no
+fade) when below the fold and `.is-in` when they enter; an IntersectionObserver marks the nav's current section; the
+Ask launcher's mascot bobs and shows "Ask me anything about BART" once per session (`sessionStorage` `tp-hello`);
+the footer mascot hops when clicked; `/` outside a field opens Ask. Section accents: `data-accent` on each `<section>`
+sets `--accent` (map blue, trends green, forecast orange, findings yellow, about red), drawn as a dot before the
+eyebrow; the Findings band has a line-colour top border.
 
 ### Live map: how it works
 - **Data**: `network.json` (50 stations, 51 track edges with their lines in lane order, label hints),
@@ -260,9 +296,12 @@ number comes from the JSON:
 - **Failure**: if the map data can't load, the map area shows an error message with Retry.
 
 ### Design system
-`web/css/tokens.css` mirrors `docs/DESIGN.md` **v1.0.1** (frozen). Black/white interface; line colours only in data
-marks; Inter 400/500/700; pills for controls, 16 px cards. Chart, trends, forecast and dashboard styles are in
-`web/css/charts.css`. Deviations awaiting v1.1 are the numbered "v1.1 list" in `DESIGN_BACKLOG.md` (19 items).
+`web/css/tokens.css` mirrors `docs/DESIGN.md` **v1.1**: the v1.0.1 base (black/white interface, Inter 400/500/700,
+pills for controls, 16 px cards) plus a **dark palette** under `:root[data-theme="dark"]` and the v1.1
+motion/delight layer in `web/css/fx.css` + `web/js/fx.js` (pulse stripe, live hero strip, departure board,
+count-ups, scroll reveal, scroll-spy, section accents, legend filter, station cards, sparklines, chart readout,
+forecast badges, mascot, dark-mode toggle; see DESIGN.md's changelog). Chart, trends, forecast and dashboard
+styles are in `web/css/charts.css`. Deviations awaiting v1.1 are the numbered "v1.1 list" in `DESIGN_BACKLOG.md` (19 items).
 - **Style guide** (`web/styleguide.html` + `web/js/styleguide.js`, linked from the footer, `noindex`): each text
   token on the surfaces DESIGN.md §2 allows; type samples; tables of every custom property, read from
   `tokens.css`'s own `:root` rules (media-query overrides included, with a sample swatch, size, radius, bar or

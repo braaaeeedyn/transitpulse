@@ -1390,3 +1390,29 @@ BART's data ends (Dec 2025). A second chip, "Busiest hour on a weekday?", could 
   "Ask a question" and a new hero button open it too; ✕ or Esc closes it and focus returns. The mascot is an inline
   SVG train front in its own colours (no BART logo). Answers use `display-md` in the narrower panel; the input clears
   after sending. Tests: launcher/Esc/focus/nav, desktop width and phone full screen at 320 px.
+
+## 2026-10-17 · site · the redesign: five rounds, watched live in the owner's Chrome
+**Why.** The owner asked for "a fun user experience that is laid out nicely" with "lots of changes", following along
+at http://localhost:8000. The design doc was frozen at v1.0.1 ("the only colour is data"); the owner's request
+reopens it, so v1.1 is an additive layer (`fx.css`, `fx.js`) and a dark palette, with tokens and components intact.
+
+**Rounds** (each committed after the 60 Playwright + 37 node tests passed):
+1. Pulse stripe under the nav; the hero's live strip (trains moving / % of 2019 / data date); count-ups on tiles and
+   Findings figures; sections slide in; nav scroll-spy; the mascot bobs and says hello once per session.
+2. The map legend as a line filter; 12-month sparklines in two tiles; a "Surprise me" forecast chip.
+3. Station cards in the map tooltip (entries, % of 2019, 28-day weekday average, peak hour); a line-colour dot before
+   each section's eyebrow, a line-colour border on the Findings band and a stripe under the headline's last word;
+   dark mode with a sun/moon toggle (system preference by default, saved choice, applied before paint).
+4. A departure board in the hero's empty second column: the six soonest arrivals anywhere, published by the map
+   every 10 s (`tp:arrivals`); the footer greets with the mascot.
+5. A crosshair readout on both line charts; busiest/quietest badges on the forecast card; `/` opens Ask; the footer
+   mascot hops when poked.
+
+**Caught by the tests.** The first reveal faded opacity in, and axe read the legend's text mid-fade as 1.4:1 contrast;
+the reveal is now a slide only. Sparklines first added 35 px to the tiles after load and broke the skeleton
+height check; they now sit absolutely in the tile's corner. The local server was killed twice for low memory
+(Docker's other project plus Chrome); it was restarted when the owner asked to continue.
+
+**Not done.** The style guide doesn't yet show the v1.1 pieces (board, badge, mascot, legend toggle, readout); the
+components test only requires `components.css` blocks, which are unchanged. Dark mode isn't covered by the axe test
+(light only). Nothing is published: the owner is reviewing locally.
