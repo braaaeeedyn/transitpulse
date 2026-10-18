@@ -192,3 +192,13 @@ export function initBoard(board) {
       .join("");
   });
 }
+
+// --- the footer mascot hops when poked --------------------------------------------------------------
+export function initMascotHop(button) {
+  if (!button) return;
+  button.addEventListener("click", () => {
+    button.classList.remove("is-hopping");
+    void button.offsetWidth; // restart the animation on a quick second poke
+    button.classList.add("is-hopping");
+  });
+}

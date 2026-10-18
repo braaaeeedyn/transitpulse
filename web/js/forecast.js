@@ -167,6 +167,7 @@ function cardHTML() {
     <div class="card__head">
       <h3 id="forecast-chart-title" data-fc-title><span class="skeleton skeleton--title"></span></h3>
       <p class="card__takeaway" data-fc-caption><span class="skeleton skeleton--body"></span></p>
+      <p class="forecast__badges" data-fc-badges></p>
     </div>
     <ul class="legend chart-legend" aria-label="Series">
       <li><svg class="chart-key" viewBox="0 0 24 8" aria-hidden="true"><line class="chart__line chart__line--actual" x1="1" y1="4" x2="23" y2="4"/></svg>Actual entries</li>
@@ -333,6 +334,15 @@ export async function initForecast(root) {
   function render(data) {
     result.querySelector("[data-fc-title]").textContent = data.name;
     result.querySelector("[data-fc-caption]").textContent = forecastCaption(data);
+    // the fortnight's extremes, at a glance
+    const days = data.forecast.filter((f) => f.p50 !== null && f.p50 !== undefined);
+    if (days.length >= 2) {
+      const busiest = days.reduce((a, b) => (b.p50 > a.p50 ? b : a));
+      const quietest = days.reduce((a, b) => (b.p50 < a.p50 ? b : a));
+      const badge = (cls, word, f) =>
+        `<span class="badge ${cls}">${word} <strong>${formatDay(f.date)}</strong> · ${formatNumber(Math.round(f.p50))}</span>`;
+      result.querySelector("[data-fc-badges]").innerHTML = badge("badge--busy", "Busiest", busiest) + badge("badge--quiet", "Quietest", quietest);
+    }
     result.querySelector("[data-fc-source]").textContent = sourceLine(data);
     // the legend and the screen-reader table name the band the same way the caption does
     const label = rangeLabel(data.model);

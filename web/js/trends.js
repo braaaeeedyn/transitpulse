@@ -109,7 +109,7 @@ const MARGIN = { top: 8, right: 8, bottom: 24, left: 44 };
  * Draws monthly line series into `el` at its current pixel size (the SVG viewBox matches it, so text stays 12 px).
  * series: [{ cls, points: [{ x: monthIndex, y }] }]. Missing months break each line instead of bridging them.
  */
-export function renderLineChart(el, { series, label, yFormat = formatCompact }) {
+export function renderLineChart(el, { series, label, yFormat = formatCompact, readout = null }) {
   const w = Math.max(1, Math.round(el.clientWidth));
   const h = Math.max(1, Math.round(el.clientHeight));
   const all = series.flatMap((s) => s.points);
@@ -135,6 +135,74 @@ export function renderLineChart(el, { series, label, yFormat = formatCompact }) 
   const gaps = series.some((s) => s.points.some((p, i) => i > 0 && p.x - s.points[i - 1].x > 1));
   el.innerHTML = `<svg class="chart__svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img"
       aria-label="${esc(label)}${gaps ? " Gaps are months with no data loaded." : ""}">${grid}${xt}${lines}</svg>`;
+  if (readout) attachReadout(el, { series, x, y, w, h, x0, x1, readout });
+}
+
+/**
+ * A crosshair that follows the pointer: a vertical rule at the nearest month, a dot per series and a small
+ * readout (`readout.xLabel(x)` for the title, `readout.format(y)` for the values, `readout.names` per series).
+ * Decoration over the chart; the hidden table under each chart stays the accessible version.
+ */
+function attachReadout(el, { series, x, y, w, h, x0, x1, readout }) {
+  const svg = el.querySelector("svg");
+  const ns = "http://www.w3.org/2000/svg";
+  const g = document.createElementNS(ns, "g");
+  g.setAttribute("class", "chart__hover");
+  g.setAttribute("aria-hidden", "true");
+  g.style.display = "none";
+  g.innerHTML = `<line class="chart__hover-rule" y1="${MARGIN.top}" y2="${h - MARGIN.bottom}"/>${series.map(() => '<circle class="chart__hover-dot" r="4"/>').join("")}`;
+  svg.append(g);
+  let box = el.querySelector(".chart__readout");
+  if (!box) {
+    box = document.createElement("div");
+    box.className = "chart__readout";
+    box.setAttribute("aria-hidden", "true");
+    el.append(box);
+  }
+  box.hidden = true;
+  const dots = [...g.querySelectorAll("circle")];
+  const rule = g.querySelector("line");
+  const xsAll = [...new Set(series.flatMap((s) => s.points.map((p) => p.x)))].sort((a, b) => a - b);
+  const byX = series.map((s) => new Map(s.points.map((p) => [p.x, p.y])));
+
+  const show = (clientX) => {
+    const r = el.getBoundingClientRect();
+    const px = ((clientX - r.left) / r.width) * w;
+    const want = x0 + ((px - MARGIN.left) / (w - MARGIN.left - MARGIN.right)) * (x1 - x0);
+    let xi = xsAll[0];
+    for (const v of xsAll) if (Math.abs(v - want) < Math.abs(xi - want)) xi = v;
+    const cx = x(xi);
+    rule.setAttribute("x1", cx);
+    rule.setAttribute("x2", cx);
+    const rows = [];
+    byX.forEach((m, i) => {
+      const v = m.get(xi);
+      const dot = dots[i];
+      if (v === null || v === undefined) {
+        dot.style.display = "none";
+        return;
+      }
+      dot.style.display = "";
+      dot.setAttribute("cx", cx);
+      dot.setAttribute("cy", y(v));
+      rows.push(`<span class="chart__readout-row"><span>${esc(readout.names?.[i] ?? "")}</span><strong>${esc(readout.format(v))}</strong></span>`);
+    });
+    g.style.display = "";
+    box.innerHTML = `<span class="chart__readout-title">${esc(readout.xLabel(xi))}</span>${rows.join("")}`;
+    box.hidden = false;
+    const left = (cx / w) * r.width;
+    const flip = left > r.width * 0.6;
+    box.style.left = flip ? "" : `${left + 12}px`;
+    box.style.right = flip ? `${r.width - left + 12}px` : "";
+  };
+  const hide = () => {
+    g.style.display = "none";
+    box.hidden = true;
+  };
+  // assignment, not addEventListener: a redraw after a resize replaces the handlers instead of stacking them
+  el.onpointermove = (e) => show(e.clientX);
+  el.onpointerdown = (e) => show(e.clientX);
+  el.onpointerleave = hide;
 }
 
 /** Draws a chart now and again whenever its container changes width. Returns the observer. */
@@ -164,9 +232,11 @@ export function hiddenTable(caption, head, rows) {
 function ridershipChart(el, rows) {
   const first = formatMonth(rows[0].month_start);
   const last = formatMonth(rows[rows.length - 1].month_start);
+  const month = new Map(rows.map((r) => [monthIndex(r.month_start), formatMonth(r.month_start)]));
   renderLineChart(el, {
     series: [{ points: rows.map((r) => ({ x: monthIndex(r.month_start), y: r.avg_daily_entries })) }],
     label: `Line chart of average daily BART entries by month, ${first} to ${last}.`,
+    readout: { xLabel: (x) => month.get(x) ?? "", names: ["entries a day"], format: formatNumber },
   });
 }
 
@@ -193,6 +263,11 @@ function bikesChart(el, rows) {
     label:
       "Line chart of BART entries (solid) and Bay Wheels trips (dashed) per day, each as a percentage of the same " +
       `month in 2019, ${formatMonth(rows[0].month_start)} to ${formatMonth(rows[rows.length - 1].month_start)}.`,
+    readout: {
+      xLabel: (x) => new Map(rows.map((r) => [monthIndex(r.month_start), formatMonth(r.month_start)])).get(x) ?? "",
+      names: ["BART entries", "Bay Wheels trips"],
+      format: (v) => `${pct(v)} of 2019`,
+    },
   });
 }
 
