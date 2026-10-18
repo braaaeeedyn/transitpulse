@@ -1597,3 +1597,9 @@ second `h1`.
   everything runs, the VM update, CI, the re-export and the dated jobs (Nov 3 copy, the VM daemon after New Year,
   the trial upgrade, the timetable), the closures rebuild. README: status, the agent is live, the site's newer parts,
   four closure rules. The real-device checklist gains the what-if picker and dark mode.
+
+## 2026-10-18 · deploy · the VM updated
+- The owner ran the bootstrap: `/opt/transitpulse` fast-forwarded to `main`, `dbt parse` passed, both Dagster units
+  `active (running)`. The VM now has the closures seed and marts for its monthly rebuild.
+- The check in `OWNER_STEPS.md` §1 ran `git` as `ubuntu`, which stops with "detected dubious ownership" (the
+  checkout belongs to `transitpulse`); it now runs `sudo -u transitpulse git …`.

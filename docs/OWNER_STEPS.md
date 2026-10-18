@@ -3,8 +3,8 @@
 Everything left in TransitPulse that needs your accounts, a GUI tool, a device or a decision. Each step says what to
 run or click, what you should see, and how to check it. **Updated 2026-10-18:** everything is committed and pushed;
 https://braedynthompson.com/transitpulse/ runs the latest pages (station closures, the what-if map, dark mode);
-`/api/closures` answers from BigQuery; Ask is live on Gemini. Open now: the VM update (step 1), the dated jobs in
-step 3, and the account steps from step 6 on.
+`/api/closures` answers from BigQuery; Ask is live on Gemini. The VM runs the latest pipeline code. Open now: the dated
+jobs in step 3 and the account steps from step 6 on.
 
 Commands run from the repo root in Git Bash (or any POSIX shell) unless a step says otherwise.
 
@@ -28,12 +28,11 @@ ssh -i ~/.ssh/oracle_seismic ubuntu@167.234.214.169
 The Dagster UI: `ssh -i ~/.ssh/oracle_seismic -N -L 3000:127.0.0.1:3000 ubuntu@167.234.214.169`, then http://localhost:3000
 ([`ORACLE_VM.md`](ORACLE_VM.md) §5).
 
-## 1. Update the VM (open: the closures models)
+## 1. Update the VM (when pipeline code changes)
 
 The VM runs the code it last pulled. Update it whenever `pipeline/`, `dbt/`, `ml/`, `deploy/`, `pyproject.toml` or
-`uv.lock` change on `main`. **Now:** the station closures added a dbt seed and three marts (2026-10-17), and removing
-Langfuse changed `pyproject.toml` and `uv.lock` (2026-10-18). Wait for running Dagster jobs to finish (the restart
-kills them; the UI's Runs page shows them), then:
+`uv.lock` change on `main` (last done 2026-10-18 at `6671168`: the closures models and the Langfuse removal). Wait
+for running Dagster jobs to finish (the restart kills them; the UI's Runs page shows them), then:
 
 ```sh
 ssh -i ~/.ssh/oracle_seismic ubuntu@167.234.214.169 'sudo bash /opt/transitpulse/deploy/oracle/bootstrap.sh'
@@ -42,11 +41,12 @@ ssh -i ~/.ssh/oracle_seismic ubuntu@167.234.214.169 'sudo bash /opt/transitpulse
 **Expect:** it ends with both units `active (running)`. **Check:**
 
 ```sh
-ssh -i ~/.ssh/oracle_seismic ubuntu@167.234.214.169 'git -C /opt/transitpulse log -1 --format=%h; systemctl is-active transitpulse-dagster-daemon transitpulse-dagster-web'
+ssh -i ~/.ssh/oracle_seismic ubuntu@167.234.214.169 'sudo -u transitpulse git -C /opt/transitpulse log -1 --format=%h; systemctl is-active transitpulse-dagster-daemon transitpulse-dagster-web'
 ```
 
-prints the same commit as `git log -1 --format=%h origin/main` here, then `active` twice. The closures tables are
-already in BigQuery (step 4), so nothing needs materializing by hand; the next monthly run rebuilds them with the rest.
+prints the same commit as `git log -1 --format=%h origin/main` here, then `active` twice (git runs as `transitpulse`, which owns
+the checkout; as `ubuntu` it stops with "dubious ownership"). The closures tables are already in BigQuery (step 4),
+so nothing needs materializing by hand; the next monthly run rebuilds them with the rest.
 
 ## 2. After every push: CI and the deploy
 
