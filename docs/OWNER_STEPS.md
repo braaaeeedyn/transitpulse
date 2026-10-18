@@ -1,128 +1,96 @@
 # Owner steps
 
-Everything left in TransitPulse that needs your accounts, a GUI tool, a device or a decision, in the order the steps
-unblock each other. Each step says what to run or click, what you should see, and how to check it. All the work that
-needed none of those is done and sits uncommitted in the working tree (built from commit `f441638`).
+Everything left in TransitPulse that needs your accounts, a GUI tool, a device or a decision. Each step says what to
+run or click, what you should see, and how to check it. **Updated 2026-10-18:** everything is committed and pushed;
+https://braedynthompson.com/transitpulse/ runs the latest pages (station closures, the what-if map, dark mode);
+`/api/closures` answers from BigQuery; Ask is live on Gemini. Open now: the VM update (step 1), the dated jobs in
+step 3, and the account steps from step 6 on.
 
 Commands run from the repo root in Git Bash (or any POSIX shell) unless a step says otherwise.
 
 ---
 
-## 0. Review the working tree
+## 0. Where everything runs
+
+| What | Where |
+|---|---|
+| Site | https://braedynthompson.com/transitpulse/ (GitHub Pages of the `portfolio` repo, folder `static/transitpulse`) |
+| API | https://transitpulse-api-etumz4pfva-uw.a.run.app (Cloud Run `transitpulse-api`, us-west1) |
+| Warehouse | BigQuery project `transitpulse-511002` (datasets `raw`, `staging`, `marts`, `ml`) |
+| Pipeline | Dagster on the Oracle VM shared with SeismicSoCal: `ubuntu@167.234.214.169` (`seismicsocal.duckdns.org`), key `~/.ssh/oracle_seismic` (it asks for the key's passphrase) |
+
+Log in to the VM (in PowerShell, write the key as `$HOME\.ssh\oracle_seismic`):
 
 ```sh
-git status
-git diff --stat f441638
+ssh -i ~/.ssh/oracle_seismic ubuntu@167.234.214.169
 ```
 
-What changed since `f441638`, in short:
-- **M5 A/B test:** retrieved example queries in the agent's SQL prompt (`api/agent/`), the eval arms, `eval/ab.py`,
-  `docs/AB_TEST.md`, two committed eval summaries. Arm B won, so `agent_examples_k` now defaults to 5.
-- **eBART post-hoc estimate** (not pre-registered): `analysis/causal/trend_adjusted.*`, a section in `docs/FINDINGS.md`.
-- **BI build guide:** `bi/README.md` with a check week.
-- **Website:** Ask history and Copy SQL, map → forecast, the busiest station in the map's text alternative, a
-  dashboard slot, Open Graph tags + `web/img/og.png`, `web/styleguide.html`, axe and Lighthouse checks, gzip in the API.
-- **`make up`:** `docker-compose.yml` (API + site + Ollama).
-- **Docs:** README (diagram, screenshots), `CURRENT_STATE.md`, `DEVLOG.md`, this file.
+The Dagster UI: `ssh -i ~/.ssh/oracle_seismic -N -L 3000:127.0.0.1:3000 ubuntu@167.234.214.169`, then http://localhost:3000
+([`ORACLE_VM.md`](ORACLE_VM.md) §5).
 
-Nothing under `pipeline/`, `dbt/`, `ml/`, `deploy/`, `infra/` or `.github/workflows/deploy.yml` changed, and neither
-did `pyproject.toml` or `uv.lock`.
+## 1. Update the VM (open: the closures models)
 
-Run the local checks once more if you like (about 3 minutes, plus the Docker ones):
+The VM runs the code it last pulled. Update it whenever `pipeline/`, `dbt/`, `ml/`, `deploy/`, `pyproject.toml` or
+`uv.lock` change on `main`. **Now:** the station closures added a dbt seed and three marts (2026-10-17), and removing
+Langfuse changed `pyproject.toml` and `uv.lock` (2026-10-18). Wait for running Dagster jobs to finish (the restart
+kills them; the UI's Runs page shows them), then:
 
 ```sh
-uv run ruff check . && uv run ruff format --check .
-uv run --group dbt --group ml --group pipeline --group agent pytest -m "not spark and not gcp and not localdata and not docker"
-node --test tests/web/ && npx playwright test
-uv run --group dbt --group ml --group agent pytest -m localdata tests/local    # needs data/transitpulse.duckdb
-uv run --group agent python -m eval.ab --check && uv run --group ml python -m analysis.causal.trend_adjusted --check
-docker build -t transitpulse-api:loop . && uv run pytest -m docker tests/deploy tests/compose
-uv run python tasks.py lighthouse --runs 3 --assert                             # local only, not in CI
+ssh -i ~/.ssh/oracle_seismic ubuntu@167.234.214.169 'sudo bash /opt/transitpulse/deploy/oracle/bootstrap.sh'
 ```
 
-**Expect:** everything passes (167 pytest, 37 node, 57 Playwright, 13 localdata, 6 + 3 Docker; Lighthouse about
-98 / 100 / 100).
-
-## 1. Commit and push to `main`
-
-Leave `.claude/` out (it is local tool configuration). Your rule is no co-author line (DEVLOG, 2026-10-07); the
-commands below add none. The four commits of 2026-10-14 (`ab55544`..`f441638`) carry one by mistake.
-A suggested grouping (each `git add` takes the paths of one area):
+**Expect:** it ends with both units `active (running)`. **Check:**
 
 ```sh
-git add api/agent api/settings.py eval/ab.py eval/examples.py eval/run_eval.py eval/results/summary-ollama-*.json tests/test_ab.py docs/AB_TEST.md
-git commit -m "M5 A/B test: 5 retrieved example queries in the SQL prompt win (27% -> 50%, McNemar p = 0.004)"
-
-git add analysis/causal/trend_adjusted.py analysis/causal/trend_adjusted.json tests/test_causal.py docs/FINDINGS.md
-git commit -m "eBART: post-hoc trend-adjusted estimate (not pre-registered; the verdict is unchanged)"
-
-git add bi tests/local/test_bi_week.py
-git commit -m "BI build guide for Looker Studio and Power BI, with a check week"
-
-git add web tests/web package.json package-lock.json api/main.py tests/test_ask_api.py
-git commit -m "Site: Ask history and Copy SQL, map to forecast, dashboard slot, Open Graph, style guide, axe + Lighthouse, gzip"
-
-git add docker-compose.yml tasks.py Makefile tests/test_compose.py tests/compose
-git commit -m "make up: the site, API and Ask agent on an Ollama container"
-
-git add README.md docs tests/test_docs_deliverables.py
-git commit -m "Docs: README diagram and screenshots, owner steps, current state, devlog"
-
-git status          # only .claude/ should be left
-git push origin main
+ssh -i ~/.ssh/oracle_seismic ubuntu@167.234.214.169 'git -C /opt/transitpulse log -1 --format=%h; systemctl is-active transitpulse-dagster-daemon transitpulse-dagster-web'
 ```
 
-**Expect:** `git push` succeeds. The push **auto-deploys Cloud Run** (`DEPLOY_ENABLED=true`): `deploy.yml` builds,
-smoke-tests, pushes and deploys the image. The live agent stays off (Terraform still says so), so the new default of
-5 examples changes nothing visible yet.
+prints the same commit as `git log -1 --format=%h origin/main` here, then `active` twice. The closures tables are
+already in BigQuery (step 4), so nothing needs materializing by hand; the next monthly run rebuilds them with the rest.
 
-**Station closures (2026-10-17 build loop).** A new band about the BART stations named for possible closure
-([`STATION_CLOSURES.md`](STATION_CLOSURES.md)). One commit for it, after the commits above. It also carries your
-uncommitted UI tweaks of the same day (map shoreline and water colours, the tile sparklines removed), which share
-`web/css/fx.css` and the docs with it:
+## 2. After every push: CI and the deploy
 
-```sh
-git add dbt/transitpulse api/routes/data.py pipeline/webexport.py web tests README.md docs
-git commit -m "Station closures: which BART stations could close, and what the ridership says"
-git push origin main
-```
-
-**Expect:** the push deploys `GET /api/closures` to Cloud Run. Until the VM's dbt build (step 4) has made the seed and
-the three marts in BigQuery, it answers 404 and the live band says "This data hasn't been loaded yet." (the
-not-final, no-position, caveat and source notes show either way).
-
-## 2. Watch CI and the deploy
+`git push origin main` runs CI and `deploy.yml` (build, smoke-test, push and deploy the API image). Watch them at
+https://github.com/braaaeeedyn/transitpulse/actions (`gh` isn't installed on this PC), or:
 
 ```sh
-gh run list --repo braaaeeedyn/transitpulse --limit 5
-gh run watch --repo braaaeeedyn/transitpulse        # pick the CI run, then the deploy run
+curl -s "https://api.github.com/repos/braaaeeedyn/transitpulse/actions/runs?per_page=4" | grep -E '"(name|status|conclusion)"'
 curl https://transitpulse-api-etumz4pfva-uw.a.run.app/api/health
-curl -s -o /dev/null -w "%{http_code} %header{content-encoding}\n" -H "Accept-Encoding: gzip" https://transitpulse-api-etumz4pfva-uw.a.run.app/api/findings
 ```
 
-**Expect:** both runs green; `{"ok":true}`; `200 gzip` (the new image compresses JSON). If CI's web job fails on
-`npm ci`, the lockfile and `package.json` were committed separately: commit both.
+**Expect:** both runs `success`; `{"ok":true}`.
 
-## 3. Re-export the pages
+## 3. Re-export the pages (when `web/` changed), and the dated jobs
 
-The website code changed, so publish it again (the export copies `web/` and points it at Cloud Run):
+The site is a copy of `web/` in the portfolio repo, pointed at Cloud Run. After a push that changed `web/`:
 
 ```sh
 uv run python tasks.py export --api-base https://transitpulse-api-etumz4pfva-uw.a.run.app --to ../portfolio/static/transitpulse
 cd ../portfolio
-git add static/transitpulse
-git commit -m "TransitPulse: Ask history, map to forecast, style guide, Open Graph"
+git add static/transitpulse        # only this folder: build.py and pages.py hold your own uncommitted work
+git commit -m "TransitPulse: <what changed>"
 git push
 cd ../transitpulse
 ```
 
-**Verify** once GitHub Pages has published (a minute or two):
-- https://braedynthompson.com/transitpulse/ loads; tap a station on the map and the forecast explorer switches to it.
-- https://braedynthompson.com/transitpulse/styleguide.html loads (it is `noindex`).
-- The Open Graph preview: `curl -s https://braedynthompson.com/transitpulse/ | grep og:image` shows the absolute
-  URL, and `curl -sI https://braedynthompson.com/transitpulse/img/og.png` answers `200` with `image/png`. Paste the
-  page URL into a link-preview checker (LinkedIn Post Inspector, or a Slack/Discord message to yourself) to see the
-  card with the map.
+**Verify** once GitHub Pages has published (a minute or two): https://braedynthompson.com/transitpulse/ loads, the
+trains move, "Close the first 10" under the map leaves 40 of 50 stations, and the Station closures band shows 15
+cards. Ctrl+F5 skips the browser's cached CSS. The style guide is at `/transitpulse/styleguide.html` (`noindex`).
+
+**After Nov 3, 2026: the closures copy.** The band and `docs/STATION_CLOSURES.md` describe the measure as upcoming.
+After the election, edit the context paragraph in `web/index.html` and the status line of the write-up, then
+re-export. If the BART board votes on a final list, edit `dbt/transitpulse/seeds/bart_closure_candidates.csv`, the
+station lists in the write-up and its tests, and `AT_RISK` in `web/js/map/whatif.js` (a test keeps it equal to the
+seed); then rebuild the tables (step 4), push and re-export.
+
+**Around Jan 1, 2027: restart the VM's daemon** so Dagster offers 2027's partitions
+([`ORACLE_VM.md`](ORACLE_VM.md) §8):
+
+```sh
+ssh -i ~/.ssh/oracle_seismic ubuntu@167.234.214.169 'sudo systemctl restart transitpulse-dagster-daemon'
+```
+
+**Before about Jan 6, 2027: upgrade from the free trial** (step 12), or Cloud Run and the API stop.
 
 **Before Jan 10, 2027: new BART timetable.** The map reads `data/schedule.json` from this export, and the
 timetable in it ends on **Jan 10, 2027**. After that the map shows "This site's BART timetable ended…" instead of
@@ -137,42 +105,21 @@ git add web/data && git commit -m "Map: BART timetable from <date>" && git push
 
 then run the export above again.
 
-**Station closures.** The band is new website code, so re-export as above after the push (commit message e.g.
-"TransitPulse: station closures band"). Then check https://braedynthompson.com/transitpulse/#closures: the notes and
-sources show at once; the 15 station cards show once step 4's dbt build is done.
+## 4. Rebuild the closures tables (only when the seed or its marts change)
 
-**After Nov 3, 2026: revisit the closures copy.** The band and `docs/STATION_CLOSURES.md` describe the measure as
-upcoming. After the election, edit the context paragraph in `web/index.html` and the status line of the write-up,
-then re-export. If the BART board votes on a final list, edit `dbt/transitpulse/seeds/bart_closure_candidates.csv`
-(and the station lists in the write-up and its tests), run the VM's dbt build again (step 4) and re-export.
+Built on BigQuery from this PC on 2026-10-18 (`PASS=15`); the VM's monthly run keeps them current once step 1 is done.
+Run this only after changing `bart_closure_candidates.csv` or the closures marts. In PowerShell (it needs
+`gcloud auth application-default login` once):
 
-## 4. Oracle VM: update only if pipeline code changed
-
-The rule, every time you pull new code:
-
-```sh
-git diff --stat f441638 -- pipeline dbt ml deploy pyproject.toml uv.lock
+```powershell
+$env:DBT_TARGET = "dev"; $env:TP_GCP_PROJECT = "transitpulse-511002"
+uv run --group dbt dbt build --select bart_closure_candidates+ --project-dir dbt/transitpulse --profiles-dir dbt/transitpulse
 ```
 
-- **Non-empty:** wait for running Dagster jobs to finish (the restart kills them), then
-  `ssh <user>@<vm> sudo bash /opt/transitpulse/deploy/oracle/bootstrap.sh` ([`ORACLE_VM.md`](ORACLE_VM.md) §8).
-- **Empty:** nothing to do.
-
-This run changed none of those paths (the loop's guard check proved it), so **no VM update is needed now**.
-
-**Station closures run (2026-10-17): this one did change `dbt/`** (a seed, three marts and the seed config), so update
-the VM once the push is in:
-
-```sh
-ssh <user>@<vm> sudo bash /opt/transitpulse/deploy/oracle/bootstrap.sh
-```
-
-then, in the Dagster UI, materialize `bart_closure_candidates` and everything downstream of it (or the whole `warehouse`
-group), which runs `dbt build` on BigQuery. The two `fct_trips_hourly` marts read about one year of it (~0.5 GB), well
-under the 20 GB per-query cap. **Verify:**
-`curl -s https://transitpulse-api-etumz4pfva-uw.a.run.app/api/closures | head -c 200` answers with `"period_year":2025`
-(the API caches for an hour, so a 404 seen just before the build can last that long). If you set up CI's BigQuery
-identity (step 9), `dbt build --target ci` is the real BigQuery check of the new SQL, which was only run on DuckDB here.
+(In Git Bash: `DBT_TARGET=dev TP_GCP_PROJECT=transitpulse-511002 uv run --group dbt dbt build …`.) **Expect:**
+`PASS=15`. **Check:** `curl -s https://transitpulse-api-etumz4pfva-uw.a.run.app/api/closures | head -c 200` starts
+with `{"period_year":2025` (the API caches for an hour). If you set up CI's BigQuery identity (step 9),
+`dbt build --target ci` is the real BigQuery check of new SQL.
 
 ## 5. Decided: `deploy.yml` skips `terraform apply` (Terraform stays manual)
 
@@ -181,7 +128,10 @@ You chose on 2026-10-16 to keep Terraform manual: `deploy.yml` builds, pushes an
 secrets or billing. When an apply is needed is listed in [`infra/README.md`](../infra/README.md) "When to run
 `terraform apply`". Nothing to do here.
 
-## 6. Turn on the live agent
+## 6. The live agent (on since 2026-10-16)
+
+Done except the BigQuery quota (6.1, after step 12's upgrade) and the optional Gemini A/B (6.3). The steps stay
+here for reference; the questions at the end are the check after any agent change.
 
 [`CLOUD_RUN.md`](CLOUD_RUN.md) §4, in this order:
 
@@ -289,8 +239,9 @@ landscape, and a desktop browser at 125% and 200% zoom. On each:
 - [ ] The nav menu opens, closes with ✕, and its links jump to their sections (phone and tablet).
 - [ ] Forecast picker: type "mac", pick MacArthur; tap a station on the map and the explorer switches to it.
 - [ ] Findings band: the verdict, both figures and both charts are readable.
-- [ ] Ask: before step 6 it says the analyst isn't connected; after step 6 one question answers, Copy SQL works,
-      and the answer is still listed after a reload.
+- [ ] Ask: one question answers, Copy SQL works, and the answer is still listed after a reload.
+- [ ] What-if: "Close the first 10" leaves 40 stations, the trains still move, and "Today's map" brings them back.
+- [ ] Dark mode (the moon in the nav): every band is readable, and the departure board and footer stay dark.
 - [ ] Desktop at 200% zoom: text reflows, nothing overlaps.
 
 Write any problem in `docs/DESIGN_BACKLOG.md` (design) or as an issue (bug), and tick the real-device line of F7 in

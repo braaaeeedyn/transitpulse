@@ -15,29 +15,7 @@ locals {
       TP_CORS_ORIGINS  = join(",", var.site_origins) # pages on braedynthompson.com call this API
     },
     var.agent_enabled ? { TP_AGENT_LLM = "gemini", TP_GEMINI_MODEL = var.gemini_model } : {},
-    local.langfuse_on ? { LANGFUSE_PUBLIC_KEY = var.langfuse_public_key, LANGFUSE_BASE_URL = var.langfuse_base_url } : {},
   )
-
-  # Langfuse tracing of Ask (api/agent/tracing.py) is on only with the agent and a public key; the secret key is
-  # bound the same way as the Gemini key (its version is added by hand).
-  langfuse_on = var.agent_enabled && var.langfuse_public_key != ""
-}
-
-resource "google_secret_manager_secret" "langfuse_secret_key" {
-  secret_id = "transitpulse-langfuse-secret-key"
-
-  replication {
-    auto {}
-  }
-
-  depends_on = [google_project_service.enabled]
-}
-
-resource "google_secret_manager_secret_iam_member" "agent_langfuse_key" {
-  count     = local.langfuse_on ? 1 : 0
-  secret_id = google_secret_manager_secret.langfuse_secret_key.id
-  role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.sa["agent"].email}"
 }
 
 resource "google_secret_manager_secret" "gemini_api_key" {
@@ -111,19 +89,6 @@ resource "google_cloud_run_v2_service" "api" {
         }
       }
 
-      dynamic "env" {
-        for_each = local.langfuse_on ? [google_secret_manager_secret.langfuse_secret_key.secret_id] : []
-        content {
-          name = "LANGFUSE_SECRET_KEY"
-          value_source {
-            secret_key_ref {
-              secret  = env.value
-              version = "latest"
-            }
-          }
-        }
-      }
-
       startup_probe {
         http_get {
           path = "/healthz"
@@ -146,7 +111,6 @@ resource "google_cloud_run_v2_service" "api" {
   depends_on = [
     google_project_service.enabled,
     google_secret_manager_secret_iam_member.agent_gemini_key,
-    google_secret_manager_secret_iam_member.agent_langfuse_key,
   ]
 }
 

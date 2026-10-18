@@ -18,7 +18,7 @@
 |---|---|---|
 | Website (static, `web/`) | **Working**: live train map, ridership tiles + charts, forecast explorer, Ask panel with a train mascot (history, Copy SQL), Findings band, a Station closures band, an optional Looker Studio card, Open Graph tags, and a style guide at `/styleguide.html` | `uv run python tasks.py api` → http://localhost:8000 |
 | API (`api/`) | **Working**: serves the site; data endpoints (incl. `GET /api/closures`) read the local DuckDB or BigQuery marts when a warehouse is configured; `POST /api/ask` streams the agent's answer when `TP_AGENT_ENABLED=true`, 503 otherwise (the default) | same as above |
-| Ask TransitPulse agent (`api/agent/`) | **Working** locally: LangGraph text-to-SQL with guardrails, 5 retrieved example queries in the SQL prompt (the M5 A/B winner), fake / Ollama / Gemini LLM, optional Langfuse | `TP_AGENT_ENABLED=true TP_AGENT_LLM=ollama uv run --group agent python tasks.py api` |
+| Ask TransitPulse agent (`api/agent/`) | **Working** locally: LangGraph text-to-SQL with guardrails, 5 retrieved example queries in the SQL prompt (the M5 A/B winner), fake / Ollama / Gemini LLM | `TP_AGENT_ENABLED=true TP_AGENT_LLM=ollama uv run --group agent python tasks.py api` |
 | Agent eval + A/B (`eval/`) | **Working**: 66 in-scope questions with gold SQL + 10 out-of-scope; arms A (no examples) and B (5 examples), compared by `eval.ab` ([`AB_TEST.md`](AB_TEST.md)) | `uv run python tasks.py eval --llm ollama --arm A\|B`, then `uv run --group agent python -m eval.ab` |
 | Map data build (`pipeline/webdata/`) | **Working** | `uv run python tasks.py web-data` |
 | Spark cleaning job (`pipeline/spark/`) | **Working** (Docker on Windows, native on Linux) | `uv run python tasks.py spark` |
@@ -467,10 +467,6 @@ Configuration: environment variables with prefix `TP_` (`api/settings.py`).
   `ollama` (`TP_OLLAMA_MODEL` llama3.1:8b at `TP_OLLAMA_URL`), `gemini` (`TP_GEMINI_MODEL`, default `gemini-3.5-flash-lite`, key from
   `GOOGLE_API_KEY`). A Gemini quota error (`GoogleRateLimitError`, the free tier's per-model daily cap) ends the
   stream with `agent_busy`, "The analyst is out of free questions for now".
-- **Tracing** (`tracing.py`): Langfuse v4 callback only when `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` are set;
-  otherwise langfuse isn't imported. On Cloud Run, Terraform sets them only with `agent_enabled` and a non-empty
-  `langfuse_public_key` (the secret key comes from Secret Manager `transitpulse-langfuse-secret-key`; `LANGFUSE_BASE_URL`
-  from `var.langfuse_base_url`, US cloud by default). Off today: no key is set.
 - **Eval** (`eval/`): `questions.yaml` has 66 in-scope questions (tags kpi, station, trend, bikes, forecast, od) with
   BigQuery-dialect gold SQL and 10 that must be refused (sha256 frozen in `eval/ab.py`).
   - `python -m eval.run_eval --llm fake|ollama|gemini --warehouse duckdb [--arm A|B] [--duckdb-path] [--ids]

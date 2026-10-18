@@ -27,7 +27,7 @@ def _reset() -> None:
 def client(fixture_warehouse, monkeypatch):
     """A TestClient with the agent on (fake LLM) over the fixture warehouse; env overrides via the returned setter."""
     monkeypatch.delenv("TP_GCP_PROJECT", raising=False)
-    for k in ("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "TP_TRUST_PROXY", "TP_AGENT_RATE_PER_MIN"):
+    for k in ("TP_TRUST_PROXY", "TP_AGENT_RATE_PER_MIN"):
         monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("TP_WAREHOUSE", "duckdb")
     monkeypatch.setenv("TP_DUCKDB_PATH", str(fixture_warehouse))

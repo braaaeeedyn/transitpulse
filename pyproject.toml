@@ -58,7 +58,6 @@ agent = [
     "langgraph>=0.2",
     "langchain-google-genai>=2.0",
     "langchain-ollama>=0.2",
-    "langfuse>=2.50",
     "sqlglot>=25.0",
 ]
 webdata = [

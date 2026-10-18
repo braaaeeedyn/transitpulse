@@ -139,7 +139,7 @@ this section is the checklist.
 - [x] `api/agent/guardrails.py`: sqlglot SELECT-only, table allowlist, auto-`LIMIT`, dry run ≤ 1 GB (BigQuery) / `EXPLAIN` on a locked-down read-only DuckDB connection. Unit-test each rejection path. *(`sa-agent` credentials come with the Cloud Run deploy, M7.)*
 - [x] LangGraph graph: router → sql (one repair retry) / forecast tool → answer (cites SQL). Out-of-scope refusal with 3 suggestions. *(chart_tool cut: the client renders no charts.)*
 - [x] Ollama for local dev, Gemini Flash for deployed; one env var (`TP_AGENT_LLM`) switches them. A deterministic FakeLLM for tests.
-- [x] Langfuse callback on every run when its keys are set (no-op and not imported otherwise).
+- ~~Langfuse callback on every run when its keys are set.~~ *(Removed 2026-10-18: it was never switched on.)*
 - [x] `eval/questions.yaml`: 66 questions with gold SQL + 10 out-of-scope; `tasks.py eval` reports execution accuracy, refusal accuracy, guardrail rejections, latency. *(llama3.1:8b: 0.27 execution accuracy, 1.0 refusal accuracy.)*
 - [x] Power analysis → A/B (schema card vs. + 5 retrieved examples) → McNemar + bootstrap CI → `docs/AB_TEST.md`. *(2026-10-14: minimum detectable improvement +14 points; arm A 18/66, arm B 33/66, McNemar p = 0.0041, +22.7 points [+9.1, +36.4]; B ships, `TP_AGENT_EXAMPLES_K` = 5. Retrieval is BM25 over the eval's own questions with leave-one-out)*
 - [x] `POST /api/ask` **streams** progress events (Server-Sent Events): `thinking` → `sql` → `rows` → `answer` (or `refusal` / `error`), so the UI can show progress (F6). Rate limit per IP and a daily byte budget answer 429 before streaming.
