@@ -4,7 +4,7 @@
 import { initAsk } from "./ask.js";
 import { formatDate } from "./chart.js";
 import { initFindings } from "./findings.js";
-import { initBoard, initCounts, initHeroLive, initMascotHello, initReveal, initScrollSpy, initTheme } from "./fx.js";
+import { initBoard, initCounts, initHeroLive, initMascotHello, initMascotHop, initReveal, initScrollSpy, initTheme } from "./fx.js";
 import { initForecast } from "./forecast.js";
 import { initMap } from "./map/map.js";
 import { getKpis, initDashboard, initTrends } from "./trends.js";
@@ -90,6 +90,13 @@ askPanel.querySelector("[data-ask-close]").addEventListener("click", closeAsk);
 askPanel.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeAsk();
 });
+// "/" anywhere outside a field opens Ask (the launcher's tooltip says so)
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.target.closest("input, textarea, select, [contenteditable]")) return;
+  e.preventDefault();
+  if (askPanel.hidden) openAsk(document.querySelector(".ask-launcher"));
+});
 
 initAsk(askPanel, document.querySelector("[data-ask-result]"), document.querySelector("[data-ask-history]"));
 initMap(document.querySelector("[data-map]"));
@@ -106,6 +113,7 @@ initHeroLive(document.querySelector("[data-hero-live]"));
 initReveal();
 initScrollSpy();
 initMascotHello(document.querySelector(".ask-launcher"));
+initMascotHop(document.querySelector("[data-mascot-hop]"));
 
 // footer "Data through <date>" (DESIGN.md §7), from the KPIs the Trends band loaded; left out without them
 getKpis().then(
