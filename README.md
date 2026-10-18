@@ -7,7 +7,12 @@ responsive website with a live map of scheduled BART trains.
 > **Status (2026-10-18):** live. The site is at **[braedynthompson.com/transitpulse](https://braedynthompson.com/transitpulse/)**,
 > the API on Cloud Run, and the pipeline runs itself on an Oracle VM. What's left is under [Left to do](#left-to-do);
 > the owner's steps, in order, are in [`docs/OWNER_STEPS.md`](docs/OWNER_STEPS.md).
-> How each part works today: [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
+> How each part works today: [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md); a portfolio summary with the headline
+> numbers: [`docs/PORTFOLIO.md`](docs/PORTFOLIO.md).
+>
+> **Latest (Oct 17–18):** a Station closures section on the 15 BART stations named for possible closure, a what-if
+> picker that closes them on the live map, dark mode across the page, and sizing that scales from 320 px phones to
+> 2560 px screens. The closures tables are on BigQuery, the pages are re-exported, and the VM runs the latest code.
 
 ## Progress
 | Milestone | Status |
@@ -20,7 +25,8 @@ responsive website with a live map of scheduled BART trains.
 | M5 AI analyst agent + eval | ✅ Done. A/B test: 5 retrieved example queries lift llama3.1:8b from 27% to 50% execution accuracy (McNemar p = 0.004), so they ship ([`docs/AB_TEST.md`](docs/AB_TEST.md)). Live on the site since 2026-10-16, on Gemini |
 | M6 QLoRA fine-tune | ⬜ Deferred to its own build loop (a decision in [`docs/OWNER_STEPS.md`](docs/OWNER_STEPS.md) §13); the A/B harness is ready for arm C |
 | M7 ship | 🟡 Live, and every push to `main` deploys itself. Architecture diagram, screenshots and `make up` done. dbt/Terraform checks in CI wait for the owner's CI identity decisions |
-| F1–F7 website | 🟡 Built and live (map with a what-if closures picker, trends, forecast explorer, Findings, Station closures, Ask with history and Copy SQL, dark mode). Style guide, axe contrast tests, Lighthouse 98/100/100 and the Open Graph image are done; real-device checks left |
+| F1–F7 website | 🟡 Built and live (map with a what-if closures picker, trends, forecast explorer, Findings, Station closures, Ask with history and Copy SQL, dark mode). The v1.1 redesign (departure board, motion, chart readouts), fluid sizing, the style guide, axe contrast tests in both themes, Lighthouse 98/100/100 and the Open Graph image are done; real-device checks left |
+| Station closures (added Oct 17) | ✅ Done. A dbt seed and three marts on BigQuery, `GET /api/closures`, the site's Closures band with four "case to keep" rules, and the map's what-if picker ([`docs/STATION_CLOSURES.md`](docs/STATION_CLOSURES.md)) |
 
 ## Architecture
 
@@ -41,7 +47,7 @@ flowchart LR
     mlds[("ml")]
   end
   subgraph run["Cloud Run"]
-    api["FastAPI: /api data, forecast, findings"]
+    api["FastAPI: /api data, forecast, findings, closures"]
     agent["Ask agent: LangGraph + Gemini (Ollama locally)"]
   end
   pages["Static site on GitHub Pages (braedynthompson.com/transitpulse)"]
@@ -64,10 +70,10 @@ flowchart LR
 
 | Phone (390 px) | Desktop (1440 px) |
 |---|---|
-| ![The live map band on a phone: the map, its time controls and the line legend](docs/img/screenshot-phone.png) | ![The top of the page on a desktop: the hero with the Ask card, then the live map with trains on every line](docs/img/screenshot-desktop.png) |
+| ![The live map band on a phone: the map, its time controls and the line legend](docs/img/screenshot-phone.png) | ![The top of the page on a desktop: the hero with the departure board, the live map with trains on every line, and the what-if card](docs/img/screenshot-desktop.png) |
 
-Both are made by `uv run python tasks.py screenshots` (Playwright, Wednesday 8:00 AM Pacific, local warehouse), which
-also writes the Open Graph image `web/img/og.png`. Every component and token is on the
+Both are made by `uv run python tasks.py screenshots` (Playwright, Wednesday 8:00 AM Pacific; these two from BigQuery
+with `TP_WAREHOUSE=bigquery TP_GCP_PROJECT=transitpulse-511002`, otherwise the local warehouse), which also writes the Open Graph image `web/img/og.png`. Every component and token is on the
 [style guide](web/styleguide.html) page (`/styleguide.html` on the site).
 
 ## Results
@@ -81,7 +87,8 @@ also writes the Open Graph image `web/img/og.png`. Every component and token is 
 | BART stations at risk of closing (2025 ridership, the 15 named in BART staff's Feb 2026 presentation, list not final) | 9 of the first 10 are among BART's 10 least-used stations; 12.6% of weekday trips start or end at the first 10 (press: ~12%), 24.1% at all 15. "Case to keep" from four ridership rules: strong 6, mixed 7, weak 2. No position on the Nov 3 measure ([`docs/STATION_CLOSURES.md`](docs/STATION_CLOSURES.md)) |
 | Cloud Run | Cold start about **4.4 s** to the first byte; warm requests 0.09–0.17 s (measured 2026-10-15) |
 | GCP cost | $0 expected (every service inside its free tier); the month-end bill is to be confirmed ([`docs/OWNER_STEPS.md`](docs/OWNER_STEPS.md) §12) |
-| Lighthouse (mobile, local server, median of 3) | Performance **98**, accessibility **100**, best practices **100**; LCP 2.3 s, CLS 0 (`tasks.py lighthouse --runs 3 --assert`, 2026-10-14). axe finds 0 contrast violations at 390 and 1440 px |
+| Tests | 179 pytest, 52 node and 75 Playwright tests (axe contrast in light and dark mode at 390 and 1440 px); 84 dbt data tests over 17 models |
+| Lighthouse (mobile, local server, median of 3; before the v1.1 redesign) | Performance **98**, accessibility **100**, best practices **100**; LCP 2.3 s, CLS 0 (`tasks.py lighthouse --runs 3 --assert`, 2026-10-14). axe finds 0 contrast violations at 390 and 1440 px |
 
 ## Run locally
 
@@ -134,8 +141,9 @@ starts on by default:
 - A full model rebuild runs on the 6th.
 - The forecast retrains every Monday.
 
-After changing pipeline code, update the VM with `sudo bash /opt/transitpulse/deploy/oracle/bootstrap.sh`. Wait for
-running jobs to finish first: the restart kills them.
+After changing pipeline code, update the VM (wait for running jobs to finish first: the restart kills them):
+`ssh -i ~/.ssh/oracle_seismic ubuntu@167.234.214.169 'sudo bash /opt/transitpulse/deploy/oracle/bootstrap.sh'`
+([`docs/OWNER_STEPS.md`](docs/OWNER_STEPS.md) §1).
 
 ## Findings: the eBART causal study
 
@@ -200,8 +208,9 @@ the timetable, not live positions. The full list is in
 |---|---|
 | [`docs/TRANSITPULSE_PLAN.md`](docs/TRANSITPULSE_PLAN.md) | Goals, stack and the skills this project demonstrates |
 | [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) | Ordered build checklist (M0–M7, F1–F7) |
-| [`docs/DESIGN.md`](docs/DESIGN.md) | Design system (frozen v1.0) |
+| [`docs/DESIGN.md`](docs/DESIGN.md) | Design system (v1.1.5; changelog in the file) |
 | [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) | How the application works right now |
+| [`docs/PORTFOLIO.md`](docs/PORTFOLIO.md) | The portfolio summary: status, what a visitor sees, headline numbers, proofs by role, images |
 | [`docs/DEVLOG.md`](docs/DEVLOG.md) | Running log of changes and decisions |
 | [`docs/SKILLS_MAP.md`](docs/SKILLS_MAP.md) | Where each skill is implemented, and how it works |
 | [`docs/METRICS.md`](docs/METRICS.md) | KPI definitions, the website tile windows, bikes vs trains, forecast coverage, agent eval, causal estimates |
@@ -209,7 +218,7 @@ the timetable, not live positions. The full list is in
 | [`docs/AB_TEST.md`](docs/AB_TEST.md) | The M5 A/B test of the Ask agent: power analysis, pre-registered design, results, decision |
 | [`docs/STATION_CLOSURES.md`](docs/STATION_CLOSURES.md) | The BART stations at risk of closing: the list as reported, the four rules, results per station, claim checks, sources |
 | [`bi/README.md`](bi/README.md) | Looker Studio and Power BI build guide, DAX measures and the check week |
-| [`docs/OWNER_STEPS.md`](docs/OWNER_STEPS.md) | Where everything runs (the VM's address included) and the owner's remaining steps: the VM update, re-exports, dated jobs, BI, CI identity, devices, bill, M6 |
+| [`docs/OWNER_STEPS.md`](docs/OWNER_STEPS.md) | Where everything runs (the VM's address included) and what's left for the owner: re-exports, dated jobs, BI, CI identity, devices, bill, M6 |
 | [`docs/ORACLE_VM.md`](docs/ORACLE_VM.md) | Runbook: Dagster on the Oracle VM (systemd) |
 | [`docs/CLOUD_RUN.md`](docs/CLOUD_RUN.md) | Runbook: the site + API on Cloud Run (Terraform, WIF, deploy workflow, costs) |
 
@@ -235,6 +244,6 @@ appears in `analysis/causal/data/README.md`, `docs/FINDINGS.md`, the Findings ba
    screenshot snapshots (Windows and Linux CI render fonts differently, and the map animates).
 
 **Needs you** (accounts, GUI tools, devices or decisions): every step, in order, with commands and what to expect,
-is in [`docs/OWNER_STEPS.md`](docs/OWNER_STEPS.md). In short: update the VM once for the closures models; after the Nov 3
-vote, update the closures copy; upgrade from the GCP free trial before about Jan 6, 2027; build the Looker Studio and Power BI reports from
+is in [`docs/OWNER_STEPS.md`](docs/OWNER_STEPS.md). In short: after the Nov 3 vote, update the
+closures copy; upgrade from the GCP free trial before about Jan 6, 2027; build the Looker Studio and Power BI reports from
 [`bi/README.md`](bi/README.md); decide the CI GCP identity; check real devices and the month-end bill.

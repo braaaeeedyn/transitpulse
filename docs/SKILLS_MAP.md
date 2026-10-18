@@ -4,31 +4,32 @@ Where each skill from [`TRANSITPULSE_PLAN.md`](TRANSITPULSE_PLAN.md) (§2 gap ta
 what it does in this project, and how it works. Links point at exact lines.
 
 **Status:** ✅ implemented and verified · 🟡 partly implemented (what's missing is stated) · ⬜ not started.
-Verified = it ran on real data or passed tests on 2026-10-08 (see [`CURRENT_STATE.md`](CURRENT_STATE.md)).
+Verified = it ran on real data or passed tests; statuses last checked 2026-10-18 (see [`CURRENT_STATE.md`](CURRENT_STATE.md)).
 
 | # | Skill (gap) | Status | Main location |
 |---|---|---|---|
-| 1 | Cloud + Terraform | ✅ (M0 applied) / 🟡 (Cloud Run + WIF: code only) | [`infra/terraform/`](../infra/terraform/), [`docs/CLOUD_RUN.md`](CLOUD_RUN.md) |
+| 1 | Cloud + Terraform | ✅ (all applied: M0, Cloud Run, WIF) | [`infra/terraform/`](../infra/terraform/), [`docs/CLOUD_RUN.md`](CLOUD_RUN.md) |
 | 2 | Advanced SQL | 🟡 | [`dbt/transitpulse/models/marts/`](../dbt/transitpulse/models/marts/) |
-| 3 | Load and latency testing | 🟡 (local) | [`load/`](../load/) |
-| 4 | Larger datasets | 🟡 | [`pipeline/spark/clean_bart_od.py`](../pipeline/spark/clean_bart_od.py), [`pipeline/baywheels.py`](../pipeline/baywheels.py) |
+| 3 | Load and latency testing | 🟡 (Locust locally; Cloud Run timed per request, not under load) | [`load/`](../load/) |
+| 4 | Larger datasets | ✅ (68M BART rows + 26M Bay Wheels trips in BigQuery) | [`pipeline/spark/clean_bart_od.py`](../pipeline/spark/clean_bart_od.py), [`pipeline/baywheels.py`](../pipeline/baywheels.py) |
 | 5 | Monitoring (LLM tracing) | ❌ dropped (2026-10-18) | Langfuse was wired in but never switched on, so it was removed ([`DEVLOG.md`](DEVLOG.md)) |
 | 6 | A/B testing | ✅ (llama3.1:8b, local) | [`eval/ab.py`](../eval/ab.py), [`docs/AB_TEST.md`](AB_TEST.md) |
 | 7 | Formal statistics | ✅ | [`ml/forecast/evaluate.py`](../ml/forecast/evaluate.py), [`analysis/causal/did.py`](../analysis/causal/did.py), [`eval/ab.py`](../eval/ab.py) |
 | 8 | Business metrics | ✅ | [`docs/METRICS.md`](METRICS.md), [`mart_kpis_daily.sql`](../dbt/transitpulse/models/marts/mart_kpis_daily.sql) |
 | 9 | BI dashboards | 🟡 (guide and check week only; the reports need the owner's accounts) | [`bi/README.md`](../bi/README.md) |
-| 10 | Warehouse + dbt + dimensional modeling | ✅ (local) / 🟡 (BigQuery) | [`dbt/transitpulse/`](../dbt/transitpulse/) |
-| 11 | Orchestration | ✅ (local) / 🟡 (VM: files ready, not deployed) | [`pipeline/definitions.py`](../pipeline/definitions.py), [`deploy/oracle/`](../deploy/oracle/) |
-| 13 | CI/CD | 🟡 | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), [`deploy.yml`](../.github/workflows/deploy.yml) |
+| 10 | Warehouse + dbt + dimensional modeling | ✅ (local and BigQuery) | [`dbt/transitpulse/`](../dbt/transitpulse/) |
+| 11 | Orchestration | ✅ (local, and running on the Oracle VM) | [`pipeline/definitions.py`](../pipeline/definitions.py), [`deploy/oracle/`](../deploy/oracle/) |
+| 13 | CI/CD | 🟡 (CI and deploy-on-push live; dbt and Terraform checks in CI wait for a CI identity) | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), [`deploy.yml`](../.github/workflows/deploy.yml) |
 | 16 | Fine-tuning | ⬜ | — |
 | 17 | Spark / PySpark | ✅ | [`pipeline/spark/clean_bart_od.py`](../pipeline/spark/clean_bart_od.py) |
 | 18 | Reproducibility | 🟡 | [`tasks.py`](../tasks.py), [`uv.lock`](../uv.lock), [`Dockerfile`](../Dockerfile), [`pipeline/spark/Dockerfile`](../pipeline/spark/Dockerfile) |
-| 19 | Agents and tool use | ✅ (local) | [`api/agent/`](../api/agent/), [`api/routes/ask.py`](../api/routes/ask.py), [`eval/`](../eval/), [`web/js/ask.js`](../web/js/ask.js) |
+| 19 | Agents and tool use | ✅ (local, and live on Cloud Run with Gemini) | [`api/agent/`](../api/agent/), [`api/routes/ask.py`](../api/routes/ask.py), [`eval/`](../eval/), [`web/js/ask.js`](../web/js/ask.js) |
 | 21 | Causal inference | ✅ | [`analysis/causal/`](../analysis/causal/), [`docs/FINDINGS.md`](FINDINGS.md) |
-| — | Forecasting (LightGBM, walk-forward, quantiles) | ✅ (local) | [`ml/forecast/`](../ml/forecast/) |
+| — | Forecasting (LightGBM, walk-forward, quantiles) | ✅ (local and BigQuery, retrained weekly on the VM) | [`ml/forecast/`](../ml/forecast/) |
 | — | Bay Wheels ingest + cleaning (second data source) | ✅ (local and BigQuery, 2018 → 2026-09) | [`pipeline/baywheels.py`](../pipeline/baywheels.py) |
 | — | Data API over the warehouse (DuckDB / BigQuery) | ✅ | [`api/warehouse.py`](../api/warehouse.py), [`api/routes/data.py`](../api/routes/data.py) |
 | — | Responsive, accessible web front end (added for the site) | ✅ | [`web/`](../web/) |
+| — | Policy analysis: BART station closures (added 2026-10-17) | ✅ | [`docs/STATION_CLOSURES.md`](STATION_CLOSURES.md), [`mart_station_closures.sql`](../dbt/transitpulse/models/marts/mart_station_closures.sql), [`web/js/closures.js`](../web/js/closures.js), [`web/js/map/whatif.js`](../web/js/map/whatif.js) |
 
 ---
 
@@ -53,7 +54,7 @@ de-duplicated, holiday-tagged Parquet partitioned by year/month. Verified on 201
 
 ---
 
-## ✅ #10 Warehouse + dbt + dimensional modeling (local target) · 🟡 BigQuery
+## ✅ #10 Warehouse + dbt + dimensional modeling (local and BigQuery)
 
 **What it does:** models the cleaned trips into a star schema (dimensions + facts) and analytics marts, with
 41 data tests. Runs today on DuckDB (`local` target, 52/52 pass in 7.5 s); the same models target BigQuery
@@ -117,7 +118,7 @@ Verified values: 2025 weekday recovery = 43.1% of 2019; Embarcadero is busiest; 
 
 ---
 
-## ✅ #11 Orchestration (local) · 🟡 Oracle VM
+## ✅ #11 Orchestration (local and the Oracle VM)
 
 **What it does:** Dagster knows every step from download to marts as an **asset** with lineage. It runs yearly
 partitions, keeps monthly schedules, and records metadata (row counts, drops, file hashes) on every run.
@@ -131,26 +132,27 @@ partitions, keeps monthly schedules, and records metadata (row counts, drops, fi
 | Schedules + sensors | [`pipeline/definitions.py`](../pipeline/definitions.py) | BART ingest is a sensor (`bart_od_updates`): every 6 hours it HEADs BART's files and reloads a year when `Last-Modified` changes, with the stamps in the sensor cursor. A run-status sensor (`models_after_ingest`) rebuilds dbt after each successful ingest. Pacific-time schedules: Bay Wheels on the 7th at 06:30 (previous month's year, so January picks up December), models on the 6th at 08:00, forecast every Monday at 09:00. |
 | Bay Wheels assets | [`pipeline/assets/baywheels.py:26`, `:55`, `:84`](../pipeline/assets/baywheels.py#L26) | `baywheels_files[year]` → `baywheels_parquet[year]` → `raw/baywheels_trips[year]`; the dbt source maps onto the last one, so lineage runs through to the marts. |
 | ML asset | [`pipeline/assets/forecast.py:21`](../pipeline/assets/forecast.py#L21) | `forecast_station_daily` (group `ml`) depends on `marts/fct_station_daily` and records MAE, the CI and coverage as metadata. |
-| VM deployment (files) | [`deploy/oracle/`](../deploy/oracle/), [`docs/ORACLE_VM.md`](ORACLE_VM.md) | systemd daemon + web units (non-root, venv on `PATH`, `MemoryMax`, `Nice`, UI on 127.0.0.1 only); an idempotent [`bootstrap.sh`](../deploy/oracle/bootstrap.sh) (apt/dnf, Java 17, `uv sync --frozen`, `dbt parse`, key-file checks at [:123](../deploy/oracle/bootstrap.sh#L123)). |
+| VM deployment | [`deploy/oracle/`](../deploy/oracle/), [`docs/ORACLE_VM.md`](ORACLE_VM.md) | systemd daemon + web units (non-root, venv on `PATH`, `MemoryMax`, `Nice`, UI on 127.0.0.1 only); an idempotent [`bootstrap.sh`](../deploy/oracle/bootstrap.sh) (apt/dnf, Java 17, `uv sync --frozen`, `dbt parse`, key-file checks at [:123](../deploy/oracle/bootstrap.sh#L123)). |
 | Swappable resources | [`pipeline/resources.py`](../pipeline/resources.py) | `Storage` (`local` files vs `gcp` GCS+BigQuery) and `SparkRunner` (in-process vs Docker), chosen by environment variables. |
 
-**Now running** on the Oracle VM in `gcp` mode (see `CURRENT_STATE.md`), Bay Wheels and the forecast included.
+**Running** on the Oracle VM in `gcp` mode (last updated 2026-10-18 at `6671168`), Bay Wheels, the forecast and the
+closures models included.
 
 ---
 
-## 🟡 #4 Larger datasets
+## ✅ #4 Larger datasets
 
 **What it does now:** BART 2018–2025 (67.8M rows, 4.2 GB) cleaned with Spark and loaded into partitioned,
-clustered BigQuery tables. Bay Wheels 2019 + 2025 (6.9M trips from 24 irregularly named monthly zips) cleaned with
-DuckDB in 56 s into partitioned Parquet. **Missing:** Bay Wheels for every year and in BigQuery.
+clustered BigQuery tables. Bay Wheels 2018 → Sep 2026 (25,989,969 trips) in BigQuery; locally, 2019 + 2025 (6.9M trips from 24 irregularly
+named monthly zips) clean with DuckDB in 56 s into partitioned Parquet.
 
 ---
 
-## ✅ #1 Cloud + Terraform (M0 applied) · 🟡 Cloud Run + WIF (code only)
+## ✅ #1 Cloud + Terraform (all applied)
 
 **What it does:** defines the whole GCP footprint as code. The M0 resources are applied (BigQuery, bucket, registry,
-service accounts, budgets). The Cloud Run service and GitHub federation are validated and statically tested, but
-**not applied**; [`docs/CLOUD_RUN.md`](CLOUD_RUN.md) is the runbook.
+service accounts, budgets). The Cloud Run service and GitHub federation are applied too (live since 2026-10-14);
+[`docs/CLOUD_RUN.md`](CLOUD_RUN.md) is the runbook.
 
 | Resource | Where | Why |
 |---|---|---|
@@ -168,17 +170,7 @@ service accounts, budgets). The Cloud Run service and GitHub federation are vali
 | Narrow deployer | [`wif.tf:39`](../infra/terraform/wif.tf#L39) | `sa-deploy`: registry writer on one repo, `run.developer` on one service, actAs on `sa-agent` only; no owner/editor. |
 | Static tests | [`tests/test_infra_cloudrun.py`](../tests/test_infra_cloudrun.py) | Parses the HCL (python-hcl2) and the workflow YAML: scaling, IAM, WIF pin, budgets, the deploy gate. |
 
-**Missing:** applying `cloudrun.tf` / `wif.tf` (a user step), `terraform plan` in CI (needs credentials in CI).
-
----|---|---|
-| Budget alerts $1 / $5 | [`main.tf:27`](../infra/terraform/main.tf#L27) | Cost guardrail as code (TRANSITPULSE_PLAN §8). |
-| Enabled APIs | [`main.tf:14`](../infra/terraform/main.tf#L14) | BigQuery, GCS, Run, Artifact Registry, IAM, STS, billing budgets. |
-| Raw bucket | [`storage.tf`](../infra/terraform/storage.tf) | Uniform access, public access blocked, temp files expire. |
-| BigQuery datasets | [`bigquery.tf`](../infra/terraform/bigquery.tf) | `raw/staging/marts/ml/ci`; CI tables auto-expire after 3 days ([:19](../infra/terraform/bigquery.tf#L19)). |
-| Artifact Registry | [`registry.tf`](../infra/terraform/registry.tf) | Keeps the last 3 images to stay in the free 0.5 GB. |
-| Least-privilege IAM | [`iam.tf`](../infra/terraform/iam.tf) | `sa-pipeline` writes; `sa-agent` is **read-only on marts/ml** ([:37](../infra/terraform/iam.tf#L37)), the base of the agent's SQL guardrails. |
-
-**Missing:** `terraform apply` (needs the GCP project), Cloud Run, Workload Identity Federation.
+**Missing:** `terraform plan` in CI (it needs a CI identity; owner step 9).
 
 ---
 
@@ -199,8 +191,8 @@ container smoke tests on it before pushing ([:47](../.github/workflows/deploy.ym
 `ci.yml`, then runs `gcloud run deploy --image` ([:67](../.github/workflows/deploy.yml#L67)) and curls the new revision.
 Terraform is deliberately not run in Actions. Both workflows pass actionlint.
 
-**Missing:** switching deploys on (after the user applies the Terraform), `dbt build --target ci` and `terraform
-plan` in CI (they need GCP credentials in CI).
+Deploys are on (`DEPLOY_ENABLED=true`) since 2026-10-14. **Missing:** `dbt build --target ci` and `terraform plan` in
+CI (they need a CI identity; owner step 9).
 
 ---
 
@@ -252,7 +244,7 @@ scheduled BART train drawn as small pills that scale with the map.
 
 ---
 
-## ✅ Forecasting (local)
+## ✅ Forecasting (local and BigQuery)
 
 **What it does:** forecasts daily entries at every BART station for the 14 days after the latest data, with a
 calibrated band, and checks it honestly against a seasonal-naive baseline. Latest local run (same data as
@@ -370,7 +362,8 @@ one Parquet dataset: 6.9M trips for 2019 + 2025, with every dropped row counted 
 | Tests | [`tests/test_baywheels.py`](../tests/test_baywheels.py) | Listing with irregular names + pagination, both schemas, every drop reason counted once. |
 
 **Why DuckDB, not Spark:** 2–5M rows a year fits one machine, and DuckDB runs natively on Windows, CI and the ARM
-VM without a JVM. **Missing:** years other than 2019/2025 and the BigQuery load (written, not run).
+VM without a JVM. BigQuery has 2018 → Sep 2026 (loaded by the VM); locally the default is 2019 and 2025
+(`tasks.py baywheels --years …` for more).
 
 ---
 
@@ -392,7 +385,7 @@ with the same SQL.
 
 ---
 
-## ✅ #19 Agents and tool use (local) · 🟡 #5 LLM tracing
+## ✅ #19 Agents and tool use (local, and live on Cloud Run)
 
 **What it does:** "Ask TransitPulse" answers a ridership question by writing one guarded SQL query over the published
 marts, running it and summarising the rows, streamed to the site as Server-Sent Events. Off unless
@@ -431,7 +424,26 @@ failed ([:60](../load/locustfile.py#L60)). Each user hits every endpoint once on
 
 Results are in the README (25 users: ~30 req/s, forecast p95 14 ms, ask p95 140 ms, 0 failures).
 
-**Missing:** numbers from Cloud Run itself (cold start, p95 under load), since nothing is deployed.
+Cloud Run itself: cold start about 4.4 s, warm requests 0.09–0.17 s (2026-10-15). **Missing:** a Locust run against
+Cloud Run (owner step 11).
+
+---
+
+## ✅ Policy analysis: BART station closures (added 2026-10-17)
+
+**What it does:** checks the 15 stations BART staff named in February 2026 (if the Nov 3 measure fails) against the
+ridership data, gives each a "case to keep" verdict from four stated rules, and lets a visitor close them on the live
+map. It takes no position on the measure. Write-up with the results, claim checks and 13 sources:
+[`STATION_CLOSURES.md`](STATION_CLOSURES.md).
+
+| Concept | Where | How |
+|---|---|---|
+| The list as data | [`bart_closure_candidates.csv`](../dbt/transitpulse/seeds/bart_closure_candidates.csv) | A dbt seed: station, group (the first 10 or the next 5) and the segment it sits on. |
+| Marts | [`mart_station_closures.sql`](../dbt/transitpulse/models/marts/mart_station_closures.sql), [`mart_closure_destinations.sql`](../dbt/transitpulse/models/marts/mart_closure_destinations.sql), [`mart_closure_scenarios.sql`](../dbt/transitpulse/models/marts/mart_closure_scenarios.sql) | Per station: 2025 weekday trips, rank from the fewest, recovery vs 2019, distance to the nearest open station, change on the year; top 3 destinations; each scenario's share of weekday trips. Data tests on all three. |
+| Rules and verdicts | [`data.py:416` `CLOSURE_RULES`, `:461` `closure_criteria`](../api/routes/data.py#L416) | Four rules on the rounded numbers the page shows (riders, recovery, distance, growing); 3–4 met = strong, 2 = mixed, 0–1 = weak. `GET /api/closures` is cached for an hour. |
+| The band | [`closures.js:174` `initClosures`](../web/js/closures.js#L174) | Summary tiles, the cost card, one card per station; every number from the API, strings escaped. |
+| What-if map | [`schedule.js:71` `closedStops`, `:62` `tripPosition`](../web/js/map/schedule.js#L62), [`whatif.js:51`](../web/js/map/whatif.js#L51) | Closed stations lose their marker; each trip keeps its times at open stations and runs through closed ones, the time between two open stops spread over the hops by their scheduled running times. Termini are never skipped. |
+| Tests | [`test_api_closures.py`](../tests/test_api_closures.py), [`test_closures_local.py`](../tests/local/test_closures_local.py), [`closures.spec.js`](../tests/web/closures.spec.js), [`whatif.test.mjs`](../tests/web/whatif.test.mjs), [`schedule.test.mjs`](../tests/web/schedule.test.mjs) | Rule edges and rounding, the numbers against the warehouse, the band in a browser, the picker's list equal to the seed, and on the real timetable no train dwelling at a closed station. |
 
 ---
 

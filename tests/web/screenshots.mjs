@@ -3,7 +3,7 @@
 // warehouse when data/transitpulse.duckdb exists, else the Playwright tests' API fixtures. Writes:
 //   web/img/og.png                   1200 × 630, the train map (under 400 KB)
 //   docs/img/screenshot-phone.png    390 px wide, the live map band on a phone
-//   docs/img/screenshot-desktop.png  1440 px wide, the top of the page through the live map
+//   docs/img/screenshot-desktop.png  1440 px wide, the top of the page through the map's what-if card
 // and fails if any file is over its size limit.
 import { readFileSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -30,6 +30,7 @@ async function openPage(browser, url, viewport) {
   await page.locator("[data-map-summary]").filter({ hasText: "trains running" }).waitFor({ state: "attached" });
   await page.locator("[data-trends] .stat-tile[data-tile]").first().waitFor();
   await page.evaluate(() => document.fonts.ready);
+  await page.waitForTimeout(1200); // the hero's count-ups take 900 ms
   return page;
 }
 
@@ -66,10 +67,12 @@ try {
   await page.close();
   check("docs/img/screenshot-phone.png", 600 * KB);
 
-  // desktop: from the top of the page through the end of the live map band
+  // desktop: from the top of the page through the what-if card under the live map; a full-page shot draws the
+  // fixed Ask button where the first screen ends (over the map), so it is hidden
   page = await openPage(browser, server.url, { width: 1440, height: 900 });
+  await page.addStyleTag({ content: ".ask-launcher { display: none; }" });
   const bottom = await page.evaluate(() => {
-    const r = document.querySelector(".map-meta").getBoundingClientRect();
+    const r = document.querySelector("[data-whatif]").getBoundingClientRect();
     return Math.ceil(r.bottom + window.scrollY + 32);
   });
   const clip = { x: 0, y: 0, width: 1440, height: bottom };
