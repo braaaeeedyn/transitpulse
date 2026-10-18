@@ -26,7 +26,7 @@ Verified = it ran on real data or passed tests on 2026-10-08 (see [`CURRENT_STAT
 | 19 | Agents and tool use | ✅ (local) | [`api/agent/`](../api/agent/), [`api/routes/ask.py`](../api/routes/ask.py), [`eval/`](../eval/), [`web/js/ask.js`](../web/js/ask.js) |
 | 21 | Causal inference | ✅ | [`analysis/causal/`](../analysis/causal/), [`docs/FINDINGS.md`](FINDINGS.md) |
 | — | Forecasting (LightGBM, walk-forward, quantiles) | ✅ (local) | [`ml/forecast/`](../ml/forecast/) |
-| — | Bay Wheels ingest + cleaning (second data source) | ✅ (local) / 🟡 (BigQuery) | [`pipeline/baywheels.py`](../pipeline/baywheels.py) |
+| — | Bay Wheels ingest + cleaning (second data source) | ✅ (local and BigQuery, 2018 → 2026-09) | [`pipeline/baywheels.py`](../pipeline/baywheels.py) |
 | — | Data API over the warehouse (DuckDB / BigQuery) | ✅ | [`api/warehouse.py`](../api/warehouse.py), [`api/routes/data.py`](../api/routes/data.py) |
 | — | Responsive, accessible web front end (added for the site) | ✅ | [`web/`](../web/) |
 
@@ -75,7 +75,7 @@ de-duplicated, holiday-tagged Parquet partitioned by year/month. Verified on 201
 
 **Bay Wheels models (local):** [`stg_baywheels_trips.sql`](../dbt/transitpulse/models/staging/stg_baywheels_trips.sql) → [`fct_bike_trips_daily.sql`](../dbt/transitpulse/models/core/fct_bike_trips_daily.sql) → [`mart_bikes_vs_trains.sql`](../dbt/transitpulse/models/marts/mart_bikes_vs_trains.sql), which is a **full outer join** of the two monthly series ([:32](../dbt/transitpulse/models/marts/mart_bikes_vs_trains.sql#L32)), so a month with only one source still appears, plus an index vs the same month of 2019 ([:35](../dbt/transitpulse/models/marts/mart_bikes_vs_trains.sql#L35)). [`mart_ridership_monthly.sql`](../dbt/transitpulse/models/marts/mart_ridership_monthly.sql) feeds the site's chart. Local build: 83/83 nodes (68 tests). [`tests/test_dbt_fixture.py`](../tests/test_dbt_fixture.py) runs `dbt build` on a generated dataset in CI.
 
-**Missing:** the `ci` target, and the Bay Wheels models on BigQuery (the BART models are built there).
+**Missing:** the `ci` target. (Bay Wheels is on BigQuery too: `raw.baywheels_trips` 2018 → 2026-09.)
 
 ---
 
@@ -134,7 +134,7 @@ partitions, keeps monthly schedules, and records metadata (row counts, drops, fi
 | VM deployment (files) | [`deploy/oracle/`](../deploy/oracle/), [`docs/ORACLE_VM.md`](ORACLE_VM.md) | systemd daemon + web units (non-root, venv on `PATH`, `MemoryMax`, `Nice`, UI on 127.0.0.1 only); an idempotent [`bootstrap.sh`](../deploy/oracle/bootstrap.sh) (apt/dnf, Java 17, `uv sync --frozen`, `dbt parse`, key-file checks at [:123](../deploy/oracle/bootstrap.sh#L123)). |
 | Swappable resources | [`pipeline/resources.py`](../pipeline/resources.py) | `Storage` (`local` files vs `gcp` GCS+BigQuery) and `SparkRunner` (in-process vs Docker), chosen by environment variables. |
 
-**Missing:** actually running it on the Oracle VM (the files are ready, not installed), and the Bay Wheels and forecast steps in GCP mode.
+**Now running** on the Oracle VM in `gcp` mode (see `CURRENT_STATE.md`), Bay Wheels and the forecast included.
 
 ---
 
@@ -354,7 +354,7 @@ bootstrap and a simulation power analysis.
 
 ---
 
-## ✅ Bay Wheels ingest + cleaning (local) · 🟡 BigQuery
+## ✅ Bay Wheels ingest + cleaning (local and BigQuery)
 
 **What it does:** finds, downloads and cleans Lyft's monthly Bay Wheels files (two schemas, irregular names) into
 one Parquet dataset: 6.9M trips for 2019 + 2025, with every dropped row counted by reason.

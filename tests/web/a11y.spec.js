@@ -23,8 +23,10 @@ async function contrastViolations(page) {
   return violations.flatMap((v) => v.nodes.map((n) => `${n.target.join(" ")}: ${n.failureSummary}`));
 }
 
-for (const width of [390, 1440]) {
-  test(`a11y: no colour-contrast violations on the loaded page at ${width}px`, async ({ page }) => {
+for (const theme of ["light", "dark"])
+  for (const width of [390, 1440]) {
+  test(`a11y: no colour-contrast violations on the loaded page at ${width}px in ${theme} mode`, async ({ page }) => {
+    await page.addInitScript((t) => localStorage.setItem("tp-theme", t), theme);
     await page.setViewportSize({ width, height: 900 });
     await mockLoaded(page);
     await page.clock.install({ time: RUSH_HOUR });
@@ -36,12 +38,16 @@ for (const width of [390, 1440]) {
     await expect(page.locator("[data-closure-station]")).toHaveCount(15);
     await expect(page.locator("main .skeleton")).toHaveCount(0);
     await expect(page.locator("[data-map-summary]")).toContainText("trains running");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     expect(await contrastViolations(page)).toEqual([]);
   });
 }
 
-test("a11y: no colour-contrast violations in the style guide", async ({ page }) => {
-  await page.goto("/styleguide.html");
-  await page.locator("html[data-ready]").waitFor({ state: "attached" });
-  expect(await contrastViolations(page)).toEqual([]);
-});
+for (const theme of ["light", "dark"]) {
+  test(`a11y: no colour-contrast violations in the style guide in ${theme} mode`, async ({ page }) => {
+    await page.addInitScript((t) => localStorage.setItem("tp-theme", t), theme);
+    await page.goto("/styleguide.html");
+    await page.locator("html[data-ready]").waitFor({ state: "attached" });
+    expect(await contrastViolations(page)).toEqual([]);
+  });
+}

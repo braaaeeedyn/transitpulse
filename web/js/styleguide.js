@@ -1,6 +1,7 @@
 // Style guide (web/styleguide.html, IMPLEMENTATION_PLAN F1/F7). The token tables are rendered from css/tokens.css's
 // own :root rules, so the page can't drift from the stylesheet, and the icon row uses index.html's sprite.
 
+import { initTheme } from "./fx.js";
 import { esc } from "./trends.js";
 
 // first match wins; the last group takes whatever is left, so no token can be missed
@@ -76,6 +77,7 @@ async function iconRow(el) {
     .join("");
 }
 
+initTheme(document.querySelector("[data-theme-toggle]"));
 const sheet = [...document.styleSheets].find((s) => s.href?.endsWith("/css/tokens.css"));
 document.querySelector("[data-tokens]").innerHTML = tokenTables(rootTokens(sheet));
 iconRow(document.querySelector("[data-icons]"))

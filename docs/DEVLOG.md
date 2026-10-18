@@ -1543,3 +1543,33 @@ mixed to strong (strong 7, mixed 6, weak 2 if SFO lost service).
 
 **Checked.** The audit shows no overflow at any of the seven widths. 69 Playwright and 46 node tests pass, including
 the styleguide's 320–2560 no-scroll test, the skeleton layout-stability test and axe.
+
+## 2026-10-17 · site · what if stations close?, dark mode throughout, the style guide catches up
+**What-if picker (owner's request).** "Show the BART map without the stations that would be removed, with the same
+trains but just not stopping." A card under the map closes stations from BART's list (presets for the first 10 and
+all 15, or one at a time). Closed stations lose their marker, label and hit target. The trains are the same trips:
+`closedStops` + `tripPosition(…, skip)` keep every open station's times and spread the time between two open stops
+over the hops by their scheduled running times, so a train runs through a closed station instead of dwelling.
+- Termini are never skipped: a trip still starts and ends where BART runs it, even at a closed Antioch or Millbrae.
+  The board's plan would close whole segments; this shows "same trains, no stops", as asked.
+- Tests: `schedule.test.mjs` checks the maths, and checks on the real timetable (every 7 minutes, 6 AM to 10 PM)
+  that the train count is unchanged and none dwells at or heads for a closed stop. `whatif.test.mjs` keeps the list
+  equal to the seed. A browser test checks the 50 → 35 → 36 → 50 markers. A first version flagged the map card with
+  `data-whatif`, the picker's own selector; removed.
+
+**Dark mode throughout.**
+- The contrast tests now run in dark mode as well (whole page at 390 and 1440 px, and the style guide). They passed
+  as soon as they were added.
+- By eye, the ink surfaces inverted to white blocks on a black page: the Findings band, the footer, the hero's
+  departure board and the chart readout. In dark mode they are now `canvas-soft` grey with white text.
+- The style guide ignored the theme. It now applies it before paint, has the toggle and loads `fx.css`.
+- A browser test checks the dark board colour.
+
+**Style guide.** A "Newer pieces" section shows the pulse stripe, the headline highlight and live strip, the
+departure board, the mascot sizes, legend toggles, the dice and what-if chips, the chart readout, forecast badges,
+verdict pills, a station card, the cost card and the what-if card. A new test requires every `fx.css` block on the
+page; state classes and page furniture are excepted. `.hero h1 .hl` became `.hero .hl` so the sample needs no
+second `h1`.
+
+**Docs.** `SKILLS_MAP.md` still said Bay Wheels and the VM weren't on BigQuery; both have been for a while
+(`CURRENT_STATE.md`), so it is corrected. 75 Playwright and 52 node tests pass.

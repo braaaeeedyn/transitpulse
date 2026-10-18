@@ -232,6 +232,24 @@
             <ul class="legend" data-map-legend aria-label="Lines"></ul>
             <p class="caption">Scheduled positions from BART's published timetable. Times in Pacific time.</p>
           </div>
+
+          <!-- what if stations close? (web/js/map/whatif.js): the picked stations leave the map; trains run through -->
+          <div class="card whatif" data-whatif>
+            <div class="whatif__head">
+              <h3>What if stations close?</h3>
+              <p>
+                Close stations from BART's list and watch the map change. They disappear from the map, and the same trains
+                keep their timetable but run through them without stopping. <a href="#closures">Why these stations?</a>
+              </p>
+            </div>
+            <div class="chip-row" role="group" aria-label="Closure scenarios">
+              <button type="button" class="chip" data-whatif-preset="none" aria-pressed="true">Today's map</button>
+              <button type="button" class="chip" data-whatif-preset="first10" aria-pressed="false">Close the first 10</button>
+              <button type="button" class="chip" data-whatif-preset="all15" aria-pressed="false">Close all 15</button>
+            </div>
+            <div class="chip-row whatif__stations" role="group" aria-label="Close a station" data-whatif-stations></div>
+            <p class="whatif__status" aria-live="polite" data-whatif-status>Today's map: all 50 stations open.</p>
+          </div>
           <p class="visually-hidden" aria-live="polite" data-map-summary></p>
         </div>
       </section>

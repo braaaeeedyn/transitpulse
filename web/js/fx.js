@@ -179,7 +179,7 @@ export function initBoard(board) {
   const esc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   document.addEventListener("tp:arrivals", (e) => {
     const { rows: next, clock: now, live } = e.detail;
-    clock.textContent = live ? now : `${now} (replay)`;
+    clock.textContent = (live ? now : `${now} (replay)`) + (e.detail.closed ? " · what if" : "");
     board.hidden = next.length === 0;
     rows.innerHTML = next
       .map(

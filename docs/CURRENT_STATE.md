@@ -213,6 +213,19 @@ fails. Write-up: [`STATION_CLOSURES.md`](STATION_CLOSURES.md).
 - **Styles:** `web/css/fx.css` (closures section: the band layout, station cards, `.verdict-pill`, the beige accent),
   tokens only, so dark mode needs nothing extra.
 
+### Live map: what if stations close? (`web/js/map/whatif.js`)
+- A card under the legend (`[data-whatif]`): presets "Today's map", "Close the first 10", "Close all 15", then one
+  chip per listed station (`[data-whatif-code]`, `aria-pressed="true"` = closed, struck through). `AT_RISK` holds
+  the list; `tests/web/whatif.test.mjs` checks it equals the dbt seed.
+- Closed stations get no marker, no label and no hit target (`renderNetwork(…, closed)`); the track stays. Trains
+  are the same trips at the same times at every open station: `schedule.closedStops` marks each pattern's closed
+  stops (never a trip's first or last), and `tripPosition(…, skip)` moves a train from the last open stop's departure
+  to the next open stop's arrival without dwelling, spreading the time over the hops by their scheduled running
+  times. "Next stop" (tooltip, list view, departure board) is the next open one.
+- The clock pill adds "· what if: N closed"; the hero board's clock adds "· what if". A status line says how many are
+  closed and, once `/api/closures` answers, the share of weekday trips that start or end at them (exact for the
+  presets, "up to" the summed station shares for a custom pick). The map works without the API.
+
 ### Live map: v1.1 additions
 - **Legend filter:** each legend entry is a toggle (`[data-legend-line]`, `aria-pressed`). One pressed line sets
   `data-focus-line` on the map card: other lines' track paths (`data-line`) fade to 15% and `drawTrains` paints
@@ -341,7 +354,8 @@ eyebrow; the Findings band has a line-colour top border.
 ### Design system
 `web/css/tokens.css` mirrors `docs/DESIGN.md` **v1.1.3**: sizes are in rem on a fluid root size (`html` in
 `base.css`: 16px up to ~1500px wide, 20px at 2560px, so large screens scale up rather than leaving a 1200px strip;
-only hairlines, focus rings and the map's stroke tokens are px); the v1.0.1 base (black/white interface, Inter 400/500/700,
+only hairlines, focus rings and the map's stroke tokens are px); in dark mode the ink surfaces (Findings band,
+footer, departure board, chart readout, `card--ink`) stay dark grey with white text; the v1.0.1 base (black/white interface, Inter 400/500/700,
 pills for controls, 16 px cards) plus a **dark palette** under `:root[data-theme="dark"]` and the v1.1
 motion/delight layer in `web/css/fx.css` + `web/js/fx.js` (pulse stripe, live hero strip, departure board,
 count-ups, scroll reveal, scroll-spy, section accents, legend filter, station cards, chart readout,

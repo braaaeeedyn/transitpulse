@@ -59,7 +59,58 @@ export function tripsForDay(schedule, ymd, weekday) {
  *   next       index into pattern.stops of the next station (null at the terminus)
  *   nextAt     minutes at which it reaches `next`
  */
-export function tripPosition(entry, t) {
+export function tripPosition(entry, t, skip = null) {
+  const pos = scheduledPosition(entry, t);
+  return pos && skip ? skipStops(entry, t, pos, skip) : pos;
+}
+
+/**
+ * The "what if" picker's closed stations, per pattern: closed[p][i] is true when stop i of pattern p is closed.
+ * A trip's first and last stops are never skipped (that's where the train starts and ends). Null when none close.
+ */
+export function closedStops(schedule, closed) {
+  if (!closed?.size) return null;
+  return schedule.patterns.map((p) => p.stops.map((s, i) => i > 0 && i < p.stops.length - 1 && closed.has(s)));
+}
+
+/**
+ * Same trip, same times at every open station, but no stop at the closed ones: between two open stops the train
+ * moves without dwelling, spreading the time over the hops in proportion to their scheduled running times.
+ */
+function skipStops(entry, t, pos, skip) {
+  const p = entry.profile;
+  const n = p.length / 2;
+  const nextOpen = (from) => {
+    for (let j = from; j < n; j++) if (!skip[j]) return j;
+    return null;
+  };
+  if (pos.atStation && !skip[pos.stop]) {
+    const next = nextOpen(pos.stop + 1);
+    return { ...pos, next, nextAt: next === null ? null : entry.start + p[2 * next] };
+  }
+  // the open stops either side: a dwelling train at a closed stop, or one on hop i (stop i → i + 1)
+  let a = pos.atStation ? pos.stop - 1 : pos.stop;
+  while (a > 0 && skip[a]) a--;
+  const b = nextOpen(pos.stop + 1);
+  if (b === null) return pos;
+  const rel = t - entry.start;
+  const dep = p[2 * a + 1];
+  const arr = p[2 * b];
+  const runs = [];
+  for (let k = a; k < b; k++) runs.push(Math.max(0, p[2 * (k + 1)] - p[2 * k + 1]));
+  const total = runs.reduce((x, y) => x + y, 0);
+  let left = arr > dep ? ((rel - dep) / (arr - dep)) * total : 0;
+  for (let k = 0; k < runs.length; k++) {
+    if (left <= runs[k] || k === runs.length - 1) {
+      const frac = runs[k] > 0 ? Math.min(1, Math.max(0, left / runs[k])) : 1;
+      return { hop: a + k, frac, stop: a + k, atStation: false, next: b, nextAt: entry.start + arr };
+    }
+    left -= runs[k];
+  }
+  return pos;
+}
+
+function scheduledPosition(entry, t) {
   if (t < entry.start || t > entry.end) return null;
   const rel = t - entry.start;
   const p = entry.profile; // [arr0, dep0, arr1, dep1, …]
@@ -96,9 +147,9 @@ export function tripPosition(entry, t) {
 /**
  * Every train running at minute `minutes` on calendar date ymd (Pacific).
  * After-midnight trips belong to the *previous* service day, with times past 1440, so both days are checked.
- * `days` is a cache object {ymd: tripsForDay(...)} owned by the caller.
+ * `days` is a cache object {ymd: tripsForDay(...)} owned by the caller; `skip` is closedStops(...) or null.
  */
-export function trainsAt(schedule, days, ymd, weekday, minutes) {
+export function trainsAt(schedule, days, ymd, weekday, minutes, skip = null) {
   if (minutes >= 1440) {
     // a time past midnight on service day `ymd` is early morning of the next calendar day
     ({ ymd, weekday } = shiftDay(ymd, 1));
@@ -115,7 +166,7 @@ export function trainsAt(schedule, days, ymd, weekday, minutes) {
     for (const entry of days[d]) {
       if (entry.start > t) break; // sorted by start
       if (entry.end < t) continue;
-      const pos = tripPosition(entry, t);
+      const pos = tripPosition(entry, t, skip?.[entry.pattern]);
       if (pos) trains.push({ ...pos, entry, serviceDay: d, dayOffset: t - minutes });
     }
   }

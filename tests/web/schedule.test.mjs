@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import { serviceRunsOn, trainsAt, tripPosition, tripsForDay } from "../../web/js/map/schedule.js";
+import { closedStops, serviceRunsOn, trainsAt, tripPosition, tripsForDay } from "../../web/js/map/schedule.js";
 import { formatClock, shiftDay } from "../../web/js/util/time.js";
 
 const schedule = JSON.parse(readFileSync(new URL("../../web/data/schedule.json", import.meta.url)));
@@ -26,6 +26,54 @@ test("trip position: dwelling, moving, and outside the trip", () => {
   assert.equal(end.atStation, true);
   assert.equal(end.next, null);
   assert.equal(tripPosition(entry, 621), null);
+});
+
+test("what if: a closed stop is passed without stopping, open stops keep their times", () => {
+  const four = { start: 600, end: 630, profile: [0, 1, 9, 10, 20, 21, 30, 30] }; // stops 0..3
+  const skip = [false, true, false, false]; // stop 1 closed
+  const first = tripPosition(four, 600.5, skip); // dwelling at stop 0: the next stop is 2, not 1
+  assert.equal(first.atStation, true);
+  assert.equal(first.next, 2);
+  assert.equal(first.nextAt, 620);
+  // 1 min after leaving stop 0: 4/19 of the dep 1 -> arr 20 span, spread over runs of 8 and 10 minutes
+  const moving = tripPosition(four, 605, skip);
+  assert.equal(moving.atStation, false);
+  assert.equal(moving.hop, 0);
+  assert.ok(Math.abs(moving.frac - (4 / 19) * 18 / 8) < 1e-9);
+  // when the timetable has it dwelling at the closed stop, it is moving on the next hop instead
+  const through = tripPosition(four, 609.5, skip);
+  assert.equal(through.atStation, false);
+  assert.equal(through.hop, 1);
+  assert.equal(through.next, 2);
+  // the open stop after it keeps its dwell and its time
+  const at2 = tripPosition(four, 620.5, skip);
+  assert.equal(at2.atStation, true);
+  assert.equal(at2.stop, 2);
+  assert.equal(at2.nextAt, 630);
+});
+
+test("what if: termini are never skipped, and no closures means no mask", () => {
+  const mini = { patterns: [{ stops: [5, 6, 7] }] };
+  assert.deepEqual(closedStops(mini, new Set([5, 6, 7])), [[false, true, false]]);
+  assert.equal(closedStops(mini, new Set()), null);
+});
+
+test("what if on the real timetable: the same trains run, none dwell at a closed station", () => {
+  const network = JSON.parse(readFileSync(new URL("../../web/data/network.json", import.meta.url)));
+  const codes = ["OAKL", "PCTR", "NCON", "WARM", "CAST", "WDUB", "ORIN", "SSAN", "SHAY", "SBRN"];
+  const closed = new Set(codes.map((c) => network.stations.findIndex((s) => s.code === c)));
+  const skip = closedStops(schedule, closed);
+  for (let m = 6 * 60; m < 22 * 60; m += 7) {
+    const today = trainsAt(schedule, {}, "20261007", 2, m);
+    const whatIf = trainsAt(schedule, {}, "20261007", 2, m, skip);
+    assert.equal(whatIf.length, today.length, `same trains at minute ${m}`);
+    for (const tr of whatIf) {
+      const stops = schedule.patterns[tr.entry.pattern].stops;
+      if (tr.atStation) assert.ok(!skip[tr.entry.pattern][tr.stop], `dwelling at a closed stop at minute ${m}`);
+      if (tr.next !== null) assert.ok(!skip[tr.entry.pattern][tr.next], `next stop closed at minute ${m}`);
+      assert.ok(stops.length > 0);
+    }
+  }
 });
 
 test("service calendar: weekday rules and exceptions", () => {
