@@ -68,13 +68,23 @@ export async function initMap(root) {
   const lineName = Object.fromEntries(network.lines.map((l) => [l.id, l.name]));
   const days = {}; // per-service-day trip cache for schedule.trainsAt
 
+  // each legend entry is a toggle: one line's trains and track in colour, the rest faded (click again to clear)
   legend.replaceChildren(
     ...network.lines.map((l) => {
       const li = document.createElement("li");
-      li.innerHTML = `<span class="swatch" style="background:var(--line-${l.id})"></span>${l.name} <span class="text-body">· ${l.desc}</span>`;
+      li.innerHTML = `<button type="button" class="legend__toggle" data-legend-line="${l.id}" aria-pressed="false"><span class="swatch" style="background:var(--line-${l.id})"></span>${l.name} <span class="text-body">· ${l.desc}</span></button>`;
       return li;
     }),
   );
+  legend.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-legend-line]");
+    if (!b) return;
+    state.focusLine = state.focusLine === b.dataset.legendLine ? null : b.dataset.legendLine;
+    for (const x of legend.querySelectorAll("[data-legend-line]")) x.setAttribute("aria-pressed", String(x.dataset.legendLine === state.focusLine));
+    if (state.focusLine) root.dataset.focusLine = state.focusLine;
+    else delete root.dataset.focusLine;
+    draw(true);
+  });
 
   // --- state -----------------------------------------------------------------------------------------
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
@@ -203,6 +213,7 @@ export async function initMap(root) {
       ink,
       canvasColor,
       selectedTrip: state.selected?.type === "train" ? state.selected.trip : null,
+      focusLine: state.focusLine ?? null,
       dpr,
       w: view.w,
       h: view.h,
@@ -318,17 +329,27 @@ export async function initMap(root) {
     return `<div class="tooltip__title">${swatch(pattern.line)}${lineName[pattern.line]} to ${dest}</div><div>${second}</div>`;
   }
 
+  const hourLabel = (h) => (h === 0 ? "12 AM" : h < 12 ? `${h} AM` : h === 12 ? "12 PM" : `${h - 12} PM`);
+
   function stationHTML(i) {
     const s = network.stations[i];
     const lines = s.lines.map((l) => `${swatch(l)}`).join("");
     const names = s.lines.map((l) => lineName[l].replace(" line", "")).join(", ");
     const sum = stationSummary(s.code);
-    let entries = "";
+    let stats = "";
     if (sum) {
+      // a small station card: the latest day, its recovery, the 28-day weekday average and the peak hour
       const rec = sum.recovery_ratio === null ? "" : ` (${formatPercent(sum.recovery_ratio)} of 2019)`;
-      entries = `<div data-station-entries>Entries on ${formatDate(sum.data_through)}: ${formatNumber(sum.entries)}${rec}</div>`;
+      const cells = [
+        [formatNumber(sum.entries), `entries on ${formatDate(sum.data_through)}`],
+        sum.recovery_ratio === null ? null : [formatPercent(sum.recovery_ratio), "of 2019"],
+        sum.avg_weekday_entries_28d === null ? null : [formatNumber(Math.round(sum.avg_weekday_entries_28d)), "weekday average, 28 days"],
+        sum.peak_hour === null ? null : [hourLabel(sum.peak_hour), `peak hour · ${formatPercent(sum.peak_hour_share)} of entries`],
+      ].filter(Boolean);
+      stats = `<p class="visually-hidden" data-station-entries>Entries on ${formatDate(sum.data_through)}: ${formatNumber(sum.entries)}${rec}</p>
+        <dl class="tooltip__stats">${cells.map(([v, l]) => `<div><dd>${v}</dd><dt>${l}</dt></div>`).join("")}</dl>`;
     }
-    return `<div class="tooltip__title">${s.name}</div><div class="tooltip__title">${lines}<span class="tooltip__muted">${names}</span></div>${entries}<a href="#forecast">See its forecast</a>`;
+    return `<div class="tooltip__title">${s.name}</div><div class="tooltip__title">${lines}<span class="tooltip__muted">${names}</span></div>${stats}<a class="tooltip__cta" href="#forecast">See its forecast →</a>`;
   }
 
   // Ridership numbers for the station tooltip (GET /api/stations/{code}/summary), fetched once per station
@@ -588,6 +609,10 @@ export async function initMap(root) {
 
   // --- lifecycle -------------------------------------------------------------------------------------
   readColors();
+  document.addEventListener("tp:theme", () => {
+    readColors();
+    draw(true);
+  });
   new ResizeObserver(() => layout()).observe(stage);
   new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting && !document.hidden)).observe(stage);
   document.addEventListener("visibilitychange", () => setVisible(!document.hidden));

@@ -4,6 +4,7 @@
 import { initAsk } from "./ask.js";
 import { formatDate } from "./chart.js";
 import { initFindings } from "./findings.js";
+import { initCounts, initHeroLive, initMascotHello, initReveal, initScrollSpy, initTheme } from "./fx.js";
 import { initForecast } from "./forecast.js";
 import { initMap } from "./map/map.js";
 import { getKpis, initDashboard, initTrends } from "./trends.js";
@@ -96,6 +97,14 @@ initTrends(document.querySelector("[data-trends]"));
 initDashboard(document.querySelector("[data-dashboard]"));
 initForecast(document.querySelector("[data-forecast]"));
 initFindings(document.querySelector("[data-findings]"));
+
+// motion: live hero numbers, count-ups, sections rising in, the nav's current section, the mascot's hello
+initTheme(document.querySelector("[data-theme-toggle]"));
+initCounts();
+initHeroLive(document.querySelector("[data-hero-live]"));
+initReveal();
+initScrollSpy();
+initMascotHello(document.querySelector(".ask-launcher"));
 
 // footer "Data through <date>" (DESIGN.md §7), from the KPIs the Trends band loaded; left out without them
 getKpis().then(

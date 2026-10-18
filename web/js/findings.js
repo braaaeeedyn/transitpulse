@@ -92,7 +92,7 @@ export function binLabel(row) {
 function figureHTML(key, est, extra = "") {
   return `<div class="findings__figure" data-findings-figure="${key}">
     <p class="findings__figure-label">${esc(TITLES[key])}</p>
-    <p class="findings__figure-value">${esc(formatSignedPct(est.pct))}</p>
+    <p class="findings__figure-value" data-count>${esc(formatSignedPct(est.pct))}</p>
     <p class="findings__figure-detail">95% interval ${esc(formatInterval(est.placebo_ci_pct))}${extra ? `, ${esc(extra)}` : ""}</p>
   </div>`;
 }

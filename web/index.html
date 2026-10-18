@@ -23,12 +23,19 @@
     <link rel="icon" href="img/favicon.svg" type="image/svg+xml" />
     <link rel="preload" href="fonts/inter-700.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="data/network.json" as="fetch" crossorigin />
+    <script>
+      // the saved theme before paint, so a dark page never flashes white
+      try {
+        document.documentElement.dataset.theme = localStorage.getItem("tp-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      } catch (e) {}
+    </script>
     <link rel="stylesheet" href="css/tokens.css" />
     <link rel="stylesheet" href="css/base.css" />
     <link rel="stylesheet" href="css/layout.css" />
     <link rel="stylesheet" href="css/components.css" />
     <link rel="stylesheet" href="css/map.css" />
     <link rel="stylesheet" href="css/charts.css" />
+    <link rel="stylesheet" href="css/fx.css" />
     <script type="module" src="js/main.js"></script>
   </head>
   <body>
@@ -47,6 +54,8 @@
       <symbol id="i-arrow-up-right" viewBox="0 0 24 24"><path d="M7 7h10v10" /><path d="M7 17 17 7" /></symbol>
       <symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></symbol>
       <symbol id="i-list" viewBox="0 0 24 24"><path d="M3 5h.01" /><path d="M3 12h.01" /><path d="M3 19h.01" /><path d="M8 5h13" /><path d="M8 12h13" /><path d="M8 19h13" /></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" /></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" /></symbol>
       <symbol id="i-send" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7" /><path d="M12 19V5" /></symbol>
       <!-- the Ask mascot: a friendly train front with its own colours (not currentColor), so it reads on ink and on white -->
       <symbol id="i-mascot" viewBox="0 0 48 48">
@@ -77,6 +86,9 @@
             <li><a href="#about">About</a></li>
           </ul>
         </nav>
+        <button class="icon-btn icon-btn--plain nav__theme" type="button" data-theme-toggle aria-pressed="false" aria-label="Dark mode">
+          <svg class="icon icon--sun" aria-hidden="true"><use href="#i-sun" /></svg><svg class="icon icon--moon" aria-hidden="true"><use href="#i-moon" /></svg>
+        </button>
         <button class="btn btn--primary nav__cta-full" type="button" data-ask-open aria-controls="ask-panel" aria-expanded="false">Ask a question</button>
         <button class="icon-btn nav__cta-icon" type="button" data-ask-open aria-controls="ask-panel" aria-expanded="false" aria-label="Ask a question">
           <svg class="icon" aria-hidden="true"><use href="#i-search" /></svg>
@@ -85,6 +97,7 @@
           <svg class="icon" aria-hidden="true"><use href="#i-menu" /></svg>
         </button>
       </div>
+      <div class="pulse-stripe" aria-hidden="true"></div>
     </header>
 
     <div class="nav-overlay" id="nav-overlay" role="dialog" aria-modal="true" aria-label="Menu" hidden data-menu>
@@ -112,11 +125,16 @@
         <div class="container hero__grid">
           <div class="hero__copy">
             <p class="eyebrow">Bay Area transit, in numbers</p>
-            <h1 id="hero-title">See the Bay Area move</h1>
+            <h1 id="hero-title">See the Bay Area <span class="hl">move</span></h1>
             <p class="lead">
               Every BART train on one map, years of BART and Bay Wheels ridership, and an analyst you can ask in plain
               English.
             </p>
+            <ul class="hero__live" data-hero-live aria-label="Right now">
+              <li><span class="hero__live-dot" aria-hidden="true"></span><span class="num" data-live-trains>—</span> trains moving</li>
+              <li><span class="num" data-live-recovery>—</span> of 2019 ridership</li>
+              <li>Data through <strong data-live-through>—</strong></li>
+            </ul>
             <div class="hero__actions">
               <button class="btn btn--primary" type="button" data-ask-open aria-controls="ask-panel" aria-expanded="false">Ask TransitPulse</button>
               <a class="btn btn--subtle" href="#map">See the live map</a>
@@ -126,7 +144,7 @@
       </section>
 
       <!-- Live map -->
-      <section class="band" id="map" aria-labelledby="map-title">
+      <section class="band" id="map" data-accent="blue" aria-labelledby="map-title">
         <div class="container">
           <div class="section-head">
             <p class="eyebrow">Live map</p>
@@ -207,7 +225,7 @@
       </section>
 
       <!-- KPIs + trends (web/js/trends.js; the skeletons below have the loaded content's size) -->
-      <section class="band" id="trends" aria-labelledby="trends-title">
+      <section class="band" id="trends" data-accent="green" aria-labelledby="trends-title">
         <div class="container">
           <div class="section-head">
             <p class="eyebrow">Trends</p>
@@ -253,7 +271,7 @@
         </div>
       </section>
 
-      <section class="band" id="forecast" aria-labelledby="forecast-title">
+      <section class="band" id="forecast" data-accent="orange" aria-labelledby="forecast-title">
         <div class="container">
           <div class="section-head">
             <p class="eyebrow">Forecast</p>
@@ -277,6 +295,7 @@
                 <button class="chip" type="button" aria-pressed="false" data-fc-chip="POWL">Powell St</button>
                 <button class="chip" type="button" aria-pressed="false" data-fc-chip="12TH">12th St Oakland</button>
                 <button class="chip" type="button" aria-pressed="false" data-fc-chip="MCAR">MacArthur</button>
+                <button class="chip chip--dice" type="button" data-fc-random>🎲 Surprise me</button>
               </div>
             </div>
             <div class="forecast__result" aria-live="polite" data-fc-result></div>
@@ -285,7 +304,7 @@
       </section>
 
       <!-- Findings: the ink band -->
-      <section class="band band--ink on-ink" id="findings" aria-labelledby="findings-title">
+      <section class="band band--ink on-ink" id="findings" data-accent="yellow" aria-labelledby="findings-title">
         <div class="container">
           <div class="section-head">
             <p class="eyebrow" style="color: var(--color-mute-on-ink)">Findings</p>
@@ -311,7 +330,7 @@
       </section>
 
       <!-- About / how it's built -->
-      <section class="band" id="about" aria-labelledby="about-title">
+      <section class="band" id="about" data-accent="red" aria-labelledby="about-title">
         <div class="container">
           <div class="section-head">
             <p class="eyebrow">About</p>
@@ -388,6 +407,7 @@
     <button class="ask-launcher" type="button" data-ask-open aria-controls="ask-panel" aria-expanded="false">
       <svg class="mascot" aria-hidden="true"><use href="#i-mascot" /></svg>
       <span class="ask-launcher__label">Ask TransitPulse</span>
+      <span class="ask-launcher__bubble" aria-hidden="true">Ask me anything about BART</span>
     </button>
 
     <div class="ask-panel" id="ask-panel" role="dialog" aria-labelledby="ask-panel-title" hidden data-ask>

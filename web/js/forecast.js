@@ -240,6 +240,12 @@ export async function initForecast(root) {
     load(code);
   }
 
+  // a random station, never the one on screen
+  root.querySelector("[data-fc-random]")?.addEventListener("click", () => {
+    const codes = Object.keys(byCode).filter((c) => c !== current);
+    choose(codes[Math.floor(Math.random() * codes.length)]);
+  });
+
   input.addEventListener("input", () => open(input.value));
   input.addEventListener("focus", () => {
     if (input.value.trim() && current && input.value === byCode[current]?.short) return;
