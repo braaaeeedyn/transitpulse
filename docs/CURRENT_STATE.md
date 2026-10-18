@@ -4,7 +4,9 @@
 > It is rewritten whenever behaviour changes. History lives in [`DEVLOG.md`](DEVLOG.md); the task list in
 > [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
 >
-> **Last verified:** 2026-10-14, on Windows 11 (the live pages, `/api/health` and `/api/findings` answer 200).
+> **Last verified:** 2026-10-18, on Windows 11: the live pages (15 station cards; "Close the first 10" leaves 40 of 50
+> stations; no console errors), `/api/health`, `/api/closures` (the same verdicts as the local data) and the VM
+> (bootstrapped at `6671168`, both Dagster units active).
 > **Live at https://braedynthompson.com/transitpulse/**: the pages are
 > published by the portfolio's GitHub Pages (`portfolio/static/transitpulse/`, exported with `tasks.py export
 > --api-base`) and call the API on Cloud Run (https://transitpulse-api-etumz4pfva-uw.a.run.app) across origins
@@ -16,17 +18,17 @@
 
 | Part | State | How to run |
 |---|---|---|
-| Website (static, `web/`) | **Working**: live train map, ridership tiles + charts, forecast explorer, Ask panel with a train mascot (history, Copy SQL), Findings band, a Station closures band, an optional Looker Studio card, Open Graph tags, and a style guide at `/styleguide.html` | `uv run python tasks.py api` → http://localhost:8000 |
+| Website (static, `web/`) | **Working**: live train map, ridership tiles + charts, forecast explorer, Ask panel with a train mascot (history, Copy SQL), Findings band, a Station closures band, a what-if closures picker under the map, dark mode, an optional Looker Studio card, Open Graph tags, and a style guide at `/styleguide.html` | `uv run python tasks.py api` → http://localhost:8000 |
 | API (`api/`) | **Working**: serves the site; data endpoints (incl. `GET /api/closures`) read the local DuckDB or BigQuery marts when a warehouse is configured; `POST /api/ask` streams the agent's answer when `TP_AGENT_ENABLED=true`, 503 otherwise (the default) | same as above |
-| Ask TransitPulse agent (`api/agent/`) | **Working** locally: LangGraph text-to-SQL with guardrails, 5 retrieved example queries in the SQL prompt (the M5 A/B winner), fake / Ollama / Gemini LLM | `TP_AGENT_ENABLED=true TP_AGENT_LLM=ollama uv run --group agent python tasks.py api` |
+| Ask TransitPulse agent (`api/agent/`) | **Working** locally and **live** on Cloud Run (Gemini, since 2026-10-16): LangGraph text-to-SQL with guardrails, 5 retrieved example queries in the SQL prompt (the M5 A/B winner), fake / Ollama / Gemini LLM | `TP_AGENT_ENABLED=true TP_AGENT_LLM=ollama uv run --group agent python tasks.py api` |
 | Agent eval + A/B (`eval/`) | **Working**: 66 in-scope questions with gold SQL + 10 out-of-scope; arms A (no examples) and B (5 examples), compared by `eval.ab` ([`AB_TEST.md`](AB_TEST.md)) | `uv run python tasks.py eval --llm ollama --arm A\|B`, then `uv run --group agent python -m eval.ab` |
 | Map data build (`pipeline/webdata/`) | **Working** | `uv run python tasks.py web-data` |
 | Spark cleaning job (`pipeline/spark/`) | **Working** (Docker on Windows, native on Linux) | `uv run python tasks.py spark` |
 | Bay Wheels download + cleaning (`pipeline/baywheels.py`) | **Working** (DuckDB, no Spark) | `uv run python tasks.py baywheels` |
-| dbt warehouse models (`dbt/transitpulse/`) | **Working**: `local` (DuckDB) has BART + Bay Wheels; `dev` (BigQuery) has BART 2018–2025 and Bay Wheels 2018 → 2026-09 | `uv run python tasks.py stations` then `uv run python tasks.py dbt` (`DBT_TARGET=dev` for BigQuery) |
+| dbt warehouse models (`dbt/transitpulse/`) | **Working**: `local` (DuckDB) has BART + Bay Wheels; `dev` (BigQuery) has BART 2018–2025, Bay Wheels 2018 → 2026-09 and the closures seed and marts (built 2026-10-18) | `uv run python tasks.py stations` then `uv run python tasks.py dbt` (`DBT_TARGET=dev` for BigQuery) |
 | Forecast (`ml/forecast/`) | **Working** locally and on BigQuery (LightGBM, 14 days, every station, split-conformal calibrated band) | `uv run python tasks.py forecast` |
 | Dagster orchestration (`pipeline/definitions.py`) | **Working** in `local` and `gcp` mode, run from this PC | `uv run python tasks.py dagster` → http://localhost:3000 |
-| Oracle VM deployment (`deploy/oracle/`) | **Running**: Dagster daemon + UI on the VM (2 OCPU / 12 GB), on `1fd224a`+, `gcp` mode. Sensors and schedules start as RUNNING (until 2026-10-14 the schedules had never been switched on, so nothing scheduled had run) | [`ORACLE_VM.md`](ORACLE_VM.md) |
+| Oracle VM deployment (`deploy/oracle/`) | **Running**: Dagster daemon + UI on the VM (2 OCPU / 12 GB), on `6671168` (updated 2026-10-18), `gcp` mode. Sensors and schedules start as RUNNING (until 2026-10-14 the schedules had never been switched on, so nothing scheduled had run) | [`ORACLE_VM.md`](ORACLE_VM.md) |
 | Terraform (`infra/terraform/`) | M0 **applied** to GCP project `transitpulse-511002` (33 resources). `cloudrun.tf` + `wif.tf` (10 more resources) are **applied** | see `infra/README.md` |
 | Container image (`Dockerfile`) | **Built, tested and pushed by `deploy.yml`** on every push to `main` (non-root, 119 MB compressed) | `uv run python tasks.py image` |
 | Local stack (`docker-compose.yml`) | **Working**: the API image with the agent on, an Ollama container and a one-shot model pull (see §5 "`make up`") | `make up` / `uv run python tasks.py up` → http://localhost:8000 |
@@ -719,6 +721,8 @@ the nearby legacy stations, and did it bring new riders or only move them? The w
   schedule only asks for the previous month's year. Both sensors start as RUNNING (`default_status`).
 
 ### Oracle VM (`deploy/oracle/`, running)
+- The VM: `ubuntu@167.234.214.169` (`seismicsocal.duckdns.org`, shared with SeismicSoCal), key
+  `~/.ssh/oracle_seismic` ([`OWNER_STEPS.md`](OWNER_STEPS.md) §0).
 - Two systemd units: `transitpulse-dagster-daemon` (schedules) and `transitpulse-dagster-web` (UI on 127.0.0.1,
   reached by SSH tunnel).
   - Both run as the non-root `transitpulse` user from `/opt/transitpulse`, with the venv first on `PATH`.

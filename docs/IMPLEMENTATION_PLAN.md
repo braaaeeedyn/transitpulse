@@ -297,6 +297,17 @@ Build exactly to `DESIGN.md §6` (base layer, train glyph, controls, tooltips). 
 
 ---
 
+### After the plan: additions (2026-10-15 → 10-18)
+- [x] Site redesign v1.1 (rounds 1–5): pulse stripe, live hero strip with count-ups, scroll reveal, nav scroll-spy,
+  legend line filter, surprise-me station, station cards, section accents, a departure board in the hero, chart hover
+  readout, forecast busiest/quietest badges, `/` opens Ask, dark mode.
+- [x] Station closures: a dbt seed and three marts, `GET /api/closures`, the Closures band and
+  `docs/STATION_CLOSURES.md` (four rules; no position on the measure). Built on BigQuery 2026-10-18.
+- [x] Fluid sizing (rem lengths, a fluid root size) from 320 px to 2560 px; light-mode contrast fixes on the map and
+  the forecast band.
+- [x] The what-if closures picker on the live map; dark mode on every surface; the style guide shows the newer pieces.
+- [x] Langfuse removed (it was never switched on).
+
 ## 5. API contract for the site
 
 | Method | Path | Source | Cache |

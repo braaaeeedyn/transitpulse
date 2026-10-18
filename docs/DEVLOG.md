@@ -1603,3 +1603,18 @@ second `h1`.
   `active (running)`. The VM now has the closures seed and marts for its monthly rebuild.
 - The check in `OWNER_STEPS.md` §1 ran `git` as `ubuntu`, which stops with "detected dubious ownership" (the
   checkout belongs to `transitpulse`); it now runs `sudo -u transitpulse git …`.
+
+## 2026-10-18 · docs · status everywhere, a portfolio summary, fresh screenshots
+- **`docs/PORTFOLIO.md`** (new): the project as it is now for the portfolio site, in the shape of SeismicSoCal's
+  `PORTFOLIO.md`: status, what a visitor sees top to bottom, headline numbers with their source doc, how each layer
+  is built, proofs by role, honest limits, images, and the docs to read for detail.
+- **README:** a "Latest" note, a Station closures row in Progress, a Tests row in Results, the architecture's API box
+  names closures, DESIGN v1.1.5, the VM command. **CURRENT_STATE:** last verified 2026-10-18 (live pages, closures
+  API, the VM at `6671168`). **SKILLS_MAP:** the status table and headings said Cloud Run, the VM and Bay Wheels on
+  BigQuery weren't done; all are. A stale duplicate Terraform table is gone, and the closures work has a section.
+  **IMPLEMENTATION_PLAN:** the additions after the plan.
+- **Screenshots** (`docs/img/screenshot-*.png`) were from 2026-10-16, before the redesign. Retaken against BigQuery.
+  Two fixes in `tests/web/screenshots.mjs`: it waits 1.2 s for the hero's count-ups (the first shot caught "24%" on
+  its way to 38%), and the desktop shot hides the fixed Ask button, which a full-page capture drew over the map's
+  controls; it now ends at the what-if card. `web/img/og.png` was left as it was, so the live link preview and the
+  exported pages stay unchanged.
