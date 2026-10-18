@@ -36,18 +36,6 @@ variable "gemini_model" {
   default     = "gemini-3.5-flash-lite"
 }
 
-variable "langfuse_public_key" {
-  description = "Langfuse project public key (pk-lf-...). Empty = no tracing. Add the secret key's version first (docs/CLOUD_RUN.md)."
-  type        = string
-  default     = ""
-}
-
-variable "langfuse_base_url" {
-  description = "The Langfuse region your project is in (US cloud by default; EU is https://cloud.langfuse.com)."
-  type        = string
-  default     = "https://us.cloud.langfuse.com"
-}
-
 variable "api_initial_image" {
   description = "Image for the service's first revision only; deploy.yml deploys the real image afterwards."
   type        = string

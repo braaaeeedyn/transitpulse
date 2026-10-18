@@ -25,7 +25,7 @@ from typing import Any, TypedDict
 from langgraph.config import get_stream_writer
 from langgraph.graph import END, START, StateGraph
 
-from api.agent import prompts, tracing
+from api.agent import prompts
 from api.agent.guardrails import GuardrailError, check_sql
 from api.agent.llm import LLM
 from api.agent.suggested import FORECAST_SUGGESTION, normalize, suggested_sql
@@ -325,7 +325,7 @@ def run_agent(
 ) -> Iterator[tuple[str, dict]]:
     """Run the graph and yield (event, payload) pairs; always ends with answer, refusal or error."""
     graph = graph or build_graph(deps)
-    config = {"callbacks": tracing.callbacks(), "run_name": "ask-transitpulse"}
+    config = {"run_name": "ask-transitpulse"}
     state = {"question": question, "exclude_examples": exclude_examples or []}
     final = False
     try:

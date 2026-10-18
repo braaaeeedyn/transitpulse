@@ -10,6 +10,9 @@ This is the **first** of the two planned projects, and it **introduces most of t
 SeismicSoCal upgrade) reuses Dagster, GitHub Actions and the statistics methods learned here, so each new skill
 is only learned once. See [the overlap plan](#overlap-plan-with-quakeops).
 
+> **Changed since this plan (2026-10-18):** Langfuse tracing was dropped. It was wired in but never switched on,
+> so the code and its dependency were removed; the lines below that mention it are kept as the original plan.
+
 ---
 
 ## 1. What it does
@@ -45,7 +48,7 @@ Numbers refer to the 21-gap table from the skills review.
 | 2 | Advanced SQL | dbt models with window functions, CTEs, cohort and period-over-period queries |
 | 3 | Load and latency testing | Locust test of the API, with p50/p95 latency reported |
 | 4 | Larger datasets | Several years of hourly origin-destination data (multiple GB raw) |
-| 5 | Monitoring (**LLM tracing part**) | Langfuse traces for every agent call: tokens, latency, tool calls, errors |
+| 5 | Monitoring (**LLM tracing part**) | Langfuse traces for every agent call: tokens, latency, tool calls, errors *(dropped 2026-10-18)* |
 | 6 | A/B testing | Offline A/B test of two agent strategies, with a power analysis |
 | 7 | Formal statistics | Bootstrap CIs, McNemar's test, CIs on the causal estimate |
 | 8 | Business metrics | KPI definitions (recovery %, peak load, station share) on the dashboard |
@@ -196,7 +199,7 @@ Keep raw files in GCS as-is, partitioned by year/month. Never edit raw data; all
   - **chart_tool:** returns a Vega-Lite spec
   - **answer:** cites the SQL it ran
 - [ ] **Refuses** if the question isn't about the data, in the same spirit as BearLM's refusal behaviour.
-- [ ] **Langfuse** callback on every run: traces, token counts, latency, tool errors.
+- ~~**Langfuse** callback on every run: traces, token counts, latency, tool errors.~~ *(Dropped 2026-10-18.)*
 - [ ] **Evaluation set:** 60–100 questions with **gold SQL**. Metric: *execution accuracy*, i.e. the agent's result equals the gold result.
 - [ ] **Offline A/B test**, arm A = schema-card prompt vs. arm B = schema card + 5 retrieved example queries:
   - **power analysis** first: how many questions you need to detect a 10-point difference
@@ -238,7 +241,7 @@ Keep raw files in GCS as-is, partitioned by year/month. Never edit raw data; all
 **Data engineering:** Dagster, **PySpark**, dbt, BigQuery, Parquet, star schema / SCD2, data tests, partitioning and clustering.
 **Analytics:** KPI design, Looker Studio, **Power BI (DAX measures, time intelligence, data modeling, drill-through)**, advanced SQL.
 **Data science:** walk-forward forecasting, difference-in-differences, event studies, power analysis, McNemar, bootstrap CIs.
-**AI engineering:** LangGraph tool-using agent, text-to-SQL with guardrails, **QLoRA fine-tuning** (Hugging Face PEFT/TRL), LLM evaluation sets, Langfuse tracing.
+**AI engineering:** LangGraph tool-using agent, text-to-SQL with guardrails, **QLoRA fine-tuning** (Hugging Face PEFT/TRL), LLM evaluation sets.
 **Platform:** GCP, Terraform, Cloud Run, Docker, GitHub Actions CI/CD with Workload Identity Federation, Locust load testing.
 
 Example résumé bullet (fill in your real numbers once you have them):
@@ -258,7 +261,7 @@ Example résumé bullet (fill in your real numbers once you have them):
 | GitHub Actions CI/CD | ✅ (new) | ✅ reuse, adding model-promotion gates |
 | Bootstrap CIs / statistical tests | ✅ (new) | ✅ reuse for model comparison |
 | GCP, Terraform, BigQuery, dbt, Looker Studio, Power BI | ✅ | ❌ not used |
-| LangGraph agent, Langfuse | ✅ | ❌ not used |
+| LangGraph agent | ✅ | ❌ not used |
 | Locust | ✅ | optional quick reuse |
 | PySpark | ✅ (new) | ❌ not used |
 | QLoRA fine-tuning (PEFT/TRL) | ✅ (new) | ❌ not used |

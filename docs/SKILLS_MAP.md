@@ -12,7 +12,7 @@ Verified = it ran on real data or passed tests on 2026-10-08 (see [`CURRENT_STAT
 | 2 | Advanced SQL | 🟡 | [`dbt/transitpulse/models/marts/`](../dbt/transitpulse/models/marts/) |
 | 3 | Load and latency testing | 🟡 (local) | [`load/`](../load/) |
 | 4 | Larger datasets | 🟡 | [`pipeline/spark/clean_bart_od.py`](../pipeline/spark/clean_bart_od.py), [`pipeline/baywheels.py`](../pipeline/baywheels.py) |
-| 5 | Monitoring (LLM tracing) | 🟡 | [`api/agent/tracing.py`](../api/agent/tracing.py) (wired, no Langfuse project yet) |
+| 5 | Monitoring (LLM tracing) | ❌ dropped (2026-10-18) | Langfuse was wired in but never switched on, so it was removed ([`DEVLOG.md`](DEVLOG.md)) |
 | 6 | A/B testing | ✅ (llama3.1:8b, local) | [`eval/ab.py`](../eval/ab.py), [`docs/AB_TEST.md`](AB_TEST.md) |
 | 7 | Formal statistics | ✅ | [`ml/forecast/evaluate.py`](../ml/forecast/evaluate.py), [`analysis/causal/did.py`](../analysis/causal/did.py), [`eval/ab.py`](../eval/ab.py) |
 | 8 | Business metrics | ✅ | [`docs/METRICS.md`](METRICS.md), [`mart_kpis_daily.sql`](../dbt/transitpulse/models/marts/mart_kpis_daily.sql) |
@@ -407,15 +407,13 @@ marts, running it and summarising the rows, streamed to the site as Server-Sent 
 | Defence in depth | [`warehouse.py:94` `agent_connection`, `:195` BigQuery dry run](../api/warehouse.py#L94) | DuckDB: read-only, `enable_external_access=false`, locked config, `EXPLAIN` + interrupt timeout. BigQuery: a free dry run refuses > 1 GB, then `maximum_bytes_billed` = 1 GB and `job_timeout_ms` (cancelled on a client-side timeout); a per-process daily byte budget. |
 | Rate limiting behind a proxy | [`ask.py:29` `RateLimiter`, `:58` `client_ip`](../api/routes/ask.py#L29) | Sliding one-minute window per IP; above 10,000 IPs, idle ones are forgotten; `X-Forwarded-For` is read (right-most entry) only when `TP_TRUST_PROXY=true`, since otherwise it's client-controlled. |
 | Swappable LLMs + test double | [`llm.py:134` `make_llm`, `:80` `FakeLLM`](../api/agent/llm.py#L134) | One `complete(prompt)` interface over ChatOllama / ChatGoogleGenerativeAI; the fake is scripted per question (incl. failing first attempts) so graph tests are deterministic and offline. |
-| Optional tracing | [`tracing.py:12` `callbacks`](../api/agent/tracing.py#L12) | Langfuse v4 LangChain handler only when keys are set; otherwise langfuse is never imported (tested in a fresh interpreter). |
 | Execution-accuracy eval | [`eval/questions.yaml`](../eval/questions.yaml), [`scoring.py:66` `execution_match`](../eval/scoring.py#L66), [`run_eval.py:70` `evaluate`](../eval/run_eval.py#L70) | 66 gold-SQL questions + 10 refusals; rows compared as multisets (ordered for top-N), column-permutation-insensitive, floats at 1e-4. The gold SQL itself passes the guardrails and runs on the CI fixture and the real warehouse. |
 | Streaming client | [`ask.js:69` `createEventParser`](../web/js/ask.js#L69) | Spec-compliant SSE parsing (LF/CRLF/CR, multi-line data, comments, split chunks) and distinct messages for 4xx, 5xx, dropped streams and streams that end without an answer. |
 | Tests | [`test_agent_guardrails.py`](../tests/test_agent_guardrails.py), [`test_agent_graph.py`](../tests/test_agent_graph.py), [`test_ask_api.py`](../tests/test_ask_api.py), [`test_agent_eval.py`](../tests/test_agent_eval.py), [`ask.test.mjs`](../tests/web/ask.test.mjs), [`ask.spec.js`](../tests/web/ask.spec.js) | Every rejection path, the repair loop, refusals, forecast tool, SSE wire format parsed like the browser, rate limit and proxy trust, byte budget, scoring rules, mocked streams in Chromium. |
 
 **Honest limits:** llama3.1:8b scores **0.50** execution accuracy (33/66) with 5 retrieved examples and **0.27**
 (18/66) without, and 1.0 refusal accuracy, on the local DuckDB; it still often picks the wrong table or adds/omits
-a column. Not deployed (the live agent would run Gemini, which hasn't been A/B-tested); Langfuse has no project
-yet.
+a column. The live agent runs Gemini (since 2026-10-16), which hasn't been A/B-tested.
 
 ---
 

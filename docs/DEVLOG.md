@@ -1584,3 +1584,16 @@ second `h1`.
   `transitpulse-langfuse-secret-key`; on only with the agent and a key). Not applied: `terraform plan` shows the new
   secret plus a service-level `scaling` block (`min_instance_count` 0 → null) that `gcloud run deploy` set, which
   Terraform would clear; harmless, left for the owner's next apply.
+
+## 2026-10-18 · docs · the VM's address on record, Langfuse removed, docs brought up to date
+- **The VM.** The docs only said `<user>@<vm>`. Earlier sessions used `ssh -i ~/.ssh/oracle_seismic ubuntu@167.234.214.169` (the SeismicSoCal VM,
+  `seismicsocal.duckdns.org`); it is now in `OWNER_STEPS.md` §0 and `ORACLE_VM.md`. The key has a passphrase, so
+  the bootstrap can't run unattended from here; it is the owner's step 1.
+- **Langfuse removed** (owner: "not necessary, it can be removed"). It was wired in since M5 but never had a project
+  or keys, so nothing was ever traced. Removed `api/agent/tracing.py`, its test, the `langfuse` dependency (122 lines
+  of `uv.lock`) and the Terraform wiring from earlier today (never applied). Skill 5 in `SKILLS_MAP.md` is marked
+  dropped; `TRANSITPULSE_PLAN.md` keeps its original lines with a note.
+- **Docs.** `OWNER_STEPS.md` steps 0–4 rewritten for today (they still described the 2026-10-14 hand-off): where
+  everything runs, the VM update, CI, the re-export and the dated jobs (Nov 3 copy, the VM daemon after New Year,
+  the trial upgrade, the timetable), the closures rebuild. README: status, the agent is live, the site's newer parts,
+  four closure rules. The real-device checklist gains the what-if picker and dark mode.

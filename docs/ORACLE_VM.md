@@ -16,6 +16,10 @@ on the existing Oracle Cloud ARM VM, next to `seismicsocal.service`. Everything 
 state in `/var/lib/transitpulse` (Dagster home, uv), config in `/etc/transitpulse` (env file + key file).
 The UI listens on 127.0.0.1 only, so no firewall or security-list change is needed; you reach it over SSH.
 
+**This project's VM:** `ubuntu@167.234.214.169` (`seismicsocal.duckdns.org`, the SeismicSoCal VM), key `~/.ssh/oracle_seismic` (it asks for
+the key's passphrase). Wherever this page says `<user>@<vm>`, use `ssh -i ~/.ssh/oracle_seismic ubuntu@167.234.214.169`; in PowerShell write
+the key as `$HOME\.ssh\oracle_seismic`.
+
 ## 1. Prerequisites
 
 - The **existing** VM (no second VM is assumed or needed) with SSH access and `sudo`. Oracle Linux or Ubuntu;

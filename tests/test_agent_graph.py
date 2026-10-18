@@ -1,8 +1,6 @@
 """The agent graph (api/agent/graph.py) with the FakeLLM on the dbt fixture warehouse (tests/dbt_fixture_data.py):
 three stations, Jan 7-20 2019 and Jan 6-19 2025, 30 entries per station per day in 2025."""
 
-import subprocess
-import sys
 from pathlib import Path
 
 from api.agent.graph import AgentDeps, ByteBudget, run_agent
@@ -131,28 +129,6 @@ def test_llm_backend_selected_by_env(monkeypatch):
     assert isinstance(make_llm(Settings(_env_file=None)), FakeLLM)
     monkeypatch.delenv("TP_AGENT_LLM")
     assert isinstance(make_llm(Settings(_env_file=None)), FakeLLM)  # the default
-
-
-def test_langfuse_is_noop_without_keys(fixture_warehouse, monkeypatch):
-    # in a fresh interpreter, so nothing else this session imported can hide an import
-    monkeypatch.delenv("LANGFUSE_PUBLIC_KEY", raising=False)
-    monkeypatch.delenv("LANGFUSE_SECRET_KEY", raising=False)
-    code = (
-        "import sys\n"
-        "from api.agent import tracing\n"
-        "from api.agent.graph import AgentDeps, ByteBudget, run_agent\n"
-        "from api.agent.llm import FakeLLM\n"
-        "from api.warehouse import DuckDBWarehouse\n"
-        f"deps = AgentDeps(FakeLLM(), DuckDBWarehouse(r'{fixture_warehouse}'), ByteBudget(10**10))\n"
-        "events = [e for e, _ in run_agent('Which station is busiest?', deps)]\n"
-        "assert events[-1] == 'answer', events\n"
-        "assert tracing.callbacks() == []\n"
-        "assert 'langfuse' not in sys.modules\n"
-        "print('ok')\n"
-    )
-    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=120, cwd=ROOT)
-    assert out.returncode == 0, out.stderr[-2000:]
-    assert out.stdout.strip() == "ok"
 
 
 def test_model_rate_limit_reads_as_busy_not_as_a_crash(fixture_warehouse):

@@ -4,7 +4,7 @@ A Bay Area transit analytics platform: BART and Bay Wheels ridership pipelines (
 station forecasts, a causal study of the eBART extension, an AI analyst agent that answers questions with SQL, and a
 responsive website with a live map of scheduled BART trains.
 
-> **Status (2026-10-14):** live. The site is at **[braedynthompson.com/transitpulse](https://braedynthompson.com/transitpulse/)**,
+> **Status (2026-10-18):** live. The site is at **[braedynthompson.com/transitpulse](https://braedynthompson.com/transitpulse/)**,
 > the API on Cloud Run, and the pipeline runs itself on an Oracle VM. What's left is under [Left to do](#left-to-do);
 > the owner's steps, in order, are in [`docs/OWNER_STEPS.md`](docs/OWNER_STEPS.md).
 > How each part works today: [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md).
@@ -17,10 +17,10 @@ responsive website with a live map of scheduled BART trains.
 | M2 KPIs + BI | 🟡 KPIs done (`mart_kpis_daily`, on the site). Build guide, DAX and a check week ready ([`bi/README.md`](bi/README.md)); the Looker Studio and Power BI reports need the owner's accounts |
 | M3 forecasting (LightGBM) | ✅ Done. Beats the baseline; retrains every Monday |
 | M4 eBART causal study | ✅ Done. Live in the site's Findings band |
-| M5 AI analyst agent + eval | ✅ Done. A/B test: 5 retrieved example queries lift llama3.1:8b from 27% to 50% execution accuracy (McNemar p = 0.004), so they ship ([`docs/AB_TEST.md`](docs/AB_TEST.md)). The agent is off on the live site until the owner adds a Gemini key |
+| M5 AI analyst agent + eval | ✅ Done. A/B test: 5 retrieved example queries lift llama3.1:8b from 27% to 50% execution accuracy (McNemar p = 0.004), so they ship ([`docs/AB_TEST.md`](docs/AB_TEST.md)). Live on the site since 2026-10-16, on Gemini |
 | M6 QLoRA fine-tune | ⬜ Deferred to its own build loop (a decision in [`docs/OWNER_STEPS.md`](docs/OWNER_STEPS.md) §13); the A/B harness is ready for arm C |
 | M7 ship | 🟡 Live, and every push to `main` deploys itself. Architecture diagram, screenshots and `make up` done. dbt/Terraform checks in CI wait for the owner's CI identity decisions |
-| F1–F7 website | 🟡 Built and live (map, trends, forecast explorer, Findings, Ask with history and Copy SQL). Style guide, axe contrast tests, Lighthouse 98/100/100 and the Open Graph image are done; real-device checks left |
+| F1–F7 website | 🟡 Built and live (map with a what-if closures picker, trends, forecast explorer, Findings, Station closures, Ask with history and Copy SQL, dark mode). Style guide, axe contrast tests, Lighthouse 98/100/100 and the Open Graph image are done; real-device checks left |
 
 ## Architecture
 
@@ -207,9 +207,9 @@ the timetable, not live positions. The full list is in
 | [`docs/METRICS.md`](docs/METRICS.md) | KPI definitions, the website tile windows, bikes vs trains, forecast coverage, agent eval, causal estimates |
 | [`docs/FINDINGS.md`](docs/FINDINGS.md) | The eBART causal study: pre-registration, design, results, limitations |
 | [`docs/AB_TEST.md`](docs/AB_TEST.md) | The M5 A/B test of the Ask agent: power analysis, pre-registered design, results, decision |
-| [`docs/STATION_CLOSURES.md`](docs/STATION_CLOSURES.md) | The BART stations at risk of closing: the list as reported, the three ridership rules, results per station, claim checks, sources |
+| [`docs/STATION_CLOSURES.md`](docs/STATION_CLOSURES.md) | The BART stations at risk of closing: the list as reported, the four rules, results per station, claim checks, sources |
 | [`bi/README.md`](bi/README.md) | Looker Studio and Power BI build guide, DAX measures and the check week |
-| [`docs/OWNER_STEPS.md`](docs/OWNER_STEPS.md) | The owner's remaining steps, in order: commit and push, re-export, the live agent, BI, CI identity, devices, bill, M6 |
+| [`docs/OWNER_STEPS.md`](docs/OWNER_STEPS.md) | Where everything runs (the VM's address included) and the owner's remaining steps: the VM update, re-exports, dated jobs, BI, CI identity, devices, bill, M6 |
 | [`docs/ORACLE_VM.md`](docs/ORACLE_VM.md) | Runbook: Dagster on the Oracle VM (systemd) |
 | [`docs/CLOUD_RUN.md`](docs/CLOUD_RUN.md) | Runbook: the site + API on Cloud Run (Terraform, WIF, deploy workflow, costs) |
 
@@ -235,6 +235,6 @@ appears in `analysis/causal/data/README.md`, `docs/FINDINGS.md`, the Findings ba
    screenshot snapshots (Windows and Linux CI render fonts differently, and the map animates).
 
 **Needs you** (accounts, GUI tools, devices or decisions): every step, in order, with commands and what to expect,
-is in [`docs/OWNER_STEPS.md`](docs/OWNER_STEPS.md). In short: commit and push this work (it deploys itself) and
-re-export the pages; turn on the live agent with a Gemini key; build the Looker Studio and Power BI reports from
+is in [`docs/OWNER_STEPS.md`](docs/OWNER_STEPS.md). In short: update the VM once for the closures models; after the Nov 3
+vote, update the closures copy; upgrade from the GCP free trial before about Jan 6, 2027; build the Looker Studio and Power BI reports from
 [`bi/README.md`](bi/README.md); decide the CI GCP identity; check real devices and the month-end bill.
