@@ -170,3 +170,38 @@
     --duration-slow: 0ms;
   }
 }
+
+/* --- dark mode: the same roles, inverted (data colours stay; the map's water and land swap) ------------------- */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-ink: #ffffff;
+  --color-on-ink: #0d0d0d;
+  --color-canvas: #0d0d0d;
+  --color-canvas-soft: #1c1c1c;
+  --color-canvas-softer: #151515;
+  --color-hairline: #2a2a2a;
+  --color-pressed: #2e2e2e;
+  --color-ink-elevated: #e4e4e4;
+  --color-body: #b4b4b4; /* 9.6:1 on canvas */
+  --color-mute: #9b9b9b; /* 6.9:1 on canvas */
+  --color-mute-on-ink: #6b6b6b; /* 5.3:1 on ink (white) */
+  --color-error: #ff7070;
+  --color-focus: #ffffff;
+  --line-casing: rgba(255, 255, 255, 0.3);
+  --map-water: #161616;
+  --map-land: #0d0d0d;
+  --map-shoreline: #3a3a3a;
+  --seq-0: #1c1c1c;
+  --seq-1: #3a3a3a;
+  --seq-2: #6b6b6b;
+  --seq-3: #9b9b9b;
+  --seq-4: #d4d4d4;
+  --seq-5: #ffffff;
+  --series-primary: #ffffff;
+  --series-secondary: #9b9b9b;
+  --interval-fill: rgba(255, 255, 255, 0.12);
+  --gridline: #262626;
+  --shadow-1: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-2: 0 4px 16px rgba(0, 0, 0, 0.6);
+  --shadow-3: 0 2px 8px rgba(0, 0, 0, 0.6);
+}

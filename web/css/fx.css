@@ -1,0 +1,296 @@
+/* Motion and delight (redesign round 1). Everything here is decoration: the page reads the same without it, and
+   prefers-reduced-motion turns the movement off. */
+
+/* --- the pulse stripe: the six BART line colours under the nav, with a light sweeping along like a train -------- */
+.pulse-stripe {
+  position: relative;
+  height: 4px;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    var(--line-yellow) 0 16.66%,
+    var(--line-orange) 16.66% 33.33%,
+    var(--line-red) 33.33% 50%,
+    var(--line-green) 50% 66.66%,
+    var(--line-blue) 66.66% 83.33%,
+    var(--line-beige) 83.33% 100%
+  );
+}
+
+.pulse-stripe::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 -20%;
+  width: 20%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent);
+  animation: pulse-sweep 6s linear infinite;
+}
+
+@keyframes pulse-sweep {
+  to {
+    transform: translateX(600%);
+  }
+}
+
+/* --- hero live strip ------------------------------------------------------------------------------------------- */
+.hero__live {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-2xl);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-body);
+}
+
+.hero__live li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+}
+
+.hero__live .num {
+  color: var(--color-ink);
+  font-weight: 700;
+  font-size: var(--type-display-md);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero__live-dot {
+  width: 8px;
+  height: 8px;
+  align-self: center;
+  border-radius: var(--radius-pill);
+  background: var(--line-green);
+  animation: live-pulse 2s var(--ease-standard) infinite;
+}
+
+/* --- sections rise in as they scroll into view (the class is added by JS, so nothing moves without it) ----------
+   A slide only, no fade: text mid-fade reads as low-contrast to axe (tests/web/a11y.spec.js). */
+.reveal {
+  transform: translateY(28px);
+  transition: transform 640ms var(--ease-standard);
+}
+
+.reveal.is-in {
+  transform: none;
+}
+
+/* --- nav: the section on screen ------------------------------------------------------------------------------- */
+.nav__links a[aria-current="true"] {
+  box-shadow: inset 0 -2px 0 var(--color-ink);
+  border-radius: 0;
+}
+
+/* --- the mascot bobs and says hello once ------------------------------------------------------------------------ */
+.ask-launcher .mascot {
+  animation: mascot-bob 3.2s ease-in-out infinite;
+}
+
+@keyframes mascot-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.ask-launcher__bubble {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + var(--space-sm));
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-xl) var(--radius-xl) var(--radius-sm) var(--radius-xl);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-size: var(--type-body-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: var(--shadow-2);
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity var(--duration-base) var(--ease-standard),
+    transform var(--duration-base) var(--ease-standard);
+  pointer-events: none;
+}
+
+.ask-launcher.has-bubble .ask-launcher__bubble {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-stripe::after,
+  .hero__live-dot,
+  .ask-launcher .mascot {
+    animation: none;
+  }
+  .reveal {
+    transform: none;
+    transition: none;
+  }
+}
+
+/* --- round 2: legend toggles, tile sparklines, the dice chip ---------------------------------------------------- */
+.legend__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: calc(-1 * var(--space-xs)) calc(-1 * var(--space-sm));
+  padding: var(--space-xs) var(--space-sm);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.legend__toggle:hover,
+.legend__toggle[aria-pressed="true"] {
+  background: var(--color-canvas-soft);
+}
+
+.legend__toggle[aria-pressed="true"] {
+  box-shadow: inset 0 0 0 1px var(--color-ink);
+}
+
+/* one line in focus: the other tracks fade (their trains are drawn grey by trains.js) */
+.map-card[data-focus-line] .map-track--line {
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+
+.map-card[data-focus-line="yellow"] .map-track--line:not([data-line="yellow"]),
+.map-card[data-focus-line="orange"] .map-track--line:not([data-line="orange"]),
+.map-card[data-focus-line="red"] .map-track--line:not([data-line="red"]),
+.map-card[data-focus-line="green"] .map-track--line:not([data-line="green"]),
+.map-card[data-focus-line="blue"] .map-track--line:not([data-line="blue"]),
+.map-card[data-focus-line="beige"] .map-track--line:not([data-line="beige"]) {
+  opacity: 0.15;
+}
+
+/* in the tile's corner, out of the flow: the tiles keep the height their skeletons reserved */
+.stat-tile {
+  position: relative;
+}
+
+.sparkline {
+  position: absolute;
+  right: var(--space-xl);
+  bottom: var(--space-xl);
+  color: var(--color-ink);
+  overflow: visible;
+}
+
+.chip--dice {
+  background: var(--color-ink);
+  color: var(--color-on-ink);
+}
+.chip--dice:hover {
+  background: var(--color-ink-elevated);
+}
+
+/* --- round 3: station card, section accents, the hero highlight, dark-mode toggle ----------------------------- */
+.tooltip:has(.tooltip__stats) {
+  max-width: 320px;
+  padding: var(--space-md) var(--space-lg);
+}
+
+.tooltip__stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm) var(--space-md);
+  margin: var(--space-sm) 0 0;
+}
+
+.tooltip__stats div {
+  display: grid;
+}
+
+.tooltip__stats dd {
+  margin: 0;
+  font-size: var(--type-body-md);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+}
+
+.tooltip__stats dt {
+  font-size: var(--type-caption);
+  line-height: var(--lh-caption);
+  color: var(--color-mute-on-ink);
+}
+
+.tooltip__cta {
+  margin-top: var(--space-sm);
+  font-weight: 500;
+}
+
+/* a line-colour dot before each section's eyebrow */
+[data-accent="blue"] {
+  --accent: var(--line-blue);
+}
+[data-accent="green"] {
+  --accent: var(--line-green);
+}
+[data-accent="orange"] {
+  --accent: var(--line-orange);
+}
+[data-accent="yellow"] {
+  --accent: var(--line-yellow);
+}
+[data-accent="red"] {
+  --accent: var(--line-red);
+}
+
+[data-accent] .section-head .eyebrow::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: var(--space-sm);
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  vertical-align: -1px;
+}
+
+/* the Findings band opens with the line colours */
+.band--ink {
+  border-top: 4px solid transparent;
+  border-image: linear-gradient(
+      90deg,
+      var(--line-yellow) 0 16.66%,
+      var(--line-orange) 16.66% 33.33%,
+      var(--line-red) 33.33% 50%,
+      var(--line-green) 50% 66.66%,
+      var(--line-blue) 66.66% 83.33%,
+      var(--line-beige) 83.33% 100%
+    )
+    1;
+}
+
+/* the headline's last word sits on a stripe of the line colours */
+.hero h1 .hl {
+  background: linear-gradient(90deg, var(--line-yellow), var(--line-orange), var(--line-red), var(--line-green), var(--line-blue));
+  background-repeat: no-repeat;
+  background-size: 100% 0.18em;
+  background-position: 0 92%;
+}
+
+/* the nav's theme toggle shows the mode you'd switch to */
+.nav__theme .icon--sun,
+:root[data-theme="dark"] .nav__theme .icon--moon {
+  display: none;
+}
+:root[data-theme="dark"] .nav__theme .icon--sun {
+  display: block;
+}
+
+/* the mascot keeps its own colours; on the (now white) launcher its outline needs a little help */
+:root[data-theme="dark"] .ask-launcher .mascot {
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.6));
+}

@@ -51,7 +51,7 @@ export function renderNetwork(svg, { network, land }, view) {
       const pts = offsetPolyline(centre, laneOffset(i, edge.lines.length, lineWidth, gap));
       const d = pathData(pts);
       el("path", { d, class: "map-track map-track--casing" }, casingGroup);
-      el("path", { d, class: "map-track map-track--line", stroke: `var(--line-${line})` }, lineGroup);
+      el("path", { d, class: "map-track map-track--line", "data-line": line, stroke: `var(--line-${line})` }, lineGroup);
       out[line] = measure(pts);
     });
     return out;

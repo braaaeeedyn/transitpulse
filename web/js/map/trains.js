@@ -44,7 +44,8 @@ function pill(ctx, length, width) {
 }
 
 /** Draw every placed train. `colors` maps line id -> CSS colour; `selectedTrip` gets the 1.5× + halo treatment. */
-export function drawTrains(ctx, placed, { size, colors, ink, canvasColor, selectedTrip, dpr, w, h }) {
+/** `focusLine`: trains on other lines are drawn in `dim` (the legend's line filter). */
+export function drawTrains(ctx, placed, { size, colors, ink, canvasColor, selectedTrip, dpr, w, h, focusLine = null, dim = "#d4d4d4" }) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
   let selected = null;
@@ -57,10 +58,11 @@ export function drawTrains(ctx, placed, { size, colors, ink, canvasColor, select
     ctx.translate(t.x, t.y);
     ctx.rotate(t.angle);
     pill(ctx, size.length, size.width);
-    ctx.fillStyle = colors[t.line];
+    const off = focusLine && t.line !== focusLine;
+    ctx.fillStyle = off ? dim : colors[t.line];
     ctx.fill();
     ctx.lineWidth = 1;
-    ctx.strokeStyle = ink;
+    ctx.strokeStyle = off ? dim : ink;
     ctx.stroke();
     ctx.restore();
   }
