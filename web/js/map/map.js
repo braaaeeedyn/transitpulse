@@ -8,8 +8,9 @@ import { apiUrl } from "../util/api.js";
 import { formatClock, formatDay, pacificParts, shiftDay } from "../util/time.js";
 import { makeView } from "./geometry.js";
 import { renderNetwork, setActiveStation } from "./network.js";
-import { isOutsideTimetable, nextDeparture, timetableRange, trainsAt } from "./schedule.js";
+import { closedStops, isOutsideTimetable, nextDeparture, timetableRange, trainsAt } from "./schedule.js";
 import { drawTrains, hitTrain, placeTrain, trainSize } from "./trains.js";
+import { initWhatIf } from "./whatif.js";
 
 const SCRUB_MIN = 240; // 4:00 AM
 const SCRUB_MAX = 1590; // 2:30 AM next day
@@ -99,7 +100,9 @@ export async function initMap(root) {
     selected: null, // {type: "train", trip} | {type: "station", index}
     view: "map",
     visible: true,
+    closed: new Set(), // "what if" picker: station indices closed (hidden; trains pass through)
   };
+  let skip = null; // closedStops(schedule, state.closed)
 
   let view;
   let geom;
@@ -166,7 +169,9 @@ export async function initMap(root) {
     scrub.setAttribute("aria-valuetext", formatClock(t.minutes));
     clockTime.textContent = formatClock(t.minutes);
     clockDate.textContent = ` · ${formatDay(t.minutes >= 1440 ? shiftDay(t.ymd, 1).ymd : t.ymd)}`;
-    clockStatus.textContent = state.live ? "Live schedule" : state.playing ? `Replay ${state.speed}×` : "Paused";
+    clockStatus.textContent =
+      (state.live ? "Live schedule" : state.playing ? `Replay ${state.speed}×` : "Paused") +
+      (state.closed.size ? ` · what if: ${state.closed.size} closed` : "");
   }
 
   // --- sizing ----------------------------------------------------------------------------------------
@@ -189,7 +194,7 @@ export async function initMap(root) {
       center: state.center,
       padPx: controlsInset(),
     });
-    geom = renderNetwork(svg, data, view);
+    geom = renderNetwork(svg, data, view, state.closed);
     size = trainSize(rect.width);
     stage.classList.toggle("is-zoomed", state.zoomIdx > 0);
     zoomOut.disabled = state.zoomIdx === 0;
@@ -201,7 +206,7 @@ export async function initMap(root) {
   // --- frame -----------------------------------------------------------------------------------------
   function computeTrains() {
     const t = now();
-    const trains = trainsAt(schedule, days, t.ymd, t.weekday, t.minutes);
+    const trains = trainsAt(schedule, days, t.ymd, t.weekday, t.minutes, skip);
     placed = trains.map((tr) => ({ ...tr, ...placeTrain(tr, schedule, geom), trip: tr.entry.trip }));
     return t;
   }
@@ -436,6 +441,7 @@ export async function initMap(root) {
     let best = -1;
     let bestD = radius;
     geom.stations.forEach((s, i) => {
+      if (s.closed) return;
       const d = Math.hypot(s.x - x, s.y - y) - s.halfSpan;
       if (d <= bestD) {
         best = i;
@@ -619,7 +625,9 @@ export async function initMap(root) {
       })
       .sort((a, b) => a.mins - b.mins || a.next.localeCompare(b.next))
       .slice(0, 6);
-    document.dispatchEvent(new CustomEvent("tp:arrivals", { detail: { rows, clock: formatClock(t.minutes), live: state.live } }));
+    document.dispatchEvent(
+      new CustomEvent("tp:arrivals", { detail: { rows, clock: formatClock(t.minutes), live: state.live, closed: state.closed.size } }),
+    );
   }
 
   // --- screen-reader summary -------------------------------------------------------------------------
@@ -631,6 +639,14 @@ export async function initMap(root) {
         : `${placed.length} trains running on ${lines.size} lines at ${formatClock(t.minutes)}.`;
     summary.textContent += busiest;
   }
+
+  // --- what if: close stations from BART's list; the same trains run through them -------------------
+  initWhatIf(document.querySelector("[data-whatif]"), network.stations, (codes) => {
+    state.closed = new Set(codes.map((c) => network.stations.findIndex((s) => s.code === c)).filter((i) => i >= 0));
+    skip = closedStops(schedule, state.closed);
+    if (state.selected?.type === "station" && state.closed.has(state.selected.index)) clearSelection();
+    layout();
+  });
 
   // --- lifecycle -------------------------------------------------------------------------------------
   readColors();

@@ -266,7 +266,7 @@
 }
 
 /* the headline's last word sits on a stripe of the line colours */
-.hero h1 .hl {
+.hero .hl {
   background: linear-gradient(90deg, var(--line-yellow), var(--line-orange), var(--line-red), var(--line-green), var(--line-blue));
   background-repeat: no-repeat;
   background-size: 100% 0.18em;
@@ -346,10 +346,6 @@
   padding: var(--space-xs) 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   animation: board-in 420ms var(--ease-standard) both;
-}
-
-:root[data-theme="dark"] .board__row {
-  border-bottom-color: rgba(0, 0, 0, 0.12);
 }
 
 .board__row:last-child {
@@ -749,4 +745,48 @@
 
 .closures__source {
   margin-top: var(--space-md);
+}
+
+/* --- what if stations close? (under the live map) ------------------------------------------------------------ */
+.whatif {
+  display: grid;
+  gap: var(--space-md);
+  margin-top: var(--space-grid);
+  border-left: 0.25rem solid var(--accent);
+}
+
+.whatif__head {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.whatif__head p,
+.whatif__status {
+  color: var(--color-body);
+}
+
+/* a closed station reads as crossed out, in words too: aria-pressed="true" means closed */
+.whatif__station[aria-pressed="true"] {
+  text-decoration: line-through;
+}
+
+.whatif__status {
+  font-size: var(--type-body-sm);
+  line-height: var(--lh-body-sm);
+  min-height: calc(2 * var(--type-body-sm) * var(--lh-body-sm));
+}
+
+/* --- dark mode keeps the ink surfaces dark --------------------------------------------------------------------
+   The Findings band, the footer, the departure board and the chart readout are "ink" surfaces: black with white
+   text in light mode. Inverted in dark mode they became white blocks on a black page, so there they turn a dark grey
+   with white text (the on-ink colours are re-pointed inside them only). */
+:root[data-theme="dark"] :is(.band--ink, .card--ink, .footer, .board, .chart__readout) {
+  --color-on-ink: #ffffff;
+  --color-mute-on-ink: #9b9b9b; /* 6.2:1 on the dark grey */
+  --color-ink-elevated: #2e2e2e;
+  background: var(--color-canvas-soft);
+}
+
+:root[data-theme="dark"] .chart__readout {
+  box-shadow: 0 0 0 1px var(--color-hairline), var(--shadow-3);
 }

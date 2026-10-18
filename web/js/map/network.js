@@ -22,7 +22,7 @@ export function cssPx(node, name) {
  *   lanes[edgeIndex][lineId] = measured polyline in px, oriented from edge.a to edge.b
  *   stations[i] = {x, y, r, halfSpan}
  */
-export function renderNetwork(svg, { network, land }, view) {
+export function renderNetwork(svg, { network, land }, view, closed = null) {
   const lineWidth = cssPx(svg, "--map-line-width");
   const gap = cssPx(svg, "--map-lane-gap");
   const r = cssPx(svg, "--map-station-radius");
@@ -79,6 +79,8 @@ export function renderNetwork(svg, { network, land }, view) {
   const capsules = view.w >= 600;
   const stations = network.stations.map((s, i) => {
     const [x, y] = view.toPx(s.x, s.y);
+    // the "what if" picker's closed stations: no marker, no label, not clickable (trains still run through)
+    if (closed?.has(i)) return { x, y, r: 0, halfSpan: 0, marker: null, closed: true };
     const halfSpan = capsules ? ((maxLanes[i] - 1) * spacing) / 2 : 0;
     let marker;
     if (capsules && maxLanes[i] > 1) {
@@ -177,7 +179,7 @@ function placeLabels(group, jobs, stations, lanes, view) {
       const clear =
         inside &&
         !placed.some((p) => overlaps(p, box)) &&
-        !blocked.some((s, k) => k !== job.i && overlaps(s, box)) &&
+        !blocked.some((s, k) => k !== job.i && !stations[k].closed && overlaps(s, box)) &&
         !track.some(([px, py]) => px > box.x && px < box.x + box.w && py > box.y && py < box.y + box.h);
       if (clear) {
         chosen = box;
@@ -201,5 +203,5 @@ function placeLabels(group, jobs, stations, lanes, view) {
 
 /** Highlight one station marker (or none). */
 export function setActiveStation(stations, index) {
-  stations.forEach((s, i) => s.marker.classList.toggle("is-active", i === index));
+  stations.forEach((s, i) => s.marker?.classList.toggle("is-active", i === index));
 }

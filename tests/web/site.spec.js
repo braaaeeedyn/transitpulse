@@ -178,3 +178,30 @@ test("meta: open graph tags and a 1200x630 image", async ({ page, request }) => 
   expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1200, 630]);
   expect(png.length).toBeLessThan(400 * 1024);
 });
+
+test("what if: closing stations hides them and the same trains keep running", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await open(page);
+  const markers = page.locator(".map-station");
+  await expect(markers).toHaveCount(50);
+  const status = page.locator("[data-whatif-status]");
+  await expect(status).toHaveText("Today's map: all 50 stations open.");
+
+  await page.locator("[data-whatif-preset=all15]").click();
+  await expect(markers).toHaveCount(35);
+  await expect(page.locator(".map-label", { hasText: /^Antioch$/ })).toHaveCount(0);
+  await expect(status).toContainText("15 of 50 stations closed.");
+  await expect(page.locator("[data-clock-status]")).toContainText("what if: 15 closed");
+  await expect(page.locator("[data-whatif-preset=all15]")).toHaveAttribute("aria-pressed", "true");
+  // (that the same trains run is checked on the real timetable in tests/web/schedule.test.mjs)
+
+  // a station chip reopens one; the preset no longer matches
+  await page.locator("[data-whatif-code=ANTC]").click();
+  await expect(markers).toHaveCount(36);
+  await expect(page.locator("[data-whatif-code=ANTC]")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator("[data-whatif-preset][aria-pressed=true]")).toHaveCount(0);
+
+  await page.locator("[data-whatif-preset=none]").click();
+  await expect(markers).toHaveCount(50);
+  await expect(status).toHaveText("Today's map: all 50 stations open.");
+});

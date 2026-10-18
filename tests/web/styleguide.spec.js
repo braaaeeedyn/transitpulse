@@ -38,6 +38,30 @@ test("styleguide: every component block in components.css is used", async ({ pag
   expect(await page.locator("[data-icons] li").count()).toBeGreaterThan(10);
 });
 
+// fx.css (DESIGN.md v1.1): every block shown too, except state classes and page furniture (the live map, the
+// footer, a real chart: their fx.css pieces are shown on their own, e.g. the chart readout)
+const FX_BLOCKS = [...new Set([...css("fx.css").matchAll(/\.([a-z][\w-]*)/g)].map((m) => m[1]))].filter(
+  (c) => !c.includes("__") && !c.includes("--") && !c.startsWith("is-") && !["reveal", "has-bubble", "map-card", "footer", "chart"].includes(c),
+);
+
+test("styleguide: every block in fx.css is shown", async ({ page }) => {
+  await open(page);
+  expect(FX_BLOCKS).toEqual(expect.arrayContaining(["board", "badge", "verdict-pill", "closure-card", "whatif", "pulse-stripe"]));
+  const missing = await page.evaluate((blocks) => blocks.filter((c) => !document.querySelector(`main .${c}`)), FX_BLOCKS);
+  expect(missing).toEqual([]);
+});
+
+test("styleguide: follows the saved theme and its toggle switches it", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("tp-theme", "dark"));
+  await open(page);
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  // the ink surfaces stay dark in dark mode
+  const bg = await page.locator("main .board").evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(bg).toBe("rgb(28, 28, 28)");
+  await page.locator("[data-theme-toggle]").click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+});
+
 test("styleguide: no console errors", async ({ page }) => {
   const errors = await open(page);
   await page.waitForLoadState("networkidle");

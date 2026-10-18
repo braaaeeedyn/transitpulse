@@ -399,6 +399,11 @@ During frontend work:
 - Everything else waits for v1.1 after launch.
 
 ### Changelog
+- **v1.1.5 (2026-10-17):** the **what-if picker** under the live map (`.whatif`: presets and a chip per listed
+  station; a closed station's chip is pressed and struck through). **Dark mode keeps the ink surfaces dark**: the
+  Findings band, the footer, the departure board, the chart readout and `card--ink` turn `canvas-soft` (#1c1c1c)
+  with white text instead of inverting to white (the on-ink colours are re-pointed inside them only). The style guide
+  follows the theme, has the toggle, and shows every `fx.css` block.
 - **v1.1.4 (2026-10-17):** light-mode `interval-fill` rgba(0,0,0,0.08) → 0.16; the forecast's calibrated range was
   nearly invisible on a white card (dark mode's 0.12 white already read clearly).
 - **v1.1.3 (2026-10-17), sizes scale with the screen:** the root font size is fluid

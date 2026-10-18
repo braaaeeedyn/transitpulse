@@ -14,6 +14,13 @@
     <link rel="stylesheet" href="css/components.css" />
     <link rel="stylesheet" href="css/map.css" />
     <link rel="stylesheet" href="css/charts.css" />
+    <link rel="stylesheet" href="css/fx.css" />
+    <script>
+      // the saved theme before paint, the same as the site
+      try {
+        document.documentElement.dataset.theme = localStorage.getItem("tp-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      } catch (e) {}
+    </script>
     <style>
       /* style-guide-only layout, tokens only */
       .sg-row {
@@ -65,6 +72,12 @@
         align-items: center;
         gap: var(--space-sm);
       }
+      .sg-display {
+        font-size: var(--type-display-xxl);
+        line-height: var(--lh-display-xxl);
+        font-weight: 700;
+        letter-spacing: var(--tracking-display);
+      }
       .sg-relative {
         position: relative;
         min-height: 120px;
@@ -77,7 +90,11 @@
     <header class="nav is-scrolled">
       <div class="container nav__inner">
         <a class="wordmark" href="./" aria-label="TransitPulse home"><span class="wordmark__mark" aria-hidden="true"></span>TransitPulse</a>
+        <button class="icon-btn icon-btn--plain nav__theme" type="button" data-theme-toggle aria-pressed="false" aria-label="Dark mode">
+          <svg class="icon icon--sun" aria-hidden="true"><use href="#i-sun" /></svg><svg class="icon icon--moon" aria-hidden="true"><use href="#i-moon" /></svg>
+        </button>
       </div>
+      <div class="pulse-stripe" aria-hidden="true"></div>
     </header>
 
     <main>
@@ -86,8 +103,9 @@
           <p class="eyebrow">Design system</p>
           <h1 id="sg-title">Style guide</h1>
           <p class="lead">
-            Every token in <code>css/tokens.css</code> and every component in <code>css/components.css</code> on one page,
-            for checking the site against <code>docs/DESIGN.md</code> (v1.0.1).
+            Every token in <code>css/tokens.css</code>, every component in <code>css/components.css</code> and the newer
+            pieces in <code>css/fx.css</code> on one page, in light and dark mode (the button at the top), for checking the
+            site against <code>docs/DESIGN.md</code> (v1.1.4).
           </p>
         </div>
       </section>
@@ -338,6 +356,126 @@ GROUP BY 1 ORDER BY 2 DESC LIMIT 5</code></pre>
               <summary>Where do the train positions come from?<svg class="icon" aria-hidden="true"><use href="#i-chevron-down" /></svg></summary>
               <div class="faq__body"><p>From BART's published GTFS timetable.</p></div>
             </details>
+          </div>
+        </div>
+      </section>
+
+      <!-- DESIGN.md v1.1: css/fx.css (motion and delight, the departure board, the closures band, the what-if picker) -->
+      <section class="band" id="newer" data-accent="blue" aria-labelledby="sg-newer">
+        <div class="container sg-stack">
+          <div class="section-head">
+            <p class="eyebrow">v1.1</p>
+            <h2 id="sg-newer">Newer pieces</h2>
+            <p>
+              From <code>css/fx.css</code>. The dot before this section's eyebrow is the section accent (<code>data-accent</code>,
+              one line colour per band).
+            </p>
+          </div>
+
+          <h3>Pulse stripe</h3>
+          <p class="caption">The six line colours under the nav, with a light sweeping along it (off with reduced motion).</p>
+          <div class="pulse-stripe" aria-hidden="true"></div>
+
+          <h3>Hero: headline highlight and live strip</h3>
+          <div class="hero">
+            <p class="sg-display">See the Bay Area <span class="hl">move</span></p>
+            <ul class="hero__live" aria-label="Right now">
+              <li><span class="hero__live-dot" aria-hidden="true"></span><span class="num">54</span> trains moving</li>
+              <li><span class="num">38%</span> of 2019 ridership</li>
+              <li>Data through <strong>Dec 31, 2025</strong></li>
+            </ul>
+          </div>
+
+          <h3>Departure board</h3>
+          <p class="caption">Fed by the map every 10 seconds (<code>tp:arrivals</code>); an ink surface, dark grey in dark mode.</p>
+          <aside class="board" aria-label="Next arrivals (sample)">
+            <div class="board__head">
+              <span class="board__title">Arriving next</span>
+              <span class="board__clock"><span class="board__dot" aria-hidden="true"></span><span>8:15 AM</span></span>
+            </div>
+            <ol class="board__rows">
+              <li class="board__row"><span class="swatch" style="background: var(--line-yellow)"></span><span class="board__dest"><strong>Embarcadero</strong><span class="board__to">to SFO Airport</span></span><span class="board__eta num">now</span></li>
+              <li class="board__row"><span class="swatch" style="background: var(--line-blue)"></span><span class="board__dest"><strong>Bay Fair</strong><span class="board__to">to Dublin/Pleasanton</span></span><span class="board__eta num">2 min</span></li>
+            </ol>
+            <p class="board__foot">From BART's timetable · <a href="./#map">see them on the map</a></p>
+          </aside>
+
+          <h3>Mascot</h3>
+          <div class="sg-row">
+            <svg class="mascot" aria-hidden="true"><use href="#i-mascot" /></svg>
+            <button class="mascot-btn" type="button" aria-label="Say hi to the mascot"><svg class="mascot mascot--lg" aria-hidden="true"><use href="#i-mascot" /></svg></button>
+            <span class="caption">mascot, and mascot--lg in a mascot-btn (it hops when poked)</span>
+          </div>
+
+          <h3>Legend toggles</h3>
+          <ul class="legend" aria-label="Lines (sample)">
+            <li><button type="button" class="legend__toggle" aria-pressed="false"><span class="swatch" style="background: var(--line-red)"></span><span>Red line <span class="text-body">· Richmond – Millbrae</span></span></button></li>
+            <li><button type="button" class="legend__toggle" aria-pressed="true"><span class="swatch" style="background: var(--line-green)"></span><span>Green line <span class="text-body">· Berryessa – Daly City (pressed)</span></span></button></li>
+          </ul>
+
+          <h3>Chips: surprise me, what-if stations</h3>
+          <div class="chip-row">
+            <button type="button" class="chip chip--dice">🎲 Surprise me</button>
+            <button type="button" class="chip whatif__station" aria-pressed="false">Orinda (open)</button>
+            <button type="button" class="chip whatif__station" aria-pressed="true">Colma (closed)</button>
+          </div>
+
+          <h3>Chart readout and forecast badges</h3>
+          <div class="sg-relative">
+            <div class="chart__readout" style="left: 0">
+              <span class="chart__readout-title">Dec 2025</span>
+              <span class="chart__readout-row"><span>BART entries</span><strong>121,578</strong></span>
+            </div>
+          </div>
+          <p class="forecast__badges">
+            <span class="badge badge--busy">Busiest <strong>Tue, Jan 13</strong> · 14,889</span>
+            <span class="badge badge--quiet">Quietest <strong>Sun, Jan 4</strong> · 3,633</span>
+          </p>
+
+          <h3>Station closures: verdict pills, a station card, the cost card</h3>
+          <div class="sg-row">
+            <span class="verdict-pill verdict-pill--strong">Case to keep: strong</span>
+            <span class="verdict-pill verdict-pill--mixed">Case to keep: mixed</span>
+            <span class="verdict-pill verdict-pill--weak">Case to keep: weak</span>
+          </div>
+          <div class="closures">
+            <div class="closures__cards">
+              <article class="card closure-card" data-verdict="strong" aria-labelledby="sg-closure">
+                <div class="closure-card__head">
+                  <h4 id="sg-closure">Antioch</h4>
+                  <p class="closure-card__segment">Concord to Antioch segment</p>
+                </div>
+                <p class="verdict-pill verdict-pill--strong">Case to keep: strong</p>
+                <dl class="closure-card__facts">
+                  <div><dt>Weekday trips in 2025</dt><dd>3,704, rank 16 of 50 from the fewest</dd></div>
+                  <div><dt>Nearest station still open</dt><dd>Concord, 13.6 mi</dd></div>
+                </dl>
+                <p class="closure-card__label">Top destinations</p>
+                <ol class="closure-card__dests"><li>Embarcadero <span class="closure-card__share">13%</span></li></ol>
+                <ul class="closure-card__rules" aria-label="Rules">
+                  <li data-met="true"><span class="closure-card__mark" aria-hidden="true">✓</span>Riders: Met</li>
+                  <li data-met="false"><span class="closure-card__mark" aria-hidden="true">✗</span>Recovery: Not met</li>
+                </ul>
+              </article>
+            </div>
+          </div>
+          <div class="card closures__cost">
+            <h3>What closing would cost</h3>
+            <ul><li><strong>Traffic.</strong> A cited finding, with the study in brackets.</li></ul>
+            <p class="caption">A caption with the caveat.</p>
+          </div>
+
+          <h3>What-if picker</h3>
+          <div class="card whatif">
+            <div class="whatif__head">
+              <h4>What if stations close?</h4>
+              <p>Presets, then a chip per station; a closed station is crossed out and pressed.</p>
+            </div>
+            <div class="chip-row" role="group" aria-label="Closure scenarios (sample)">
+              <button type="button" class="chip" aria-pressed="false">Today's map</button>
+              <button type="button" class="chip" aria-pressed="true">Close the first 10</button>
+            </div>
+            <p class="whatif__status">10 of 50 stations closed. The same trains run through them without stopping.</p>
           </div>
         </div>
       </section>
