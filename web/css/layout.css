@@ -208,7 +208,7 @@
 
 @media (min-width: 1120px) {
   .hero__grid {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 520px);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 440px);
     gap: var(--space-5xl);
   }
 }
