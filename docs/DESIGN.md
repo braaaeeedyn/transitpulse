@@ -398,6 +398,22 @@ During frontend work:
 - Everything else waits for v1.1 after launch.
 
 ### Changelog
+- **v1.1 (2026-10-17), the redesign the owner asked for ("a fun user experience"), as an additive layer**
+  (`web/css/fx.css`, `web/js/fx.js`; tokens and components unchanged, so v1.0.1 still describes the base):
+  a 4 px **pulse stripe** of the six line colours under the nav with a light sweeping along it; the hero's
+  **live strip** (trains moving, % of 2019, data date) and a **departure board** (the six soonest arrivals, from the
+  map) in its second column; **count-up** numbers (stat tiles, Findings figures); sections **slide up** on scroll
+  (transform only, no fade, so text never reads as low-contrast mid-animation); the nav **underlines the current
+  section**; a line-colour **dot before each section's eyebrow** and a line-colour top border on the Findings band;
+  the headline's last word on a line-colour stripe; the map **legend as a line filter** (one line in colour, the
+  rest at 15% with grey trains); **station cards** in the map tooltip (latest day, % of 2019, 28-day weekday
+  average, peak hour); **sparklines** in the recovery and entries tiles; a **crosshair readout** on the line charts;
+  **busiest/quietest** badges on the forecast card; a 🎲 "Surprise me" station chip; a **mascot** (train front) on
+  the Ask launcher that bobs and says hello once, and in the footer, where it hops when poked; `/` opens Ask;
+  and **dark mode** (`:root[data-theme="dark"]` in `tokens.css`: every chrome role inverted, the map's water/land
+  swapped, series/gridline/interval colours flipped; a sun/moon toggle in the nav, saved in `localStorage`,
+  defaulting to the system preference). Motion obeys `prefers-reduced-motion`. The "only colour is data" rule is
+  relaxed to "colour is data, plus the line colours as the brand".
 - **v1.0.1 (2026-10-07), accessibility fix:** on maps narrower than 600 px, transfer-station capsules (up to 23 px long)
   overlapped each other in downtown SF/Oakland and hid the 6 px trains, so trains and stations could not be told apart.
   Below 600 px all stations are now plain circles (§6). Found in F3 phone screenshots.
