@@ -408,7 +408,7 @@ export function initDashboard(slot) {
       <h3 id="dashboard-title">Dashboard</h3>
       <p class="card__takeaway">The same ridership marts in Looker Studio, with filters to explore them.</p>
     </div>
-    <div class="dashboard__frame"><iframe src="${esc(url)}" title="TransitPulse ridership dashboard (Looker Studio)" loading="lazy" allowfullscreen></iframe></div>
+    <div class="dashboard__frame"><iframe src="${esc(url)}" title="BayRidership ridership dashboard (Looker Studio)" loading="lazy" allowfullscreen></iframe></div>
     <a class="btn btn--subtle dashboard__open" href="${esc(url)}" target="_blank" rel="noopener">Open dashboard<svg class="icon" aria-hidden="true"><use href="#i-arrow-up-right"/></svg></a>
     <p class="caption chart-card__source">A Looker Studio report built on the same BigQuery marts as this page.</p>
   </article>`;

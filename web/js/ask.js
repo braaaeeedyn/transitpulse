@@ -1,4 +1,4 @@
-// Ask TransitPulse (IMPLEMENTATION_PLAN F6). Sends the question to POST /api/ask and renders the streamed
+// Ask BayRidership (IMPLEMENTATION_PLAN F6). Sends the question to POST /api/ask and renders the streamed
 // progress events (thinking → sql → rows → answer, or a refusal/error). While the agent is off the API answers 503
 // and this shows a friendly "not connected yet" message. The last 5 answers and refusals (never errors) are kept in
 // sessionStorage and shown in the Ask panel after a reload; "Show SQL" has a copy button.
@@ -155,7 +155,7 @@ export function initAsk(card, result, history) {
     input.value = ""; // a chat box: the question is echoed above the answer
     if (isStaticSite()) {
       result.innerHTML = message(
-        "The analyst needs TransitPulse's live server, which this public snapshot doesn't run. " +
+        "The analyst needs BayRidership's live server, which this public snapshot doesn't run. " +
           "Every number on this page is real warehouse data, as of the date shown in each section.",
       );
       return;

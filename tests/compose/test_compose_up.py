@@ -41,7 +41,7 @@ def base() -> Iterator[str]:
 def test_health_and_site(base):
     assert httpx.get(f"{base}/api/health").status_code == 200
     home = httpx.get(f"{base}/")
-    assert home.status_code == 200 and "TransitPulse" in home.text
+    assert home.status_code == 200 and "BayRidership" in home.text
 
 
 def test_kpis_follow_the_warehouse(base):

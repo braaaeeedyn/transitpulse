@@ -107,7 +107,7 @@ def test_container_serves_site_and_health(server):
     home = httpx.get(f"{server}/")
     assert home.status_code == 200
     assert "text/html" in home.headers["content-type"]
-    assert "TransitPulse" in home.text
+    assert "BayRidership" in home.text
     assert home.headers["cache-control"] == "no-cache"
 
     data = httpx.get(f"{server}/data/network.json")

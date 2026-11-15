@@ -138,7 +138,7 @@ export function sourceLine(data) {
   const through =
     `Forecast from data through ${formatDate(data.data_through)}. It covers ${formatDateRange(start, end)}, ` +
     "the 14 days after the latest ridership BART has published.";
-  if (!m) return `${through} Source: BART hourly ridership; TransitPulse forecasting model.`;
+  if (!m) return `${through} Source: BART hourly ridership; BayRidership forecasting model.`;
   const iv = bandInterval(m);
   const label = rangeLabel(m);
   const what = !iv.calibrated

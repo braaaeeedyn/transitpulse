@@ -159,12 +159,12 @@ test("respects reduced motion", async ({ page }) => {
 test("meta: open graph tags and a 1200x630 image", async ({ page, request }) => {
   await page.goto("/");
   const og = (p) => page.locator(`meta[property="og:${p}"]`);
-  await expect(og("title")).toHaveAttribute("content", /TransitPulse/);
+  await expect(og("title")).toHaveAttribute("content", /BayRidership/);
   await expect(og("description")).toHaveAttribute("content", /BART/);
   await expect(og("type")).toHaveAttribute("content", "website");
-  await expect(og("url")).toHaveAttribute("content", "https://braedynthompson.com/transitpulse/");
+  await expect(og("url")).toHaveAttribute("content", "https://braedynthompson.com/bayridership/");
   // absolute, as crawlers need: the public copy of the file checked below
-  await expect(og("image")).toHaveAttribute("content", "https://braedynthompson.com/transitpulse/img/og.png");
+  await expect(og("image")).toHaveAttribute("content", "https://braedynthompson.com/bayridership/img/og.png");
   await expect(og("image:width")).toHaveAttribute("content", "1200");
   await expect(og("image:height")).toHaveAttribute("content", "630");
   await expect(og("image:alt")).toHaveAttribute("content", /map/);

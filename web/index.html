@@ -3,20 +3,20 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>TransitPulse · Bay Area transit, live</title>
+    <title>BayRidership · Bay Area transit, live</title>
     <meta
       name="description"
       content="Every BART train on a live map, plus ridership trends, forecasts and an AI analyst for Bay Area transit data."
     />
     <meta name="theme-color" content="#ffffff" />
-    <meta property="og:title" content="TransitPulse · Bay Area transit, live" />
+    <meta property="og:title" content="BayRidership · Bay Area transit, live" />
     <meta property="og:description" content="Every BART train on a live map, plus ridership trends, forecasts and an AI analyst for Bay Area transit data." />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://braedynthompson.com/transitpulse/" />
-    <meta property="og:image" content="https://braedynthompson.com/transitpulse/img/og.png" />
+    <meta property="og:url" content="https://braedynthompson.com/bayridership/" />
+    <meta property="og:image" content="https://braedynthompson.com/bayridership/img/og.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="The TransitPulse live map: BART trains on their coloured lines around the Bay." />
+    <meta property="og:image:alt" content="The BayRidership live map: BART trains on their coloured lines around the Bay." />
     <meta name="twitter:card" content="summary_large_image" />
     <!-- A Looker Studio embed URL (https://lookerstudio.google.com/embed/...) shows a Dashboard card in Trends; see bi/README.md -->
     <meta name="tp-looker-url" content="" />
@@ -76,7 +76,7 @@
 
     <header class="nav" data-nav>
       <div class="container nav__inner">
-        <a class="wordmark" href="#top" aria-label="TransitPulse home"><span class="wordmark__mark" aria-hidden="true"></span>TransitPulse</a>
+        <a class="wordmark" href="#top" aria-label="BayRidership home"><span class="wordmark__mark" aria-hidden="true"></span>BayRidership</a>
         <nav aria-label="Sections">
           <ul class="nav__links">
             <li><a href="#map">Map</a></li>
@@ -103,7 +103,7 @@
 
     <div class="nav-overlay" id="nav-overlay" role="dialog" aria-modal="true" aria-label="Menu" hidden data-menu>
       <div class="container nav-overlay__head">
-        <span class="wordmark"><span class="wordmark__mark" aria-hidden="true"></span>TransitPulse</span>
+        <span class="wordmark"><span class="wordmark__mark" aria-hidden="true"></span>BayRidership</span>
         <button class="icon-btn icon-btn--plain" type="button" aria-label="Close menu" data-menu-close>
           <svg class="icon" aria-hidden="true"><use href="#i-x" /></svg>
         </button>
@@ -138,7 +138,7 @@
               <li>Data through <strong data-live-through>—</strong></li>
             </ul>
             <div class="hero__actions">
-              <button class="btn btn--primary" type="button" data-ask-open aria-controls="ask-panel" aria-expanded="false">Ask TransitPulse</button>
+              <button class="btn btn--primary" type="button" data-ask-open aria-controls="ask-panel" aria-expanded="false">Ask BayRidership</button>
               <a class="btn btn--subtle" href="#map">See the live map</a>
             </div>
           </div>
@@ -380,7 +380,7 @@
               The list isn't final: the board still has to vote on which stations or segments would close.
             </p>
             <p data-closures-neutral>
-              TransitPulse doesn't take a position on the measure. The verdicts below weigh ridership, recovery and distance;
+              BayRidership doesn't take a position on the measure. The verdicts below weigh ridership, recovery and distance;
               they can't see cost, fairness or what riders would do instead.
             </p>
           </div>
@@ -488,7 +488,7 @@
               </div>
             </details>
             <details>
-              <summary>How does "Ask TransitPulse" answer questions?<svg class="icon" aria-hidden="true"><use href="#i-chevron-down" /></svg></summary>
+              <summary>How does "Ask BayRidership" answer questions?<svg class="icon" aria-hidden="true"><use href="#i-chevron-down" /></svg></summary>
               <div class="faq__body">
                 <p>
                   It writes a read-only SQL query against the ridership warehouse, runs it, and shows you the answer
@@ -542,10 +542,10 @@
       </div>
     </footer>
 
-    <!-- Ask TransitPulse: a launcher in the corner opens a side panel (full screen on phones) -->
-    <button class="ask-launcher" type="button" data-ask-open aria-controls="ask-panel" aria-expanded="false" title="Ask TransitPulse (press /)">
+    <!-- Ask BayRidership: a launcher in the corner opens a side panel (full screen on phones) -->
+    <button class="ask-launcher" type="button" data-ask-open aria-controls="ask-panel" aria-expanded="false" title="Ask BayRidership (press /)">
       <svg class="mascot" aria-hidden="true"><use href="#i-mascot" /></svg>
-      <span class="ask-launcher__label">Ask TransitPulse</span>
+      <span class="ask-launcher__label">Ask BayRidership</span>
       <span class="ask-launcher__bubble" aria-hidden="true">Ask me anything about BART</span>
     </button>
 
@@ -553,7 +553,7 @@
       <div class="ask-panel__head">
         <svg class="mascot" aria-hidden="true"><use href="#i-mascot" /></svg>
         <div class="ask-panel__heading">
-          <h2 class="ask-panel__title" id="ask-panel-title">Ask TransitPulse</h2>
+          <h2 class="ask-panel__title" id="ask-panel-title">Ask BayRidership</h2>
           <p class="caption">BART and Bay Wheels data, in plain English</p>
         </div>
         <button class="icon-btn icon-btn--plain" type="button" aria-label="Close" data-ask-close>
