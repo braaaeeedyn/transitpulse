@@ -23,7 +23,7 @@ app.include_router(findings.router)
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 if origins := get_settings().cors_origin_list:
-    # pages on another domain (braedynthompson.com/transitpulse/) read the API on Cloud Run; GET for the data,
+    # pages on another domain (braedynthompson.com/bayridership/) read the API on Cloud Run; GET for the data,
     # POST for Ask (a JSON body, so browsers send a preflight)
     app.add_middleware(
         CORSMiddleware,

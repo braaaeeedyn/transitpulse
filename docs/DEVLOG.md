@@ -790,7 +790,7 @@ The Architect's final review rejected iteration 3 for six small defects. This en
   `ALLOW_FIELD_ADDITION` (older run rows are NULL there) — the B5 fix working on BigQuery.
 - The site labels it "calibrated model range" (calibrated but > 5 pts from 80%).
 
-## 2026-10-09 · web · static export for braedynthompson.com/transitpulse
+## 2026-10-09 · web · static export for braedynthompson.com/bayridership
 **Why**: the site only ran on the dev PC (the VM runs the pipeline, Cloud Run isn't deployed). braedynthompson.com
 is GitHub Pages built by the `portfolio` repo (`build.py` copies `static/` as-is into `site/`), so a path on that
 domain must be published by the portfolio, as static files.
@@ -810,7 +810,7 @@ domain must be published by the portfolio, as static files.
 re-running the export after new monthly data. The Ask analyst stays for a later Cloud Run deploy.
 
 ## 2026-10-09 · web · pages on braedynthompson.com, API on Cloud Run
-**Why**: the user wants braedynthompson.com/transitpulse/ with both the frontend and the backend working. GitHub
+**Why**: the user wants braedynthompson.com/bayridership/ with both the frontend and the backend working. GitHub
 Pages (the portfolio) can't run the API, and a Cloud Run domain mapping can't take a path on a domain GitHub Pages
 serves. So: pages from the portfolio, API on Cloud Run, the browser calling across origins.
 
@@ -1578,7 +1578,7 @@ second `h1`.
 - Built the closure seed and marts on BigQuery (`dbt build --select bart_closure_candidates+`, dev target): PASS=15.
   `/api/closures` on Cloud Run answers with the same 15 verdicts as local data (strong 6, mixed 7, weak 2; 12.6% and
   24.1% of weekday trips).
-- Re-exported the pages to the portfolio (live mode). Checked on braedynthompson.com/transitpulse/: 15 station cards,
+- Re-exported the pages to the portfolio (live mode). Checked on braedynthompson.com/bayridership/: 15 station cards,
   "Close the first 10" leaves 40 of 50 markers, the status line has the live share, no console errors.
 - Terraform: optional Langfuse tracing, bound like the Gemini key (`langfuse_public_key`, `langfuse_base_url`, secret
   `transitpulse-langfuse-secret-key`; on only with the agent and a key). Not applied: `terraform plan` shows the new

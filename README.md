@@ -4,7 +4,7 @@ A Bay Area transit analytics platform: BART and Bay Wheels ridership pipelines (
 station forecasts, a causal study of the eBART extension, an AI analyst agent that answers questions with SQL, and a
 responsive website with a live map of scheduled BART trains.
 
-> **Status (2026-10-18):** live. The site is at **[braedynthompson.com/transitpulse](https://braedynthompson.com/transitpulse/)**,
+> **Status (2026-10-18):** live. The site is at **[braedynthompson.com/bayridership](https://braedynthompson.com/bayridership/)**,
 > the API on Cloud Run, and the pipeline runs itself on an Oracle VM. What's left is under [Left to do](#left-to-do);
 > the owner's steps, in order, are in [`docs/OWNER_STEPS.md`](docs/OWNER_STEPS.md).
 > How each part works today: [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md); a portfolio summary with the headline
@@ -50,7 +50,7 @@ flowchart LR
     api["FastAPI: /api data, forecast, findings, closures"]
     agent["Ask agent: LangGraph + Gemini (Ollama locally)"]
   end
-  pages["Static site on GitHub Pages (braedynthompson.com/transitpulse)"]
+  pages["Static site on GitHub Pages (braedynthompson.com/bayridership)"]
   browser["Browser: live map drawn from the timetable"]
   gha["GitHub Actions: CI, then build and deploy over WIF"]
 

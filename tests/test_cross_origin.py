@@ -1,4 +1,4 @@
-"""Pages on another domain (braedynthompson.com/transitpulse/) calling the API on Cloud Run: CORS and the export."""
+"""Pages on another domain (braedynthompson.com/bayridership/) calling the API on Cloud Run: CORS and the export."""
 
 import importlib
 import json

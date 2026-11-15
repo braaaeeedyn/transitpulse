@@ -325,12 +325,12 @@ All BigQuery reads go through `sa-agent` (read-only) with `maximum_bytes_billed`
 ---
 
 ## 6. Definition of done for the whole project
-- [~] Public URL on Cloud Run; trains running on the map on a phone and a desktop. *(public at braedynthompson.com/transitpulse + Cloud Run; the real-device check is still to do)*
+- [~] Public URL on Cloud Run; trains running on the map on a phone and a desktop. *(public at braedynthompson.com/bayridership + Cloud Run; the real-device check is still to do)*
 - [x] `make up` brings up the whole thing locally (API + web + Ollama) from a fresh clone. *(`docker-compose.yml`: a pinned `ollama/ollama:0.40.4`, a one-shot model pull, the API image with the agent on and `./data` mounted read-only; `tests/test_compose.py` + `tests/compose/` (marker `docker`); run by hand once on 2026-10-14 with `qwen2.5-coder:0.5b`, one question answered)*
 - [~] CI green: ruff, pytest, Playwright, dbt CI build, terraform plan. *(ruff, pytest, Playwright, terraform validate and the container job are green on every push; dbt CI build and terraform plan wait for the owner's CI identity decisions, `docs/OWNER_STEPS.md` §9)*
 - [ ] README has real numbers: raw data size, forecast MAE vs. baseline, agent accuracy (A/B/C), McNemar p-values, DiD estimate with CI *(✅ M4: in the README)*, Locust p95, monthly cost. *(A/B accuracy and McNemar p in the README since 2026-10-14; arm C waits for M6, Locust p95 on Cloud Run and the bill for the owner)*
 - [ ] GCP bill for the month: $0. *(owner step, `docs/OWNER_STEPS.md` §12)*
-- [x] Portfolio entry added (see `BAYRIDERSHIP_PLAN.md §9`). *(braedynthompson.com/transitpulse, from the `portfolio` repo's `static/transitpulse/`)*
+- [x] Portfolio entry added (see `BAYRIDERSHIP_PLAN.md §9`). *(braedynthompson.com/bayridership, from the `portfolio` repo's `static/transitpulse/`)*
 
 ---
 

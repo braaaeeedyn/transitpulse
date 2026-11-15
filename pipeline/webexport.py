@@ -1,4 +1,4 @@
-"""Export the website for hosting on another domain (the portfolio publishes it at braedynthompson.com/transitpulse/
+"""Export the website for hosting on another domain (the portfolio publishes it at braedynthompson.com/bayridership/
 through GitHub Pages, which only serves files). Two modes:
 
     # live: the pages call the API on Cloud Run (data + Ask BayRidership)

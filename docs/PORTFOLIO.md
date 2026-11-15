@@ -1,6 +1,6 @@
 # BayRidership: Bay Area transit analytics, from raw ridership to a live site
 
-**Live:** https://braedynthompson.com/transitpulse/ · **Code:** github.com/braaaeeedyn/transitpulse · **Role:** sole
+**Live:** https://braedynthompson.com/bayridership/ · **Code:** github.com/braaaeeedyn/transitpulse · **Role:** sole
 developer (data platform, warehouse, models, causal study, AI agent, website, cloud deployment)
 
 > Eight years of BART ridership (67.8 million hourly origin-destination rows) and Bay Wheels bike trips (26 million),
@@ -17,7 +17,7 @@ linked in §8; nothing here is newer than they are.
 ## 1. Status
 
 Everything below is live and runs itself:
-- **Site:** static pages on GitHub Pages (braedynthompson.com/transitpulse), calling the API across origins.
+- **Site:** static pages on GitHub Pages (braedynthompson.com/bayridership), calling the API across origins.
 - **API + Ask agent:** FastAPI on Cloud Run (us-west1), scales to zero, at most 2 instances. Ask runs on Gemini
   (`gemini-3.5-flash-lite`) since 2026-10-16. Every push to `main` builds, smoke-tests and deploys the image.
 - **Pipeline:** Dagster on the Oracle VM it shares with SeismicSoCal, in `gcp` mode. BART is checked every 6 hours and

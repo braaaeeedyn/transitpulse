@@ -157,7 +157,7 @@ The agent costs money per question once it is public: BigQuery bytes and Gemini 
 To turn the agent off, set `agent_enabled = false` and apply. The site's Ask card then says the analyst isn't
 connected. The secret version can stay; disabled or not, it costs nothing at this size.
 
-## 5. The pages at braedynthompson.com/transitpulse/
+## 5. The pages at braedynthompson.com/bayridership/
 
 braedynthompson.com is GitHub Pages, built by the `portfolio` repo: its `build.py` copies `static/` as-is into the
 published `site/`. So the pages live in `portfolio/static/transitpulse/`, and the API stays on Cloud Run:

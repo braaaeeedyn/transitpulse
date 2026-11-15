@@ -2,7 +2,7 @@
 
 Everything left in BayRidership that needs your accounts, a GUI tool, a device or a decision. Each step says what to
 run or click, what you should see, and how to check it. **Updated 2026-10-18:** everything is committed and pushed;
-https://braedynthompson.com/transitpulse/ runs the latest pages (station closures, the what-if map, dark mode);
+https://braedynthompson.com/bayridership/ runs the latest pages (station closures, the what-if map, dark mode);
 `/api/closures` answers from BigQuery; Ask is live on Gemini. The VM runs the latest pipeline code. Open now: the dated
 jobs in step 3 and the account steps from step 6 on.
 
@@ -14,7 +14,7 @@ Commands run from the repo root in Git Bash (or any POSIX shell) unless a step s
 
 | What | Where |
 |---|---|
-| Site | https://braedynthompson.com/transitpulse/ (GitHub Pages of the `portfolio` repo, folder `static/transitpulse`) |
+| Site | https://braedynthompson.com/bayridership/ (GitHub Pages of the `portfolio` repo, folder `static/transitpulse`) |
 | API | https://transitpulse-api-etumz4pfva-uw.a.run.app (Cloud Run `transitpulse-api`, us-west1) |
 | Warehouse | BigQuery project `transitpulse-511002` (datasets `raw`, `staging`, `marts`, `ml`) |
 | Pipeline | Dagster on the Oracle VM shared with SeismicSoCal: `ubuntu@167.234.214.169` (`seismicsocal.duckdns.org`), key `~/.ssh/oracle_seismic` (it asks for the key's passphrase) |
@@ -73,7 +73,7 @@ git push
 cd ../transitpulse
 ```
 
-**Verify** once GitHub Pages has published (a minute or two): https://braedynthompson.com/transitpulse/ loads, the
+**Verify** once GitHub Pages has published (a minute or two): https://braedynthompson.com/bayridership/ loads, the
 trains move, "Close the first 10" under the map leaves 40 of 50 stations, and the Station closures band shows 15
 cards. Ctrl+F5 skips the browser's cached CSS. The style guide is at `/transitpulse/styleguide.html` (`noindex`).
 
@@ -164,7 +164,7 @@ here for reference; the questions at the end are the check after any agent chang
    terraform -chdir=infra/terraform plan      # expect: 1 to add (secret accessor), 1 to change (the service env)
    terraform -chdir=infra/terraform apply
    ```
-6. **On a phone**, tap the train in the bottom-right corner and ask the 10 sample questions below on https://braedynthompson.com/transitpulse/. The expected
+6. **On a phone**, tap the train in the bottom-right corner and ask the 10 sample questions below on https://braedynthompson.com/bayridership/. The expected
    answers come from the local DuckDB, which holds the same BART data as BigQuery for 2018–2025. Wording will differ;
    check the numbers and names. Also ask one off-topic question ("What's the weather tomorrow?"): it should be
    refused with three suggestion chips.

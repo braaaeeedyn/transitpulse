@@ -7,7 +7,7 @@
 > **Last verified:** 2026-10-18, on Windows 11: the live pages (15 station cards; "Close the first 10" leaves 40 of 50
 > stations; no console errors), `/api/health`, `/api/closures` (the same verdicts as the local data) and the VM
 > (bootstrapped at `6671168`, both Dagster units active).
-> **Live at https://braedynthompson.com/transitpulse/**: the pages are
+> **Live at https://braedynthompson.com/bayridership/**: the pages are
 > published by the portfolio's GitHub Pages (`portfolio/static/transitpulse/`, exported with `tasks.py export
 > --api-base`) and call the API on Cloud Run (https://transitpulse-api-etumz4pfva-uw.a.run.app) across origins
 > (CORS allows `https://braedynthompson.com`). The Dagster pipeline runs on the Oracle VM against BigQuery.
@@ -34,7 +34,7 @@
 | Local stack (`docker-compose.yml`) | **Working**: the API image with the agent on, an Ollama container and a one-shot model pull (see §5 "`make up`") | `make up` / `uv run python tasks.py up` → http://localhost:8000 |
 | Cloud Run service `transitpulse-api` (us-west1) | **Live** (Terraform applied; image `api:<commit sha>`, deployed by `deploy.yml`). Ask agent **on** since 2026-10-16 (`agent_enabled = true` in the local tfvars), on `gemini-3.5-flash-lite` | [`CLOUD_RUN.md`](CLOUD_RUN.md) |
 | Cloud Run deploy (`.github/workflows/deploy.yml`) | **On** (`DEPLOY_ENABLED=true`): every push to `main` builds, smoke-tests, pushes and deploys (first seen for `ab55544`, 2026-10-14) | [`CLOUD_RUN.md`](CLOUD_RUN.md) |
-| Pages at braedynthompson.com/transitpulse/ | **Live**: the portfolio repo publishes `static/transitpulse/`; re-export only when the website code changes | [`CLOUD_RUN.md`](CLOUD_RUN.md) §5 |
+| Pages at braedynthompson.com/bayridership/ | **Live**: the portfolio repo publishes `static/transitpulse/`; re-export only when the website code changes | [`CLOUD_RUN.md`](CLOUD_RUN.md) §5 |
 | Load test (`load/`) | **Working** locally: Locust at 1/10/25 users on a fixture warehouse with the fake LLM | `uv run python tasks.py load` |
 | CI (`.github/workflows/ci.yml`) | **Runs on GitHub** (python, spark, web, container, terraform jobs) | — |
 | eBART causal study (`analysis/causal/`) | **Done** (pre-registered + Amendment 1; one real run): verdict **new**, served by `GET /api/findings` and the Findings band; write-up in [`FINDINGS.md`](FINDINGS.md). A post-hoc trend-adjusted estimate (not pre-registered) is in `trend_adjusted.json` and FINDINGS.md only | `uv run python tasks.py causal`; `uv run --group ml python -m analysis.causal.trend_adjusted` (see §5 "Causal study") |
@@ -133,7 +133,7 @@ S3 baywheels-data ──► data/raw/baywheels/*.zip ─► DuckDB clean ─► 
    A/B and station closures write-ups and the style guide; credits; "Data through Dec 31, 2025." from the KPIs (left out without them).
 
 **`<head>`:** title, description, favicon, and Open Graph tags: `og:title`, `og:description`, `og:type` website,
-`og:url` `https://braedynthompson.com/transitpulse/`, `og:image` `https://braedynthompson.com/transitpulse/img/og.png`
+`og:url` `https://braedynthompson.com/bayridership/`, `og:image` `https://braedynthompson.com/bayridership/img/og.png`
 (absolute, as crawlers need) with its width 1200, height 630 and alt text, and `twitter:card`
 `summary_large_image`. `web/img/og.png` is the train map at 8:00 AM on a Wednesday (104 KB), written by
 `tasks.py screenshots`. `<meta name="tp-looker-url" content="">` holds the dashboard URL (see Trends band).
