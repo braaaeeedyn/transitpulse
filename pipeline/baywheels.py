@@ -33,7 +33,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BUCKET_URL = "https://s3.amazonaws.com/baywheels-data"
-USER_AGENT = "TransitPulse/0.1 (+https://github.com/braaaeeedyn/transitpulse)"
+USER_AGENT = "BayRidership/0.1 (+https://github.com/braaaeeedyn/transitpulse)"
 _S3 = "{http://s3.amazonaws.com/doc/2006-03-01/}"
 _MONTHLY_KEY = re.compile(r"^(\d{4})(\d{2})-[^/]+\.zip$")
 _COLUMN = re.compile(r"^[a-z_]+$")

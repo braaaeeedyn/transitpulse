@@ -1,6 +1,6 @@
 """Dagster entry point: `dagster dev -m pipeline.definitions` (or `uv run python tasks.py dagster`).
 
-Schedules and sensors (TRANSITPULSE_PLAN §5 Phase 1):
+Schedules and sensors (BAYRIDERSHIP_PLAN §5 Phase 1):
   * bart_od_updates (sensor) - every 6 hours: HEAD the BART ridership files of the last two years and reload a year
     as soon as its Last-Modified changes (BART posts on no fixed day; last year's file still changes in January).
   * models_after_ingest (sensor) - after every successful BART or Bay Wheels ingest run (not backfills): rebuild the

@@ -1,4 +1,4 @@
-# TransitPulse dev log
+# BayRidership dev log
 
 A running, append-only record of what is happening in the codebase: what was built, what was decided, what broke,
 and what is blocked. Newest entries at the bottom. For a description of how the app works *right now*, see
@@ -10,8 +10,8 @@ Entry format: `## YYYY-MM-DD · milestone · short title`, then **Did / Decided 
 
 ## 2026-10-07 · planning · plan + design frozen
 **Did**
-- `docs/IMPLEMENTATION_PLAN.md` written from `TRANSITPULSE_PLAN.md` (M0–M7 backend, F1–F7 frontend).
-- `docs/DESIGN.md` rewritten as the TransitPulse design system v1.0 and **frozen** (original kept at
+- `docs/IMPLEMENTATION_PLAN.md` written from `BAYRIDERSHIP_PLAN.md` (M0–M7 backend, F1–F7 frontend).
+- `docs/DESIGN.md` rewritten as the BayRidership design system v1.0 and **frozen** (original kept at
   `docs/reference/DESIGN_SOURCE_uber-analysis.md`).
 
 ## 2026-10-07 · M0 · environment check
@@ -135,7 +135,7 @@ Entry format: `## YYYY-MM-DD · milestone · short title`, then **Did / Decided 
 **Fixed**
 - Spark OOM on two years: local mode runs executors inside the 1 GB default driver → `--driver-memory 4g`; the job
   also recomputed the de-dup shuffle three times (years list, write, duplicate count) → now once.
-- bart.gov returns **403** to Python's default User-Agent → downloads send `TransitPulse/0.1`.
+- bart.gov returns **403** to Python's default User-Agent → downloads send `BayRidership/0.1`.
 - dagster-dbt runs dbt from inside the project folder → data paths come from `TP_DATA_ROOT` / `TP_DUCKDB_PATH`.
 - `from __future__ import annotations` breaks Dagster's context-type check → removed from asset modules.
 - Line endings normalized to LF; `.gitattributes` added.
@@ -406,14 +406,14 @@ Entry format: `## YYYY-MM-DD · milestone · short title`, then **Did / Decided 
 
 **Changed** (follow-ups from the build-loop final review)
 - Daemon unit: removed `MemoryHigh=5G` (a soft cap below the Spark peak throttled the run), `MemoryMax=7G`;
-  web unit: removed `MemoryHigh`. Both: `OOMScoreAdjust=500`, so the kernel kills TransitPulse before SeismicSoCal.
+  web unit: removed `MemoryHigh`. Both: `OOMScoreAdjust=500`, so the kernel kills BayRidership before SeismicSoCal.
 - New env knobs (defaults unchanged elsewhere): `TP_SPARK_DRIVER_MEMORY` (SparkRunner), `TP_ML_THREADS`
   (LightGBM `n_jobs`), `DBT_THREADS` (all dbt targets); the VM env example sets 4g / 2 / 2.
 - `docs/ORACLE_VM.md`: sizing section with the free-tier limit, the measured VM, the resize steps, an optional
   swap file, and `systemctl edit` drop-ins instead of editing unit files (bootstrap re-copies them).
 - Verified: pytest 42/42, Oracle VM + forecast tests, shellcheck, `systemd-analyze verify`, Dagster validate.
 
-## 2026-10-08 · deploy · TransitPulse running on the Oracle VM
+## 2026-10-08 · deploy · BayRidership running on the Oracle VM
 **Did**
 - VM resized to 2 OCPU / 12 GB (free maximum) + 4 GB swap; `bootstrap.sh` installed Java 17, uv, the repo and both
   Dagster units next to `seismicsocal.service` (key check refused to start until the key was transitpulse:600, as designed).
@@ -772,7 +772,7 @@ The Architect's final review rejected iteration 3 for six small defects. This en
 **Found**
 - Updating the VM (`bootstrap.sh`) stopped at `apt-get update`: the **Caddy** package source (SeismicSoCal's web
   server, `dl.cloudsmith.io/public/caddy/stable`) now answers `402 Payment Required`, and `set -e` aborted the script
-  before any TransitPulse step. Caddy itself is installed and unaffected; only its update channel is broken.
+  before any BayRidership step. Caddy itself is installed and unaffected; only its update channel is broken.
 
 **Fixed**
 - `bootstrap.sh` skips apt when git, curl, ca-certificates and Java 17 are already installed (`dpkg-query`), and
@@ -1386,7 +1386,7 @@ BART's data ends (Dec 2025). A second chip, "Busiest hour on a weekday?", could 
   is on in the eval too (it is production behaviour), so runs from now on differ from the committed A/B summaries,
   which were measured with every question routed by the model.
 - Ask moved out of the hero into a panel: a launcher in the bottom-right corner (ink pill, the mascot, "Ask
-  TransitPulse"; mascot only on phones) opens a 440 px side panel under the nav, full screen under 768 px. The nav's
+  BayRidership"; mascot only on phones) opens a 440 px side panel under the nav, full screen under 768 px. The nav's
   "Ask a question" and a new hero button open it too; ✕ or Esc closes it and focus returns. The mascot is an inline
   SVG train front in its own colours (no BART logo). Answers use `display-md` in the narrower panel; the input clears
   after sending. Tests: launcher/Esc/focus/nav, desktop width and phone full screen at 320 px.
@@ -1446,7 +1446,7 @@ voted on which stations; the 15 are the ones the press reported from BART staff'
   pre-registration): **Riders** (not among the 10 least used, BART staff's own cut), **Recovery** (whole-percent
   recovery vs 2019 at or above BART's), **Distance** (nearest open station ≥ 3.0 mi). 3 met = strong, 2 = mixed,
   0–1 = weak. The rules compare the rounded numbers the page shows.
-- Neutral on the measure: the copy says TransitPulse doesn't take a position on it, the verdicts weigh ridership
+- Neutral on the measure: the copy says BayRidership doesn't take a position on it, the verdicts weigh ridership
   only, and the list isn't final. The Ask agent is unchanged (its prompt and eval are frozen).
 - Top destinations leave out trips back to the same station; their share is of all trips starting there.
 
@@ -1592,7 +1592,7 @@ second `h1`.
 - **Langfuse removed** (owner: "not necessary, it can be removed"). It was wired in since M5 but never had a project
   or keys, so nothing was ever traced. Removed `api/agent/tracing.py`, its test, the `langfuse` dependency (122 lines
   of `uv.lock`) and the Terraform wiring from earlier today (never applied). Skill 5 in `SKILLS_MAP.md` is marked
-  dropped; `TRANSITPULSE_PLAN.md` keeps its original lines with a note.
+  dropped; `BAYRIDERSHIP_PLAN.md` keeps its original lines with a note.
 - **Docs.** `OWNER_STEPS.md` steps 0–4 rewritten for today (they still described the 2026-10-14 hand-off): where
   everything runs, the VM update, CI, the re-export and the dated jobs (Nov 3 copy, the VM daemon after New Year,
   the trial upgrade, the timetable), the closures rebuild. README: status, the agent is live, the site's newer parts,

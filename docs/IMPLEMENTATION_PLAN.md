@@ -1,6 +1,6 @@
-# TransitPulse: implementation plan
+# BayRidership: implementation plan
 
-> Turns [`TRANSITPULSE_PLAN.md`](TRANSITPULSE_PLAN.md) (the *what* and *why*) into an ordered list of tasks
+> Turns [`BAYRIDERSHIP_PLAN.md`](BAYRIDERSHIP_PLAN.md) (the *what* and *why*) into an ordered list of tasks
 > (the *how*), and adds the web app: a user-friendly, fully responsive site built on [`DESIGN.md`](DESIGN.md),
 > with a live system map of small animated BART trains.
 >
@@ -74,7 +74,7 @@ map only needs the static GTFS feed, not the warehouse, so there's something vis
 | 4–5 | **M2** KPIs, Looker Studio, Power BI | **F4** KPI + station panels | Data Analyst demo |
 | 6 | **M3** forecasting | **F5** forecast explorer | |
 | 7 | **M4** causal analysis ✅ | Findings section ✅ | eBART verdict on the site |
-| 8–9 | **M5** agent + eval + A/B | **F6** Ask TransitPulse UI | AI Eng / DS demo |
+| 8–9 | **M5** agent + eval + A/B | **F6** Ask BayRidership UI | AI Eng / DS demo |
 | 10 | **M6** QLoRA fine-tune | | |
 | 11–12 | **M7** deploy, CI/CD, Locust | **F7** polish, a11y, perf, device QA | Public launch |
 | 13 | buffer | optional: GTFS-RT delays | |
@@ -83,7 +83,7 @@ map only needs the static GTFS feed, not the warehouse, so there's something vis
 
 ## 3. Backend milestones
 
-Each task below names the gap number from the main plan. Detail on methods lives in `TRANSITPULSE_PLAN.md §5`;
+Each task below names the gap number from the main plan. Detail on methods lives in `BAYRIDERSHIP_PLAN.md §5`;
 this section is the checklist.
 
 ### M0: setup (week 0)
@@ -95,7 +95,7 @@ this section is the checklist.
 - [x] `infra/terraform/`: provider + backend; BigQuery datasets `raw`, `staging`, `marts`, `ml`, `ci`; *(applied to `transitpulse-511002`; `plan` shows no changes)*
       raw bucket; Artifact Registry repo with a cleanup policy (keep last 3); service accounts
       `sa-pipeline` (write raw/staging/marts), `sa-agent` (read-only on `marts`), `sa-deploy`.
-- [x] Verify the data source links and licences in `TRANSITPULSE_PLAN.md §4`; record them in `README.md`. *(Bay Wheels verified 2026-10-08; BART verified 2026-10-14: derived data allowed with \"Data provided by BART\" attribution)*
+- [x] Verify the data source links and licences in `BAYRIDERSHIP_PLAN.md §4`; record them in `README.md`. *(Bay Wheels verified 2026-10-08; BART verified 2026-10-14: derived data allowed with \"Data provided by BART\" attribution)*
 - **Done when:** `terraform apply` is clean, `make lint test` passes on an empty project, budget alerts are visible in the console.
 
 ### M1: data platform (weeks 1–3) · #4 #10 #11 #17 #2
@@ -174,7 +174,7 @@ Each section uses components from `DESIGN.md §7` and follows its band rhythm:
 
 | # | Section | `DESIGN.md` component | Content |
 |---|---|---|---|
-| 1 | Sticky nav | `nav-bar`, `button-primary` "Ask a question" | Wordmark "TransitPulse", links: Map · Trends · Forecast · Findings · About. Overlay menu < 1120 px. |
+| 1 | Sticky nav | `nav-bar`, `button-primary` "Ask a question" | Wordmark "BayRidership", links: Map · Trends · Forecast · Findings · About. Overlay menu < 1120 px. |
 | 2 | Hero | `ask-card`, `chip` | Headline ("See the Bay Area move") + the **Ask card**: input row, 4 suggestion chips, black "Ask" pill. 2 columns ≥ 1120 px, stacked below. |
 | 3 | **Live system map** | `map-card`, `map-controls`, `segmented`, `tooltip` | SVG network + canvas trains, time controls, legend, Map/List toggle. |
 | 4 | KPI row | `stat-tile` | Recovery %, weekday entries, peak-hour share, busiest station. "Data through <date>". |
@@ -268,7 +268,7 @@ Build exactly to `DESIGN.md §6` (base layer, train glyph, controls, tooltips). 
 - [x] Chart: actuals line + forecast line + shaded interval; plain-English caption. *(worded from the measured coverage: "For Tue, Jan 6, 2026 the model expected about 14,200 entries; model range (10th–90th percentile) 10,500–16,800."; "80% range" only once a calibrated band holds 75–85%)*
 - **Done when:** works with keyboard only and on a phone in portrait. *(met: Playwright `forecast:` tests)*
 
-### F6: Ask TransitPulse (weeks 8–9, after M5)
+### F6: Ask BayRidership (weeks 8–9, after M5)
 - [x] The hero Ask card: one input row ("Ask about BART or Bay Wheels ridership…"), 4 suggestion chips that fill and submit
       the question, black "Ask" pill. `Enter` submits.
 - [x] Results open as a panel below the hero (full-screen sheet on phones), streaming `/api/ask` events: *(streaming client with a spec-compliant SSE parser + all message states, tested against mocked streams; "Copy SQL" icon button with a "Copied" toast. **Changed:** inline below the hero on phones too, no sheet (DESIGN_BACKLOG v1.1 #12); the chart stays cut with the chart tool)*
@@ -330,7 +330,7 @@ All BigQuery reads go through `sa-agent` (read-only) with `maximum_bytes_billed`
 - [~] CI green: ruff, pytest, Playwright, dbt CI build, terraform plan. *(ruff, pytest, Playwright, terraform validate and the container job are green on every push; dbt CI build and terraform plan wait for the owner's CI identity decisions, `docs/OWNER_STEPS.md` §9)*
 - [ ] README has real numbers: raw data size, forecast MAE vs. baseline, agent accuracy (A/B/C), McNemar p-values, DiD estimate with CI *(✅ M4: in the README)*, Locust p95, monthly cost. *(A/B accuracy and McNemar p in the README since 2026-10-14; arm C waits for M6, Locust p95 on Cloud Run and the bill for the owner)*
 - [ ] GCP bill for the month: $0. *(owner step, `docs/OWNER_STEPS.md` §12)*
-- [x] Portfolio entry added (see `TRANSITPULSE_PLAN.md §9`). *(braedynthompson.com/transitpulse, from the `portfolio` repo's `static/transitpulse/`)*
+- [x] Portfolio entry added (see `BAYRIDERSHIP_PLAN.md §9`). *(braedynthompson.com/transitpulse, from the `portfolio` repo's `static/transitpulse/`)*
 
 ---
 

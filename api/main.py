@@ -13,7 +13,7 @@ from api.routes import ask, data, findings
 from api.settings import get_settings
 
 app = FastAPI(
-    title="TransitPulse API", version="0.1.0", docs_url="/api/docs", openapi_url="/api/openapi.json"
+    title="BayRidership API", version="0.1.0", docs_url="/api/docs", openapi_url="/api/openapi.json"
 )
 app.include_router(data.router)
 app.include_router(ask.router)

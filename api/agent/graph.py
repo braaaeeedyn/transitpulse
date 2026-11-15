@@ -1,4 +1,4 @@
-"""The Ask TransitPulse agent: a LangGraph StateGraph that turns a question into one guarded SQL query and a short
+"""The Ask BayRidership agent: a LangGraph StateGraph that turns a question into one guarded SQL query and a short
 answer, emitting progress events as it goes (the SSE stream POST /api/ask sends).
 
     route ─┬─ refuse ──────────────────────────────────────────────► (refusal)

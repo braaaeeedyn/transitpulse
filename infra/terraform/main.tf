@@ -27,9 +27,9 @@ data "google_project" "this" {
   project_id = var.project_id
 }
 
-# --- Cost guardrails: alerts at $1 and $5 (TRANSITPULSE_PLAN.md §8) ---------------------------------
+# --- Cost guardrails: alerts at $1 and $5 (BAYRIDERSHIP_PLAN.md §8) ---------------------------------
 resource "google_monitoring_notification_channel" "budget_email" {
-  display_name = "TransitPulse budget alerts"
+  display_name = "BayRidership budget alerts"
   type         = "email"
   labels       = { email_address = var.budget_alert_email }
 

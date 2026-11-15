@@ -1,4 +1,4 @@
-# TransitPulse: Bay Area transit analytics, from raw ridership to a live site
+# BayRidership: Bay Area transit analytics, from raw ridership to a live site
 
 **Live:** https://braedynthompson.com/transitpulse/ · **Code:** github.com/braaaeeedyn/transitpulse · **Role:** sole
 developer (data platform, warehouse, models, causal study, AI agent, website, cloud deployment)
@@ -50,7 +50,7 @@ never switched on.
    summary tiles, a cited "What closing would cost" card, one card per station (2025 weekday trips, rank, nearest
    open station, top destinations, the four rules met or not, a "case to keep" verdict), caveats and 13 sources.
    The page takes no position on the measure.
-8. **Ask TransitPulse.** A side panel (the train mascot in the corner, or `/`): ask in plain English and watch the
+8. **Ask BayRidership.** A side panel (the train mascot in the corner, or `/`): ask in plain English and watch the
    steps stream in (thinking → SQL → rows → answer), then "Show SQL" / "Copy SQL". Off-topic questions are refused
    with suggestions. The last 5 answers survive a reload.
 

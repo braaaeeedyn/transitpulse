@@ -1,6 +1,6 @@
 # Running the pipeline on the Oracle VM
 
-How to run TransitPulse's Dagster schedules (monthly BART + Bay Wheels ingest, model rebuilds, weekly forecast)
+How to run BayRidership's Dagster schedules (monthly BART + Bay Wheels ingest, model rebuilds, weekly forecast)
 on the existing Oracle Cloud ARM VM, next to `seismicsocal.service`. Everything here is files in
 [`deploy/oracle/`](../deploy/oracle/); nothing is deployed until you run the steps below.
 
@@ -24,7 +24,7 @@ the key as `$HOME\.ssh\oracle_seismic`.
 
 - The **existing** VM (no second VM is assumed or needed) with SSH access and `sudo`. Oracle Linux or Ubuntu;
   the script detects `dnf` or `apt`. ARM (`aarch64`) is expected; the script warns otherwise.
-- **Size the VM first.** TransitPulse needs ~0.7 GB all the time (Dagster daemon + UI) plus **~5–6 GB during a
+- **Size the VM first.** BayRidership needs ~0.7 GB all the time (Dagster daemon + UI) plus **~5–6 GB during a
   Spark run** (4 GB driver + JVM overhead), a few minutes a month. Check headroom **with SeismicSoCal running**:
   ```sh
   free -h      # the "available" column must cover ~6 GB more than today's usage
@@ -47,7 +47,7 @@ the key as `$HOME\.ssh\oracle_seismic`.
   ```
 - Defaults in the units and the env file assume the 2 OCPU / 12 GB VM: daemon `MemoryMax=7G`, Spark driver
   `TP_SPARK_DRIVER_MEMORY=4g`, `TP_ML_THREADS=2`, `DBT_THREADS=2`. Both units set `OOMScoreAdjust=500`, so if memory
-  ever runs out the kernel kills TransitPulse, not SeismicSoCal. To change a limit, use a drop-in (it survives
+  ever runs out the kernel kills BayRidership, not SeismicSoCal. To change a limit, use a drop-in (it survives
   `bootstrap.sh` updates, which re-copy the unit files):
   ```sh
   sudo systemctl edit transitpulse-dagster-daemon     # add:  [Service]  MemoryMax=6G

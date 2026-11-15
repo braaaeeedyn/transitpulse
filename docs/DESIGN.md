@@ -1,8 +1,8 @@
 ---
 version: 1.0.1
 status: frozen            # locked before frontend work starts (F1). See "Change policy" at the end.
-name: TransitPulse
-description: The design system for TransitPulse, a Bay Area transit analytics site. A black-and-white interface built on one pill-shaped control, Inter type and flat 16 px cards, where the only colour on the page is the data itself — BART line colours on the live train map and charts.
+name: BayRidership
+description: The design system for BayRidership, a Bay Area transit analytics site. A black-and-white interface built on one pill-shaped control, Inter type and flat 16 px cards, where the only colour on the page is the data itself — BART line colours on the live train map and charts.
 source: docs/reference/DESIGN_SOURCE_uber-analysis.md (the black/white + pill language is adapted from it; no Uber names, fonts or assets are used)
 
 colors:
@@ -147,14 +147,14 @@ components:
   focus-ring:       { outline: "2px solid {colors.focus}", offset: 2px, onInk: "2px solid {colors.on-ink}" }
 ---
 
-# TransitPulse design system
+# BayRidership design system
 
 > **Status: v1.0, frozen.** Everything the frontend needs is decided here so the frontend
 > doesn't need design changes while it's being built. See [Change policy](#change-policy).
 
 ## 1. Overview
 
-TransitPulse is a data site, so **the data is the decoration**. The interface is a quiet black-and-white
+BayRidership is a data site, so **the data is the decoration**. The interface is a quiet black-and-white
 frame: white pages, black text, grey surfaces, one black pill for the main action, and flat 16 px cards.
 The only colour anywhere is the BART line colours, which appear only on the train map, in charts and in their
 legends. Because the frame has no colour, the moving trains are the first thing a visitor's eye goes to.
@@ -331,7 +331,7 @@ Tokens for each are in the front matter. Behaviour:
 - **Segmented control:** speed, Map/List, chart ranges (1M / 1Y / All). The thumb slides with `duration-base`.
 - **Ask launcher and panel:** a fixed ink pill in the bottom-right corner with the mascot (a friendly train front:
   white body, ink windshield with two eyes, a smile, yellow headlights, a BART-blue stripe; drawn in its own colours,
-  not BART's logo) and "Ask TransitPulse" (mascot only under 640 px). It, the nav's "Ask a question" and the hero's
+  not BART's logo) and "Ask BayRidership" (mascot only under 640 px). It, the nav's "Ask a question" and the hero's
   button open the **Ask panel**: a 440 px side panel under the nav from 768 px (not modal: the page stays usable),
   full screen below. Head: mascot, title, caption, ✕. Body (scrolls): a greeting, 6 suggestion chips (each backed by a
   reviewed query), the answer, earlier answers. Foot: one `text-input` row and an ink round send button. Esc or ✕
@@ -441,7 +441,7 @@ During frontend work:
 - **v1.0.1 (2026-10-07), accessibility fix:** on maps narrower than 600 px, transfer-station capsules (up to 23 px long)
   overlapped each other in downtown SF/Oakland and hid the 6 px trains, so trains and stations could not be told apart.
   Below 600 px all stations are now plain circles (§6). Found in F3 phone screenshots.
-- **v1.0 (2026-10-07):** first TransitPulse version, adapted from `reference/DESIGN_SOURCE_uber-analysis.md`.
+- **v1.0 (2026-10-07):** first BayRidership version, adapted from `reference/DESIGN_SOURCE_uber-analysis.md`.
   Swapped proprietary fonts for Inter; removed Uber-specific components (ride-request form, app-download pills, showcase card,
   editorial illustrations); darkened `mute` to pass AA; replaced blue links with underlined ink; added the data palette,
   fluid type/spacing, motion, map/train spec, data components (ask card, answer panel, stat tile, chart card, table, combobox,

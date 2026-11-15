@@ -1,4 +1,4 @@
-# TransitPulse API + static site for Cloud Run (IMPLEMENTATION_PLAN M7). Runbook: docs/CLOUD_RUN.md.
+# BayRidership API + static site for Cloud Run (IMPLEMENTATION_PLAN M7). Runbook: docs/CLOUD_RUN.md.
 #
 #   docker build -t transitpulse-api:loop .
 #   docker run --rm -p 8080:8080 transitpulse-api:loop          # data endpoints answer 503 without a warehouse

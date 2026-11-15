@@ -1,4 +1,4 @@
-"""Locust load test for the API: the forecast, the KPI strip and Ask TransitPulse (POST /api/ask, SSE).
+"""Locust load test for the API: the forecast, the KPI strip and Ask BayRidership (POST /api/ask, SSE).
 
 Run it through load/run_local.py, which starts the API on a generated fixture warehouse with the fake LLM and runs
 1/10/25 users headless. To point it at another server by hand (never at production without a reason: every /api/ask

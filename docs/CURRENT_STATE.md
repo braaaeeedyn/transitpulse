@@ -1,4 +1,4 @@
-# TransitPulse: current state
+# BayRidership: current state
 
 > **Scope of this file:** how the application works *right now*, and nothing else. No history, no plans.
 > It is rewritten whenever behaviour changes. History lives in [`DEVLOG.md`](DEVLOG.md); the task list in
@@ -20,7 +20,7 @@
 |---|---|---|
 | Website (static, `web/`) | **Working**: live train map, ridership tiles + charts, forecast explorer, Ask panel with a train mascot (history, Copy SQL), Findings band, a Station closures band, a what-if closures picker under the map, dark mode, an optional Looker Studio card, Open Graph tags, and a style guide at `/styleguide.html` | `uv run python tasks.py api` → http://localhost:8000 |
 | API (`api/`) | **Working**: serves the site; data endpoints (incl. `GET /api/closures`) read the local DuckDB or BigQuery marts when a warehouse is configured; `POST /api/ask` streams the agent's answer when `TP_AGENT_ENABLED=true`, 503 otherwise (the default) | same as above |
-| Ask TransitPulse agent (`api/agent/`) | **Working** locally and **live** on Cloud Run (Gemini, since 2026-10-16): LangGraph text-to-SQL with guardrails, 5 retrieved example queries in the SQL prompt (the M5 A/B winner), fake / Ollama / Gemini LLM | `TP_AGENT_ENABLED=true TP_AGENT_LLM=ollama uv run --group agent python tasks.py api` |
+| Ask BayRidership agent (`api/agent/`) | **Working** locally and **live** on Cloud Run (Gemini, since 2026-10-16): LangGraph text-to-SQL with guardrails, 5 retrieved example queries in the SQL prompt (the M5 A/B winner), fake / Ollama / Gemini LLM | `TP_AGENT_ENABLED=true TP_AGENT_LLM=ollama uv run --group agent python tasks.py api` |
 | Agent eval + A/B (`eval/`) | **Working**: 66 in-scope questions with gold SQL + 10 out-of-scope; arms A (no examples) and B (5 examples), compared by `eval.ab` ([`AB_TEST.md`](AB_TEST.md)) | `uv run python tasks.py eval --llm ollama --arm A\|B`, then `uv run --group agent python -m eval.ab` |
 | Map data build (`pipeline/webdata/`) | **Working** | `uv run python tasks.py web-data` |
 | Spark cleaning job (`pipeline/spark/`) | **Working** (Docker on Windows, native on Linux) | `uv run python tasks.py spark` |
@@ -93,7 +93,7 @@ S3 baywheels-data ──► data/raw/baywheels/*.zip ─► DuckDB clean ─► 
    4 px pulse stripe of the line colours underneath. Below 1120 px the links move into a full-screen menu
    (focus trapped, Esc closes, body scroll locked). Below 600 px the CTA becomes a search icon.
 2. **Hero**: headline (last word on a line-colour stripe), lead, a live strip (`[data-hero-live]`: trains moving
-   now from the map's summary, % of 2019 and the data date from `/api/kpis`, counted up), "Ask TransitPulse"
+   now from the map's summary, % of 2019 and the data date from `/api/kpis`, counted up), "Ask BayRidership"
    (opens the panel) and "See the live map"; in the second column from 1120 px (below the copy otherwise) a
    **departure board** (`[data-board]`): the six soonest arrivals anywhere, which the map publishes every 10 s as
    `tp:arrivals` (line swatch, next stop, destination, minutes; hidden when nothing is running).
@@ -180,7 +180,7 @@ fails. Write-up: [`STATION_CLOSURES.md`](STATION_CLOSURES.md).
   February 26, 2026; it applies only if the measure fails and no other money is found; up to 15 closures from July
   2027); `[data-closures-status]` (the stations are the ones named in BART staff's February 2026 presentation as
   reported by the press; the list "isn't final" because the board "still has to vote" on stations or segments);
-  `[data-closures-neutral]` (TransitPulse "doesn't take a position on the measure"; the verdicts weigh ridership,
+  `[data-closures-neutral]` (BayRidership "doesn't take a position on the measure"; the verdicts weigh ridership,
   recovery and distance); `[data-closures-cost]` "What closing would cost" (left border in the band's accent): a
   data line `[data-closures-cost-data]` (hidden until the API answers; `costSentence`: the share of weekday trips at
   the 15, how many grew on the previous year, how many meet Distance and the farthest one's miles) and three cited
@@ -412,7 +412,7 @@ rounded half up to 0.1%, above 0. 3–4 met = strong, 2 = mixed, 0–1 = weak. C
 
 Configuration: environment variables with prefix `TP_` (`api/settings.py`).
 
-### Ask TransitPulse (`api/agent/`, `api/routes/ask.py`)
+### Ask BayRidership (`api/agent/`, `api/routes/ask.py`)
 - **Off by default.** `TP_AGENT_ENABLED=true` turns it on; only then are the agent packages (`agent` dependency
   group: LangGraph, LangChain, sqlglot) imported, so the rest of the API runs without them.
 - **Stream:** `fastapi.sse`, LF-delimited, `event:` + one JSON `data:` line each:

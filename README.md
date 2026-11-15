@@ -1,4 +1,4 @@
-# TransitPulse
+# BayRidership
 
 A Bay Area transit analytics platform: BART and Bay Wheels ridership pipelines (Dagster + PySpark + dbt on BigQuery),
 station forecasts, a causal study of the eBART extension, an AI analyst agent that answers questions with SQL, and a
@@ -206,7 +206,7 @@ the timetable, not live positions. The full list is in
 ## Docs
 | File | What it is |
 |---|---|
-| [`docs/TRANSITPULSE_PLAN.md`](docs/TRANSITPULSE_PLAN.md) | Goals, stack and the skills this project demonstrates |
+| [`docs/BAYRIDERSHIP_PLAN.md`](docs/BAYRIDERSHIP_PLAN.md) | Goals, stack and the skills this project demonstrates |
 | [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) | Ordered build checklist (M0–M7, F1–F7) |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Design system (v1.1.5; changelog in the file) |
 | [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) | How the application works right now |

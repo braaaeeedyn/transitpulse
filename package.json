@@ -2,7 +2,7 @@
   "name": "transitpulse-web-tests",
   "private": true,
   "type": "module",
-  "description": "Browser tests for the TransitPulse site (Playwright). The site itself has no build step.",
+  "description": "Browser tests for the BayRidership site (Playwright). The site itself has no build step.",
   "scripts": {
     "test": "playwright test"
   },

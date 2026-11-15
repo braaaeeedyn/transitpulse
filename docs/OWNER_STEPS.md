@@ -1,6 +1,6 @@
 # Owner steps
 
-Everything left in TransitPulse that needs your accounts, a GUI tool, a device or a decision. Each step says what to
+Everything left in BayRidership that needs your accounts, a GUI tool, a device or a decision. Each step says what to
 run or click, what you should see, and how to check it. **Updated 2026-10-18:** everything is committed and pushed;
 https://braedynthompson.com/transitpulse/ runs the latest pages (station closures, the what-if map, dark mode);
 `/api/closures` answers from BigQuery; Ask is live on Gemini. The VM runs the latest pipeline code. Open now: the dated
@@ -68,7 +68,7 @@ The site is a copy of `web/` in the portfolio repo, pointed at Cloud Run. After 
 uv run python tasks.py export --api-base https://transitpulse-api-etumz4pfva-uw.a.run.app --to ../portfolio/static/transitpulse
 cd ../portfolio
 git add static/transitpulse        # only this folder: build.py and pages.py hold your own uncommitted work
-git commit -m "TransitPulse: <what changed>"
+git commit -m "BayRidership: <what changed>"
 git push
 cd ../transitpulse
 ```

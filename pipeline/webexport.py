@@ -1,7 +1,7 @@
 """Export the website for hosting on another domain (the portfolio publishes it at braedynthompson.com/transitpulse/
 through GitHub Pages, which only serves files). Two modes:
 
-    # live: the pages call the API on Cloud Run (data + Ask TransitPulse)
+    # live: the pages call the API on Cloud Run (data + Ask BayRidership)
     uv run python -m pipeline.webexport --api-base https://transitpulse-api-xxxx.a.run.app --to DIR
 
     # static snapshot: no server at all; every read-only API response is pre-computed

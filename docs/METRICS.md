@@ -1,4 +1,4 @@
-# TransitPulse KPIs
+# BayRidership KPIs
 
 Each KPI has one definition, computed once in dbt (`marts.mart_kpis_daily` / `marts.mart_recovery` /
 `marts.mart_peak_load`). The website, Looker Studio and Power BI read these columns rather than re-deriving them,
@@ -86,7 +86,7 @@ schema has no bike type) and dockless (no start station).
   line says "narrower than it should be" below 75% and "wider than needed" above 85%. If calibration lands farther
   from 80% than the raw band, the API serves the raw band.
 
-## Ask TransitPulse eval (`eval/questions.yaml`, `python -m eval.run_eval`)
+## Ask BayRidership eval (`eval/questions.yaml`, `python -m eval.run_eval`)
 
 | Metric | Definition |
 |---|---|

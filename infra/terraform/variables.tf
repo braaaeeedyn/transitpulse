@@ -25,7 +25,7 @@ variable "raw_bucket_name" {
 }
 
 variable "agent_enabled" {
-  description = "Turn on Ask TransitPulse (POST /api/ask) on Cloud Run. Add the Gemini key's secret version first (docs/CLOUD_RUN.md)."
+  description = "Turn on Ask BayRidership (POST /api/ask) on Cloud Run. Add the Gemini key's secret version first (docs/CLOUD_RUN.md)."
   type        = bool
   default     = false
 }

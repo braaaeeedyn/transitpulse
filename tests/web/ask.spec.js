@@ -1,4 +1,4 @@
-// Ask TransitPulse in the browser (F6 + M5), with POST /api/ask mocked by page.route, so no agent or warehouse
+// Ask BayRidership in the browser (F6 + M5), with POST /api/ask mocked by page.route, so no agent or warehouse
 // is needed. The streams use CRLF and multi-line data on purpose: any spec-valid stream must work.
 import { expect, test } from "@playwright/test";
 

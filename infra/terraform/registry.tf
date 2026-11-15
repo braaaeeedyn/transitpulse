@@ -2,7 +2,7 @@ resource "google_artifact_registry_repository" "app" {
   repository_id = "transitpulse"
   location      = var.region
   format        = "DOCKER"
-  description   = "TransitPulse API + web images."
+  description   = "BayRidership API + web images."
 
   # Free tier is 0.5 GB: keep only the 3 most recent images.
   cleanup_policy_dry_run = false

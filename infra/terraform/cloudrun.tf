@@ -4,7 +4,7 @@
 locals {
   api_service = "transitpulse-api"
 
-  # Ask TransitPulse is off unless var.agent_enabled; only then is the Gemini key bound (the secret's *version* is
+  # Ask BayRidership is off unless var.agent_enabled; only then is the Gemini key bound (the secret's *version* is
   # added by hand, so the key never appears in Terraform state).
   api_env = merge(
     {

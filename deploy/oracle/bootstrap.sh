@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install or update TransitPulse's Dagster services on the Oracle VM (ARM, Oracle Linux or Ubuntu).
+# Install or update BayRidership's Dagster services on the Oracle VM (ARM, Oracle Linux or Ubuntu).
 #
 #   sudo bash deploy/oracle/bootstrap.sh          # first install, and again for every update
 #
@@ -48,7 +48,7 @@ if command -v apt-get >/dev/null 2>&1; then
     log "installing packages with apt: ${missing[*]}"
     export DEBIAN_FRONTEND=noninteractive
     # another program's package source on a shared VM can fail (e.g. Caddy's returned 402 on 2026-10-09);
-    # that must not block TransitPulse: warn, and let the install below fail only if our packages are unavailable
+    # that must not block BayRidership: warn, and let the install below fail only if our packages are unavailable
     apt-get update -q || warn "apt-get update reported errors (often an unrelated package source); continuing"
     apt-get install -y -q "${missing[@]}"
   fi

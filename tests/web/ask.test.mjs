@@ -1,4 +1,4 @@
-// The Ask TransitPulse stream parser (web/js/ask.js), run with Node's built-in runner:
+// The Ask BayRidership stream parser (web/js/ask.js), run with Node's built-in runner:
 //   node --test tests/web/
 import assert from "node:assert/strict";
 import { test } from "node:test";

@@ -1,4 +1,4 @@
-# BI build guide: Looker Studio and Power BI on the TransitPulse marts
+# BI build guide: Looker Studio and Power BI on the BayRidership marts
 
 Both tools read the same dbt marts in BigQuery (project `transitpulse-511002`, dataset `marts`) that the website
 reads, so every surface shows the same number. Each KPI is defined once in dbt; see

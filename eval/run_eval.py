@@ -1,4 +1,4 @@
-"""Run the Ask TransitPulse eval set (eval/questions.yaml) through the agent and score it.
+"""Run the Ask BayRidership eval set (eval/questions.yaml) through the agent and score it.
 
     uv run --group agent python -m eval.run_eval --llm fake|ollama|gemini --warehouse duckdb [--arm A|B]
         [--duckdb-path data/transitpulse.duckdb] [--ids k01,s02] [--json] [--save-summary] [--results-dir DIR]

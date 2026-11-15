@@ -1,4 +1,4 @@
-"""POST /api/ask: Ask TransitPulse (M5). Streams Server-Sent Events (LF-delimited, `event:` + one JSON `data:` line):
+"""POST /api/ask: Ask BayRidership (M5). Streams Server-Sent Events (LF-delimited, `event:` + one JSON `data:` line):
 thinking, sql, rows, then answer, refusal or error. See api/agent/graph.py.
 
 Off unless TP_AGENT_ENABLED=true (503, so the site shows a friendly message); the agent packages are imported only

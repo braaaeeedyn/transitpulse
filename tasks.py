@@ -142,7 +142,7 @@ def causal(*args: str) -> None:
 
 
 def eval_agent(*args: str) -> None:
-    """Score Ask TransitPulse on eval/questions.yaml (default: fake LLM on the local DuckDB; --llm ollama for real)."""
+    """Score Ask BayRidership on eval/questions.yaml (default: fake LLM on the local DuckDB; --llm ollama for real)."""
     run("uv", "run", "--group", "agent", "python", "-m", "eval.run_eval", *args)
 
 

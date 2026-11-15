@@ -23,7 +23,7 @@ from pipeline.resources import ROOT, SparkRunner, Storage
 OD_URL = "https://afcweb.bart.gov/ridership/origin-destination/date-hour-soo-dest-{year}.csv.gz"
 GTFS_URL = "https://www.bart.gov/dev/schedules/google_transit.zip"
 # bart.gov rejects Python's default User-Agent with 403
-USER_AGENT = "TransitPulse/0.1 (+https://github.com/braaaeeedyn/transitpulse)"
+USER_AGENT = "BayRidership/0.1 (+https://github.com/braaaeeedyn/transitpulse)"
 FIRST_YEAR = 2018  # one year before the 2019 baseline, and the year eBART opened (causal study, M4)
 years = StaticPartitionsDefinition([str(y) for y in range(FIRST_YEAR, date.today().year + 1)])
 

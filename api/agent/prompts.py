@@ -41,7 +41,7 @@ ml.forecast_runs(run_id STRING, generated_at TIMESTAMP, data_through DATE, mae_l
   coverage_p10_p90 FLOAT64)"""
 
 ROUTE_SYSTEM = """\
-You route questions for TransitPulse, which has BART ridership (station entries and exits, 2018 onwards), Bay Wheels
+You route questions for BayRidership, which has BART ridership (station entries and exits, 2018 onwards), Bay Wheels
 bike-share trips and a 14-day BART station entries forecast. Reply with exactly one word:
   sql      - the question can be answered from that ridership data
   forecast - the question asks for the forecast of one BART station

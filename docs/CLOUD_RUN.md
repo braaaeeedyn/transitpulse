@@ -129,7 +129,7 @@ If a deploy fails on a permission error for operations or the service, check wit
 If the error is about acting as `sa-agent`, check
 `gcloud iam service-accounts get-iam-policy sa-agent@transitpulse-511002.iam.gserviceaccount.com`.
 
-## 4. Turning on Ask TransitPulse (the agent)
+## 4. Turning on Ask BayRidership (the agent)
 
 The agent costs money per question once it is public: BigQuery bytes and Gemini tokens. Do these steps in order.
 
@@ -165,7 +165,7 @@ published `site/`. So the pages live in `portfolio/static/transitpulse/`, and th
 ```sh
 API_URL=$(terraform -chdir=infra/terraform output -raw api_url)
 uv run python tasks.py export --api-base "$API_URL" --to ../portfolio/static/transitpulse
-cd ../portfolio && git add static/transitpulse && git commit -m "TransitPulse at /transitpulse (live API)" && git push
+cd ../portfolio && git add static/transitpulse && git commit -m "BayRidership at /transitpulse (live API)" && git push
 ```
 
 The export adds `<meta name="tp-api-base" content="$API_URL/">`, so every `api/...` request (data and Ask) goes to

@@ -1,7 +1,7 @@
 # Dagster daemon: runs the schedules (monthly ingest, models, weekly forecast) and the run queue.
 # Installed by deploy/oracle/bootstrap.sh into /etc/systemd/system/. See docs/ORACLE_VM.md.
 [Unit]
-Description=TransitPulse Dagster daemon (schedules and run queue)
+Description=BayRidership Dagster daemon (schedules and run queue)
 Documentation=https://github.com/braaaeeedyn/transitpulse/blob/main/docs/ORACLE_VM.md
 After=network-online.target
 Wants=network-online.target
@@ -22,7 +22,7 @@ RestartSec=30
 # the run instead of protecting anything. Change it with `sudo systemctl edit transitpulse-dagster-daemon`
 # (a drop-in survives bootstrap.sh updates; editing this file on the VM does not). See docs/ORACLE_VM.md.
 MemoryMax=7G
-# if the VM ever runs out of memory, the kernel kills TransitPulse before SeismicSoCal
+# if the VM ever runs out of memory, the kernel kills BayRidership before SeismicSoCal
 OOMScoreAdjust=500
 # lower priority than everything else on the VM, so SeismicSoCal keeps priority
 Nice=10

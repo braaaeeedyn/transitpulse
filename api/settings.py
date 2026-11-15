@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     warehouse: WarehouseKind | None = None
     gcp_project: str | None = None
     duckdb_path: Path = Path("data/transitpulse.duckdb")  # relative paths are resolved from the repo root
-    # Ask TransitPulse (POST /api/ask). Off unless TP_AGENT_ENABLED=true; the agent packages are imported only then.
+    # Ask BayRidership (POST /api/ask). Off unless TP_AGENT_ENABLED=true; the agent packages are imported only then.
     agent_enabled: bool = False
     agent_llm: AgentLLM = "fake"  # fake = deterministic test double; ollama (local) and gemini are opt-in
     ollama_model: str = "llama3.1:8b"

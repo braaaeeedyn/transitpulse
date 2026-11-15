@@ -2,7 +2,7 @@
 
 > **Status (2026-10-17):** the stations below are the ones named in BART staff's February 2026 presentation, as
 > reported by the press. The list isn't final: the BART board still has to vote on which stations or segments would
-> close. **TransitPulse doesn't take a position on the measure** on the November 3, 2026 ballot; the verdicts here
+> close. **BayRidership doesn't take a position on the measure** on the November 3, 2026 ballot; the verdicts here
 > weigh ridership, recovery and distance. This page will need revisiting after the election.
 
 The site's **Station closures** band (`web/js/closures.js`, `GET /api/closures`) shows the same numbers as this

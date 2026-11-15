@@ -6,7 +6,7 @@
 
 Input files (bart.gov ridership reports) have no header: date, hour, origin, destination, trips.
 
-Spark concepts used here (TRANSITPULSE_PLAN §5 Phase 1):
+Spark concepts used here (BAYRIDERSHIP_PLAN §5 Phase 1):
   * explicit schema       - no inference pass over GBs of gzip (gzip isn't splittable, so inference = a full extra read)
   * lazy evaluation       - nothing runs until the write; `audit` is computed from one cached DataFrame
   * broadcast join        - the holidays table is tiny, so it is shipped to every executor instead of shuffled

@@ -1,4 +1,4 @@
-# TransitPulse: project plan
+# BayRidership: project plan
 
 > **Type:** brand-new project (new repo, e.g. `github.com/braaaeeedyn/transitpulse`)
 > **One line:** a Bay Area transit analytics platform. It ingests years of BART and Bay Wheels ridership,
@@ -23,7 +23,7 @@ is only learned once. See [the overlap plan](#overlap-plan-with-quakeops).
 | **Dashboard** | Looker Studio dashboard: ridership trends, busiest stations, rush-hour peaks, 2019 → today recovery, bikes vs. trains. |
 | **Power BI report** | A deeper analyst report built on the same marts: DAX KPI measures, time intelligence (YoY, vs. 2019), a station drill-through page and a what-if scenario. Shared as the `.pbix` file in the repo plus a PDF export, screenshots and a short screen recording, because Power BI has no free public hosting. |
 | **Forecasts** | Expected daily entries per BART station for the next 14 days, with prediction intervals. |
-| **Ask TransitPulse** | An AI analyst agent. You ask *"Which stations grew most since 2022?"*; it writes **read-only SQL** against the warehouse, runs it, can call the forecast, and answers with a table/chart **plus the exact SQL it ran**. |
+| **Ask BayRidership** | An AI analyst agent. You ask *"Which stations grew most since 2022?"*; it writes **read-only SQL** against the warehouse, runs it, can call the forecast, and answers with a table/chart **plus the exact SQL it ran**. |
 | **Findings write-up** | A causal analysis answering a real question (see §5.4), with method, assumptions, results and confidence intervals. |
 
 ### What runs behind the scenes
@@ -42,7 +42,7 @@ is only learned once. See [the overlap plan](#overlap-plan-with-quakeops).
 
 Numbers refer to the 21-gap table from the skills review.
 
-| # | Gap | How TransitPulse covers it |
+| # | Gap | How BayRidership covers it |
 |---|---|---|
 | 1 | Cloud + Terraform | GCP (BigQuery, GCS, Cloud Run, Artifact Registry) all defined in Terraform |
 | 2 | Advanced SQL | dbt models with window functions, CTEs, cohort and period-over-period queries |
@@ -64,7 +64,7 @@ Numbers refer to the 21-gap table from the skills review.
 
 **Not covered, on purpose:**
 - #12 MLflow (owned by QuakeOps)
-- **#5 model drift monitoring** (owned by QuakeOps; TransitPulse only does *LLM* tracing)
+- **#5 model drift monitoring** (owned by QuakeOps; BayRidership only does *LLM* tracing)
 - #14 Kubernetes, #15 distributed/multi-GPU training, #20 novel methods (too senior for internship targeting)
 
 ---
@@ -245,7 +245,7 @@ Keep raw files in GCS as-is, partitioned by year/month. Never edit raw data; all
 **Platform:** GCP, Terraform, Cloud Run, Docker, GitHub Actions CI/CD with Workload Identity Federation, Locust load testing.
 
 Example résumé bullet (fill in your real numbers once you have them):
-> Built TransitPulse, a Bay Area transit analytics platform: Dagster + PySpark + dbt pipelines over **N GB** of BART/Bay Wheels
+> Built BayRidership, a Bay Area transit analytics platform: Dagster + PySpark + dbt pipelines over **N GB** of BART/Bay Wheels
 > ridership in BigQuery, a LangGraph text-to-SQL agent with guardrails (**X% execution accuracy**, +Y pts vs. baseline
 > via an offline A/B test, McNemar p = Z; a QLoRA-tuned 1.5B model reached **W%** locally at $0), and a
 > difference-in-differences study of the eBART extension; deployed on
@@ -255,7 +255,7 @@ Example résumé bullet (fill in your real numbers once you have them):
 
 ## 7. Overlap plan with QuakeOps
 
-| Skill / tool | Learned in TransitPulse | Reused in QuakeOps |
+| Skill / tool | Learned in BayRidership | Reused in QuakeOps |
 |---|:-:|:-:|
 | Dagster OSS on the Oracle VM | ✅ (new) | ✅ reuse for retraining and drift jobs |
 | GitHub Actions CI/CD | ✅ (new) | ✅ reuse, adding model-promotion gates |
@@ -277,4 +277,4 @@ Example résumé bullet (fill in your real numbers once you have them):
 - Fine-tuning runs on your GPU or free Colab; if Colab disconnects, save checkpoints to Google Drive every N steps.
 
 ## 9. Adding it to the portfolio
-See `docs/PORTFOLIO_CONTEXT.md` → "Adding TransitPulse".
+See `docs/PORTFOLIO_CONTEXT.md` → "Adding BayRidership".

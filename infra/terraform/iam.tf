@@ -9,7 +9,7 @@ locals {
 resource "google_service_account" "sa" {
   for_each     = local.service_accounts
   account_id   = "sa-${each.key}"
-  display_name = "TransitPulse ${each.key}"
+  display_name = "BayRidership ${each.key}"
   description  = each.value
 
   depends_on = [google_project_service.enabled] # needs iam.googleapis.com on first

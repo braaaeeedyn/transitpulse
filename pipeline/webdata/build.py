@@ -250,7 +250,7 @@ def _download(url: str, dest: Path) -> Path:
     if not dest.exists():
         print(f"downloading {url}")
         # bart.gov rejects Python's default User-Agent with 403
-        req = urllib.request.Request(url, headers={"User-Agent": "TransitPulse/0.1"})
+        req = urllib.request.Request(url, headers={"User-Agent": "BayRidership/0.1"})
         with urllib.request.urlopen(req) as res:
             dest.write_bytes(res.read())
     return dest

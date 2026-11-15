@@ -1,6 +1,6 @@
-# TransitPulse: skills map
+# BayRidership: skills map
 
-Where each skill from [`TRANSITPULSE_PLAN.md`](TRANSITPULSE_PLAN.md) (§2 gap table, §6 skills list) is implemented,
+Where each skill from [`BAYRIDERSHIP_PLAN.md`](BAYRIDERSHIP_PLAN.md) (§2 gap table, §6 skills list) is implemented,
 what it does in this project, and how it works. Links point at exact lines.
 
 **Status:** ✅ implemented and verified · 🟡 partly implemented (what's missing is stated) · ⬜ not started.
@@ -156,7 +156,7 @@ service accounts, budgets). The Cloud Run service and GitHub federation are appl
 
 | Resource | Where | Why |
 |---|---|---|
-| Budget alerts $1 / $5 | [`main.tf:30`](../infra/terraform/main.tf#L30) | Cost guardrail as code (TRANSITPULSE_PLAN §8); a test keeps them at $1/$5. |
+| Budget alerts $1 / $5 | [`main.tf:30`](../infra/terraform/main.tf#L30) | Cost guardrail as code (BAYRIDERSHIP_PLAN §8); a test keeps them at $1/$5. |
 | Enabled APIs | [`main.tf:4`](../infra/terraform/main.tf#L4) | BigQuery, GCS, Run, Artifact Registry, IAM, STS, billing budgets, Secret Manager. |
 | Raw bucket | [`storage.tf`](../infra/terraform/storage.tf) | Uniform access, public access blocked, temp files expire. |
 | BigQuery datasets | [`bigquery.tf`](../infra/terraform/bigquery.tf) | `raw/staging/marts/ml/ci`; CI tables auto-expire after 3 days ([:19](../infra/terraform/bigquery.tf#L19)). |
@@ -387,7 +387,7 @@ with the same SQL.
 
 ## ✅ #19 Agents and tool use (local, and live on Cloud Run)
 
-**What it does:** "Ask TransitPulse" answers a ridership question by writing one guarded SQL query over the published
+**What it does:** "Ask BayRidership" answers a ridership question by writing one guarded SQL query over the published
 marts, running it and summarising the rows, streamed to the site as Server-Sent Events. Off unless
 `TP_AGENT_ENABLED=true`; the LLM is a deterministic fake (tests), llama3.1:8b via Ollama (local) or Gemini.
 
